@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+coverage/
+
+# Prisma
+prisma/migrations/**/migration_lock.toml
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Docker
+.docker/
+
+# IDE
+.vscode/
+.idea/

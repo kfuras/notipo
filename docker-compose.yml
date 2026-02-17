@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: blog-compiler-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: blogcompiler
+      POSTGRES_PASSWORD: localdev
+      POSTGRES_DB: blogcompiler
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blogcompiler"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  image-service:
+    build:
+      context: ./image-service
+      dockerfile: Dockerfile
+    container_name: blog-compiler-images
+    restart: unless-stopped
+    ports:
+      - "8100:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

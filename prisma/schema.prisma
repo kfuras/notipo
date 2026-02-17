@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Encrypted credentials (AES-256-GCM JSON blobs)
+  notionCredentials    String? // {accessToken, workspaceId}
+  wordpressCredentials String? // {siteUrl, username, appPassword}
+
+  // Notion polling config
+  notionDatabaseId      String?
+  notionPollIntervalSec Int             @default(60)
+  notionTriggerStatus   String          @default("Ready to Publish")
+
+  // WordPress config
+  wpSiteUrl       String?
+  codeHighlighter CodeHighlighter @default(PRISMATIC)
+
+  users      User[]
+  posts      Post[]
+  categories Category[]
+  imageCache ImageMapping[]
+  jobs       Job[]
+
+  @@map("tenants")
+}
+
+enum CodeHighlighter {
+  PRISMATIC
+  WP_CODE
+  HIGHLIGHT_JS
+  PRISM_JS
+}
+
+model User {
+  id       String   @id @default(cuid())
+  email    String
+  name     String?
+  role     UserRole @default(MEMBER)
+  apiKey   String?  @unique
+  tenantId String
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([email, tenantId])
+  @@map("users")
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Post {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Notion source
+  notionPageId   String?
+  notionLastEdit DateTime?
+
+  // Content
+  title           String
+  slug            String?
+  markdownContent String? @db.Text
+  wpContent       String? @db.Text
+  excerpt         String? @db.Text
+
+  // WordPress target
+  wpPostId Int?
+  wpUrl    String?
+
+  // SEO
+  seoKeyword     String?
+  seoDescription String?
+
+  // Taxonomy
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+  tags       String[]
+
+  // Featured image
+  featuredImageTitle String?
+  featuredImageUrl   String?
+  wpFeaturedMediaId  Int?
+
+  // Status tracking
+  status      PostStatus @default(DRAFT)
+  syncedAt    DateTime?
+  publishedAt DateTime?
+
+  imageMappings ImageMapping[]
+  jobs          Job[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, notionPageId])
+  @@index([tenantId, status])
+  @@map("posts")
+}
+
+enum PostStatus {
+  DRAFT
+  SYNCED
+  IMAGES_PROCESSING
+  READY_TO_PUBLISH
+  PUBLISHING
+  PUBLISHED
+  UPDATE_PENDING
+  FAILED
+}
+
+model Category {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name            String
+  wpCategoryId    Int?
+  wpTagIds        Int[]
+  backgroundImage String?
+
+  posts Post[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, name])
+  @@map("categories")
+}
+
+model ImageMapping {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  notionImageUrl String
+  wpImageUrl     String
+  wpMediaId      Int
+  filename       String?
+
+  postId String?
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, notionImageUrl])
+  @@index([tenantId, postId])
+  @@map("image_mappings")
+}
+
+model Job {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  postId String?
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: SetNull)
+
+  type        JobType
+  status      JobStatus @default(PENDING)
+  payload     Json?
+  result      Json?
+  error       String?
+  attempts    Int       @default(0)
+  pgBossJobId String?
+
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  @@index([tenantId, status])
+  @@index([type, status])
+  @@map("jobs")
+}
+
+enum JobType {
+  NOTION_POLL
+  SYNC_POST
+  PROCESS_IMAGES
+  GENERATE_FEATURED_IMAGE
+  PUBLISH_POST
+  UPDATE_POST
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
