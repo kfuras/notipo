@@ -1,7 +1,10 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
+import fastifyStatic from "@fastify/static";
 import { ZodError } from "zod";
+import { fileURLToPath } from "url";
+import path from "path";
 import { config } from "./config.js";
 import { prismaPlugin } from "./plugins/prisma.js";
 import { pgBossPlugin } from "./plugins/pg-boss.js";
@@ -35,6 +38,13 @@ export async function buildApp() {
       });
     }
     throw error; // let Fastify handle everything else
+  });
+
+  // Admin UI — served at /admin
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  await app.register(fastifyStatic, {
+    root: path.join(__dirname, "..", "public"),
+    prefix: "/admin",
   });
 
   // Plugins

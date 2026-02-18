@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="night">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blog Compiler Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .status-badge { @apply badge badge-sm font-mono; }
+  </style>
+</head>
+<body x-data="app()" x-cloak>
+
+<!-- ── Login Screen ─────────────────────────────────────────────────────── -->
+<div x-show="!auth.apiKey" class="min-h-screen flex items-center justify-center bg-base-200">
+  <div class="card w-96 bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h2 class="card-title text-2xl justify-center mb-2">Blog Compiler</h2>
+      <p class="text-base-content/60 text-center text-sm mb-4">Enter your API key to continue</p>
+      <div x-show="auth.error" class="alert alert-error text-sm mb-3">
+        <span x-text="auth.error"></span>
+      </div>
+      <input
+        type="password"
+        placeholder="API key"
+        class="input input-bordered w-full"
+        x-model="auth.input"
+        @keydown.enter="login()"
+      />
+      <button class="btn btn-primary mt-2" :class="auth.loading && 'loading'" @click="login()">
+        Sign in
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── App Shell ─────────────────────────────────────────────────────────── -->
+<div x-show="auth.apiKey" class="min-h-screen flex flex-col">
+
+  <!-- Navbar -->
+  <div class="navbar bg-base-300 px-4 shadow-md">
+    <div class="flex-1">
+      <span class="text-lg font-bold">Blog Compiler</span>
+      <span x-show="auth.isAdmin" class="badge badge-warning badge-sm ml-2">admin</span>
+    </div>
+    <div class="flex-none gap-2">
+      <span class="text-base-content/50 text-xs hidden sm:block" x-text="'API: ' + auth.apiKey.slice(0,8) + '…'"></span>
+      <button class="btn btn-ghost btn-sm" @click="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-52 bg-base-200 flex-shrink-0 p-3 flex flex-col gap-1">
+      <template x-for="item in navItems()" :key="item.id">
+        <button
+          class="btn btn-ghost justify-start gap-2 w-full"
+          :class="page === item.id && 'btn-active'"
+          @click="navigate(item.id)"
+        >
+          <span x-text="item.icon"></span>
+          <span x-text="item.label"></span>
+        </button>
+      </template>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 overflow-y-auto p-6">
+
+      <!-- Loading -->
+      <div x-show="loading" class="flex justify-center items-center h-40">
+        <span class="loading loading-spinner loading-lg"></span>
+      </div>
+
+      <!-- Error -->
+      <div x-show="error && !loading" class="alert alert-error">
+        <span x-text="error"></span>
+        <button class="btn btn-ghost btn-sm" @click="loadPage()">Retry</button>
+      </div>
+
+      <!-- ── Dashboard ───────────────────────────────────────────────── -->
+      <div x-show="page === 'dashboard' && !loading && !error">
+        <h1 class="text-2xl font-bold mb-6">Dashboard</h1>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <template x-for="stat in dashboard.stats" :key="stat.label">
+            <div class="stat bg-base-200 rounded-box">
+              <div class="stat-title text-xs" x-text="stat.label"></div>
+              <div class="stat-value text-2xl" :class="stat.color" x-text="stat.value"></div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Config status -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <div class="card bg-base-200">
+            <div class="card-body py-4">
+              <h3 class="font-semibold text-sm">Notion</h3>
+              <div class="flex items-center gap-2">
+                <span x-show="dashboard.settings?.notion?.configured" class="badge badge-success badge-sm">connected</span>
+                <span x-show="!dashboard.settings?.notion?.configured" class="badge badge-error badge-sm">not configured</span>
+                <span class="text-xs text-base-content/50" x-text="dashboard.settings?.notion?.databaseId ? 'DB: ' + dashboard.settings.notion.databaseId.slice(0,8) + '…' : ''"></span>
+              </div>
+            </div>
+          </div>
+          <div class="card bg-base-200">
+            <div class="card-body py-4">
+              <h3 class="font-semibold text-sm">WordPress</h3>
+              <div class="flex items-center gap-2">
+                <span x-show="dashboard.settings?.wordpress?.configured" class="badge badge-success badge-sm">connected</span>
+                <span x-show="!dashboard.settings?.wordpress?.configured" class="badge badge-error badge-sm">not configured</span>
+                <span class="text-xs text-base-content/50" x-text="dashboard.settings?.wordpress?.siteUrl || ''"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent jobs -->
+        <h2 class="text-lg font-semibold mb-3">Recent Jobs</h2>
+        <div class="overflow-x-auto">
+          <table class="table table-sm bg-base-200 rounded-box">
+            <thead>
+              <tr><th>Type</th><th>Status</th><th>Started</th><th>Duration</th><th>Error</th></tr>
+            </thead>
+            <tbody>
+              <template x-for="job in dashboard.recentJobs" :key="job.id">
+                <tr>
+                  <td class="font-mono text-xs" x-text="job.type.replace(/_/g,' ')"></td>
+                  <td><span class="badge badge-sm" :class="jobBadge(job.status)" x-text="job.status"></span></td>
+                  <td class="text-xs text-base-content/60" x-text="job.startedAt ? timeAgo(job.startedAt) : '—'"></td>
+                  <td class="text-xs" x-text="jobDuration(job)"></td>
+                  <td class="text-xs text-error max-w-xs truncate" x-text="job.error || ''"></td>
+                </tr>
+              </template>
+              <tr x-show="dashboard.recentJobs.length === 0">
+                <td colspan="5" class="text-center text-base-content/40">No jobs yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Posts ───────────────────────────────────────────────────── -->
+      <div x-show="page === 'posts' && !loading && !error">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-bold">Posts</h1>
+          <div class="flex gap-1">
+            <template x-for="f in ['ALL','PUBLISHED','FAILED','IMAGES_PROCESSING','UPDATE_PENDING','SYNCED']" :key="f">
+              <button
+                class="btn btn-xs"
+                :class="posts.filter === f ? 'btn-primary' : 'btn-ghost'"
+                @click="posts.filter = f"
+                x-text="f === 'ALL' ? 'All' : f.replace(/_/g,' ')"
+              ></button>
+            </template>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="table table-sm bg-base-200 rounded-box">
+            <thead>
+              <tr><th>Title</th><th>Category</th><th>Status</th><th>Last Sync</th><th>WP</th></tr>
+            </thead>
+            <tbody>
+              <template x-for="post in filteredPosts()" :key="post.id">
+                <tr class="cursor-pointer hover" @click="togglePost(post.id)">
+                  <td>
+                    <div class="font-medium text-sm" x-text="post.title"></div>
+                    <!-- Expanded detail -->
+                    <div x-show="posts.expanded === post.id" class="mt-2 text-xs text-base-content/60 space-y-1">
+                      <div x-show="post.notionPageId"><span class="font-mono">Notion: </span><span x-text="post.notionPageId"></span></div>
+                      <div x-show="post.seoKeyword"><span class="font-semibold">SEO: </span><span x-text="post.seoKeyword"></span></div>
+                      <div x-show="post.tags?.length"><span class="font-semibold">Tags: </span><span x-text="post.tags.join(', ')"></span></div>
+                    </div>
+                  </td>
+                  <td class="text-xs" x-text="post.category?.name || '—'"></td>
+                  <td><span class="badge badge-sm" :class="postBadge(post.status)" x-text="post.status.replace(/_/g,' ')"></span></td>
+                  <td class="text-xs text-base-content/60" x-text="post.syncedAt ? timeAgo(post.syncedAt) : '—'"></td>
+                  <td>
+                    <a x-show="post.wpUrl" :href="post.wpUrl" target="_blank" class="btn btn-xs btn-ghost" @click.stop>↗</a>
+                    <span x-show="!post.wpUrl" class="text-base-content/30 text-xs">—</span>
+                  </td>
+                </tr>
+              </template>
+              <tr x-show="filteredPosts().length === 0">
+                <td colspan="5" class="text-center text-base-content/40">No posts</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Jobs ───────────────────────────────────────────────────── -->
+      <div x-show="page === 'jobs' && !loading && !error">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-bold">Jobs</h1>
+          <div class="flex gap-1">
+            <template x-for="f in ['ALL','RUNNING','COMPLETED','FAILED','PENDING','CANCELLED']" :key="f">
+              <button
+                class="btn btn-xs"
+                :class="jobs.filter === f ? 'btn-primary' : 'btn-ghost'"
+                @click="jobs.filter = f; loadJobs()"
+                x-text="f === 'ALL' ? 'All' : f"
+              ></button>
+            </template>
+            <button class="btn btn-xs btn-ghost ml-2" @click="loadJobs()">↻ Refresh</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="table table-sm bg-base-200 rounded-box">
+            <thead>
+              <tr><th>Type</th><th>Status</th><th>Post</th><th>Started</th><th>Duration</th><th>Error</th></tr>
+            </thead>
+            <tbody>
+              <template x-for="job in jobs.list" :key="job.id">
+                <tr>
+                  <td class="font-mono text-xs" x-text="job.type.replace(/_/g,' ')"></td>
+                  <td><span class="badge badge-sm" :class="jobBadge(job.status)" x-text="job.status"></span></td>
+                  <td class="text-xs text-base-content/60" x-text="job.postId ? job.postId.slice(0,8)+'…' : '—'"></td>
+                  <td class="text-xs text-base-content/60" x-text="job.startedAt ? timeAgo(job.startedAt) : '—'"></td>
+                  <td class="text-xs" x-text="jobDuration(job)"></td>
+                  <td class="text-xs text-error max-w-xs">
+                    <div x-show="job.error" class="tooltip tooltip-left" :data-tip="job.error">
+                      <span class="truncate block max-w-48" x-text="job.error"></span>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+              <tr x-show="jobs.list.length === 0">
+                <td colspan="6" class="text-center text-base-content/40">No jobs</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Pagination -->
+        <div class="flex justify-between items-center mt-4 text-sm text-base-content/60">
+          <span x-text="`Showing ${jobs.list.length} of ${jobs.total}`"></span>
+          <div class="flex gap-2">
+            <button class="btn btn-xs btn-ghost" :disabled="jobs.offset === 0" @click="jobs.offset = Math.max(0, jobs.offset - jobs.limit); loadJobs()">← Prev</button>
+            <button class="btn btn-xs btn-ghost" :disabled="jobs.offset + jobs.limit >= jobs.total" @click="jobs.offset += jobs.limit; loadJobs()">Next →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Settings ───────────────────────────────────────────────── -->
+      <div x-show="page === 'settings' && !loading && !error">
+        <h1 class="text-2xl font-bold mb-6">Settings</h1>
+
+        <!-- Notion -->
+        <div class="card bg-base-200 mb-4">
+          <div class="card-body">
+            <h2 class="card-title text-base">
+              Notion
+              <span x-show="settings.notion?.configured" class="badge badge-success badge-sm">connected</span>
+              <span x-show="!settings.notion?.configured" class="badge badge-warning badge-sm">not configured</span>
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label class="form-control">
+                <div class="label"><span class="label-text text-xs">Access Token</span></div>
+                <input type="password" class="input input-bordered input-sm" placeholder="ntn_xxxx" x-model="forms.notion.accessToken" />
+              </label>
+              <label class="form-control">
+                <div class="label"><span class="label-text text-xs">Database ID</span></div>
+                <input type="text" class="input input-bordered input-sm" placeholder="xxxxxxxx-xxxx-…" x-model="forms.notion.databaseId" />
+              </label>
+              <label class="form-control">
+                <div class="label"><span class="label-text text-xs">Sync trigger status</span></div>
+                <input type="text" class="input input-bordered input-sm" x-model="forms.notion.triggerStatus" />
+              </label>
+              <label class="form-control">
+                <div class="label"><span class="label-text text-xs">Publish trigger status</span></div>
+                <input type="text" class="input input-bordered input-sm" x-model="forms.notion.publishTriggerStatus" />
+              </label>
+              <label class="form-control">
+                <div class="label"><span class="label-text text-xs">Update trigger status</span></div>
+                <input type="text" class="input input-bordered input-sm" x-model="forms.notion.updateTriggerStatus" />
+              </label>
+            </div>
+            <div class="card-actions justify-end mt-2">
+              <span x-show="forms.notionSaved" class="text-success text-sm">Saved ✓</span>
+              <button class="btn btn-primary btn-sm" :class="forms.notionLoading && 'loading'" @click="saveNotion()">Save Notion</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- WordPress -->
+        <div class="card bg-base-200 mb-4">
+          <div class="card-body">
+            <h2 class="card-title text-base">
+              WordPress
+              <span x-show="settings.wordpress?.configured" class="badge badge-success badge-sm">connected</span>
+              <span x-show="!settings.wordpress?.configured" class="badge badge-warning badge-sm">not configured</span>
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label class="form-control">
+                <div class="label"><span class="label-text text-xs">Site URL</span></div>
+                <input type="url" class="input input-bordered input-sm" placeholder="https://your-site.com" x-model="forms.wp.siteUrl" />
+              </label>
+              <label class="form-control">
+                <div class="label"><span class="label-text text-xs">Username / Email</span></div>
+                <input type="text" class="input input-bordered input-sm" x-model="forms.wp.username" />
+              </label>
+              <label class="form-control md:col-span-2">
+                <div class="label"><span class="label-text text-xs">Application Password</span></div>
+                <input type="password" class="input input-bordered input-sm" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" x-model="forms.wp.appPassword" />
+              </label>
+            </div>
+            <div class="card-actions justify-end mt-2">
+              <span x-show="forms.wpSaved" class="text-success text-sm">Saved ✓</span>
+              <button class="btn btn-primary btn-sm" :class="forms.wpLoading && 'loading'" @click="saveWordPress()">Save WordPress</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- General -->
+        <div class="card bg-base-200">
+          <div class="card-body">
+            <h2 class="card-title text-base">General</h2>
+            <label class="form-control w-64">
+              <div class="label"><span class="label-text text-xs">Code highlighter</span></div>
+              <select class="select select-bordered select-sm" x-model="forms.general.codeHighlighter">
+                <option value="PRISMATIC">Prismatic</option>
+                <option value="WP_CODE">WP Code</option>
+                <option value="HIGHLIGHT_JS">Highlight.js</option>
+                <option value="PRISM_JS">Prism.js</option>
+              </select>
+            </label>
+            <div class="card-actions justify-end mt-2">
+              <span x-show="forms.generalSaved" class="text-success text-sm">Saved ✓</span>
+              <button class="btn btn-primary btn-sm" :class="forms.generalLoading && 'loading'" @click="saveGeneral()">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Tenants (admin only) ───────────────────────────────────── -->
+      <div x-show="page === 'tenants' && !loading && !error">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-bold">Tenants</h1>
+          <button class="btn btn-primary btn-sm" @click="tenants.showCreate = true">+ New Tenant</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="table table-sm bg-base-200 rounded-box">
+            <thead>
+              <tr><th>Name</th><th>Slug</th><th>Posts</th><th>Users</th><th>WP Site</th><th>Created</th></tr>
+            </thead>
+            <tbody>
+              <template x-for="t in tenants.list" :key="t.id">
+                <tr>
+                  <td class="font-medium text-sm" x-text="t.name"></td>
+                  <td class="font-mono text-xs" x-text="t.slug"></td>
+                  <td x-text="t._count.posts"></td>
+                  <td x-text="t._count.users"></td>
+                  <td class="text-xs text-base-content/60" x-text="t.wpSiteUrl || '—'"></td>
+                  <td class="text-xs text-base-content/60" x-text="formatDate(t.createdAt)"></td>
+                </tr>
+              </template>
+              <tr x-show="tenants.list.length === 0">
+                <td colspan="6" class="text-center text-base-content/40">No tenants</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Create tenant modal -->
+        <dialog class="modal" :class="tenants.showCreate && 'modal-open'">
+          <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4">New Tenant</h3>
+            <div class="space-y-3">
+              <label class="form-control">
+                <div class="label"><span class="label-text text-xs">Name</span></div>
+                <input type="text" class="input input-bordered input-sm" x-model="tenants.form.name" placeholder="My Blog" />
+              </label>
+              <label class="form-control">
+                <div class="label"><span class="label-text text-xs">Slug</span></div>
+                <input type="text" class="input input-bordered input-sm" x-model="tenants.form.slug" placeholder="my-blog" />
+              </label>
+              <label class="form-control">
+                <div class="label"><span class="label-text text-xs">Owner Email</span></div>
+                <input type="email" class="input input-bordered input-sm" x-model="tenants.form.ownerEmail" placeholder="owner@example.com" />
+              </label>
+            </div>
+            <div x-show="tenants.createdKey" class="mt-4">
+              <div class="alert alert-success text-sm mb-2">Tenant created! Save this API key — it won't be shown again.</div>
+              <div class="flex gap-2 items-center">
+                <code class="text-xs bg-base-300 p-2 rounded flex-1 break-all" x-text="tenants.createdKey"></code>
+                <button class="btn btn-xs btn-ghost" @click="copyKey()">Copy</button>
+              </div>
+            </div>
+            <div class="modal-action">
+              <button class="btn btn-ghost btn-sm" @click="closeTenantModal()">Close</button>
+              <button x-show="!tenants.createdKey" class="btn btn-primary btn-sm" :class="tenants.creating && 'loading'" @click="createTenant()">Create</button>
+            </div>
+          </div>
+          <div class="modal-backdrop" @click="closeTenantModal()"></div>
+        </dialog>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+function app() {
+  return {
+    page: 'dashboard',
+    loading: false,
+    error: null,
+
+    auth: {
+      apiKey: localStorage.getItem('apiKey') || '',
+      isAdmin: localStorage.getItem('isAdmin') === 'true',
+      input: '',
+      error: null,
+      loading: false,
+    },
+
+    dashboard: { stats: [], recentJobs: [], settings: null },
+    posts: { list: [], filter: 'ALL', expanded: null },
+    jobs: { list: [], total: 0, filter: 'ALL', offset: 0, limit: 50 },
+    settings: {},
+    forms: {
+      notion: { accessToken: '', databaseId: '', triggerStatus: '', publishTriggerStatus: '', updateTriggerStatus: '' },
+      wp: { siteUrl: '', username: '', appPassword: '' },
+      general: { codeHighlighter: 'PRISMATIC' },
+      notionLoading: false, notionSaved: false,
+      wpLoading: false, wpSaved: false,
+      generalLoading: false, generalSaved: false,
+    },
+    tenants: { list: [], showCreate: false, creating: false, createdKey: null, form: { name: '', slug: '', ownerEmail: '' } },
+
+    async init() {
+      if (this.auth.apiKey) await this.loadPage();
+    },
+
+    navItems() {
+      const items = [
+        { id: 'dashboard', label: 'Dashboard', icon: '◈' },
+        { id: 'posts',     label: 'Posts',     icon: '◉' },
+        { id: 'jobs',      label: 'Jobs',      icon: '◎' },
+        { id: 'settings',  label: 'Settings',  icon: '◇' },
+      ];
+      if (this.auth.isAdmin) items.push({ id: 'tenants', label: 'Tenants', icon: '◈' });
+      return items;
+    },
+
+    navigate(id) {
+      this.page = id;
+      this.error = null;
+      this.loadPage();
+    },
+
+    async loadPage() {
+      this.loading = true;
+      this.error = null;
+      try {
+        if (this.page === 'dashboard') await this.loadDashboard();
+        else if (this.page === 'posts')  await this.loadPosts();
+        else if (this.page === 'jobs')   await this.loadJobs();
+        else if (this.page === 'settings') await this.loadSettings();
+        else if (this.page === 'tenants')  await this.loadTenants();
+      } catch(e) {
+        this.error = e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async api(path, opts = {}) {
+      const res = await fetch(path, {
+        ...opts,
+        headers: { 'x-api-key': this.auth.apiKey, 'Content-Type': 'application/json', ...opts.headers },
+        body: opts.body ? JSON.stringify(opts.body) : undefined,
+      });
+      if (res.status === 204) return null;
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`);
+      return json;
+    },
+
+    async login() {
+      this.auth.loading = true;
+      this.auth.error = null;
+      const key = this.auth.input.trim();
+      if (!key) { this.auth.error = 'API key is required'; this.auth.loading = false; return; }
+
+      // Temporarily set key to test it
+      this.auth.apiKey = key;
+      try {
+        // Check if admin key
+        try {
+          await this.api('/api/admin/tenants');
+          this.auth.isAdmin = true;
+        } catch {
+          // Try tenant key instead
+          await this.api('/api/settings');
+          this.auth.isAdmin = false;
+        }
+        localStorage.setItem('apiKey', key);
+        localStorage.setItem('isAdmin', String(this.auth.isAdmin));
+        this.auth.input = '';
+        await this.loadPage();
+      } catch(e) {
+        this.auth.apiKey = '';
+        this.auth.error = 'Invalid API key';
+      } finally {
+        this.auth.loading = false;
+      }
+    },
+
+    logout() {
+      localStorage.removeItem('apiKey');
+      localStorage.removeItem('isAdmin');
+      this.auth.apiKey = '';
+      this.auth.isAdmin = false;
+      this.auth.input = '';
+    },
+
+    async loadDashboard() {
+      const [postsRes, jobsRes, settingsRes] = await Promise.all([
+        this.api('/api/posts'),
+        this.api('/api/jobs?limit=10'),
+        this.api('/api/settings'),
+      ]);
+      const posts = postsRes.data;
+      const byStatus = (s) => posts.filter(p => p.status === s).length;
+      this.dashboard.stats = [
+        { label: 'Published',   value: byStatus('PUBLISHED'),   color: 'text-success' },
+        { label: 'Failed',      value: byStatus('FAILED'),      color: 'text-error' },
+        { label: 'Processing',  value: posts.filter(p => ['IMAGES_PROCESSING','PUBLISHING'].includes(p.status)).length, color: 'text-warning' },
+        { label: 'Total',       value: posts.length,            color: '' },
+      ];
+      this.dashboard.recentJobs = jobsRes.data;
+      this.dashboard.settings = settingsRes.data;
+    },
+
+    async loadPosts() {
+      const res = await this.api('/api/posts');
+      this.posts.list = res.data;
+    },
+
+    filteredPosts() {
+      if (this.posts.filter === 'ALL') return this.posts.list;
+      return this.posts.list.filter(p => p.status === this.posts.filter);
+    },
+
+    togglePost(id) {
+      this.posts.expanded = this.posts.expanded === id ? null : id;
+    },
+
+    async loadJobs() {
+      this.loading = true;
+      try {
+        const params = new URLSearchParams({ limit: this.jobs.limit, offset: this.jobs.offset });
+        if (this.jobs.filter !== 'ALL') params.set('status', this.jobs.filter);
+        const res = await this.api(`/api/jobs?${params}`);
+        this.jobs.list = res.data;
+        this.jobs.total = res.total;
+      } catch(e) {
+        this.error = e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async loadSettings() {
+      const res = await this.api('/api/settings');
+      this.settings = res.data;
+      this.forms.notion.triggerStatus = res.data.notion?.triggerStatus || 'Post to Wordpress';
+      this.forms.notion.publishTriggerStatus = res.data.notion?.publishTriggerStatus || 'Publish';
+      this.forms.notion.updateTriggerStatus = res.data.notion?.updateTriggerStatus || 'Update Wordpress';
+      this.forms.notion.databaseId = res.data.notion?.databaseId || '';
+      this.forms.wp.siteUrl = res.data.wordpress?.siteUrl || '';
+      this.forms.general.codeHighlighter = res.data.codeHighlighter || 'PRISMATIC';
+    },
+
+    async saveNotion() {
+      if (!this.forms.notion.accessToken && !this.forms.notion.databaseId) return;
+      this.forms.notionLoading = true;
+      try {
+        const body = { ...this.forms.notion };
+        if (!body.accessToken) delete body.accessToken;
+        await this.api('/api/settings/notion', { method: 'PUT', body });
+        this.forms.notionSaved = true;
+        setTimeout(() => this.forms.notionSaved = false, 3000);
+        await this.loadSettings();
+      } catch(e) {
+        alert('Error: ' + e.message);
+      } finally {
+        this.forms.notionLoading = false;
+      }
+    },
+
+    async saveWordPress() {
+      this.forms.wpLoading = true;
+      try {
+        await this.api('/api/settings/wordpress', { method: 'PUT', body: this.forms.wp });
+        this.forms.wpSaved = true;
+        setTimeout(() => this.forms.wpSaved = false, 3000);
+        await this.loadSettings();
+      } catch(e) {
+        alert('Error: ' + e.message);
+      } finally {
+        this.forms.wpLoading = false;
+      }
+    },
+
+    async saveGeneral() {
+      this.forms.generalLoading = true;
+      try {
+        await this.api('/api/settings', { method: 'PATCH', body: this.forms.general });
+        this.forms.generalSaved = true;
+        setTimeout(() => this.forms.generalSaved = false, 3000);
+      } catch(e) {
+        alert('Error: ' + e.message);
+      } finally {
+        this.forms.generalLoading = false;
+      }
+    },
+
+    async loadTenants() {
+      const res = await this.api('/api/admin/tenants');
+      this.tenants.list = res.data;
+    },
+
+    async createTenant() {
+      this.tenants.creating = true;
+      try {
+        const res = await this.api('/api/admin/tenants', { method: 'POST', body: this.tenants.form });
+        this.tenants.createdKey = res.data.users[0]?.apiKey;
+        await this.loadTenants();
+      } catch(e) {
+        alert('Error: ' + e.message);
+      } finally {
+        this.tenants.creating = false;
+      }
+    },
+
+    closeTenantModal() {
+      this.tenants.showCreate = false;
+      this.tenants.createdKey = null;
+      this.tenants.form = { name: '', slug: '', ownerEmail: '' };
+    },
+
+    async copyKey() {
+      await navigator.clipboard.writeText(this.tenants.createdKey);
+    },
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+    postBadge(status) {
+      return {
+        PUBLISHED:         'badge-success',
+        FAILED:            'badge-error',
+        IMAGES_PROCESSING: 'badge-warning',
+        PUBLISHING:        'badge-warning',
+        UPDATE_PENDING:    'badge-info',
+        SYNCED:            'badge-ghost',
+      }[status] || 'badge-ghost';
+    },
+
+    jobBadge(status) {
+      return {
+        COMPLETED:  'badge-success',
+        FAILED:     'badge-error',
+        RUNNING:    'badge-warning',
+        PENDING:    'badge-ghost',
+        CANCELLED:  'badge-ghost',
+      }[status] || 'badge-ghost';
+    },
+
+    timeAgo(iso) {
+      const diff = Date.now() - new Date(iso).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1)  return 'just now';
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24)  return `${hrs}h ago`;
+      return `${Math.floor(hrs / 24)}d ago`;
+    },
+
+    jobDuration(job) {
+      if (!job.startedAt || !job.completedAt) return '—';
+      const ms = new Date(job.completedAt) - new Date(job.startedAt);
+      if (ms < 1000) return `${ms}ms`;
+      return `${(ms / 1000).toFixed(1)}s`;
+    },
+
+    formatDate(iso) {
+      return new Date(iso).toLocaleDateString();
+    },
+  };
+}
+</script>
+</body>
+</html>
