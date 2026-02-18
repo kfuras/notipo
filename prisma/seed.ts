@@ -1,7 +1,26 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import "dotenv/config";
-import { encryptJson } from "../src/lib/encryption.js";
+import { createCipheriv, randomBytes } from "node:crypto";
+
+const ALGORITHM = "aes-256-gcm";
+const IV_LENGTH = 16;
+
+function getEncryptionKey(): Buffer {
+  const key = process.env.ENCRYPTION_KEY;
+  if (!key) {
+    throw new Error("ENCRYPTION_KEY is required for seeding encrypted credentials");
+  }
+  return Buffer.from(key, "hex");
+}
+
+function encryptJson(data: Record<string, unknown>): string {
+  const iv = randomBytes(IV_LENGTH);
+  const cipher = createCipheriv(ALGORITHM, getEncryptionKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(JSON.stringify(data), "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return [iv.toString("base64"), tag.toString("base64"), encrypted.toString("base64")].join(":");
+}
 
 interface CategorySeed {
   name: string;
