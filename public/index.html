@@ -438,16 +438,22 @@ function app() {
     _pollTimer: null,
 
     async init() {
-      if (this.auth.apiKey) await this.loadPage();
+      if (this.auth.apiKey) {
+        if (this.auth.isAdmin) this.page = 'tenants';
+        await this.loadPage();
+      }
     },
 
     navItems() {
-      const items = [
-        { id: 'dashboard', label: 'Dashboard', icon: '◈' },
-        { id: 'posts',     label: 'Posts',     icon: '◉' },
-        { id: 'jobs',      label: 'Jobs',      icon: '◎' },
-        { id: 'settings',  label: 'Settings',  icon: '◇' },
-      ];
+      const items = [];
+      if (!this.auth.isAdmin) {
+        items.push(
+          { id: 'dashboard', label: 'Dashboard', icon: '◈' },
+          { id: 'posts',     label: 'Posts',     icon: '◉' },
+          { id: 'jobs',      label: 'Jobs',      icon: '◎' },
+          { id: 'settings',  label: 'Settings',  icon: '◇' },
+        );
+      }
       if (this.auth.isAdmin) items.push({ id: 'tenants', label: 'Tenants', icon: '◈' });
       return items;
     },
@@ -501,6 +507,7 @@ function app() {
         try {
           await this.api('/api/admin/tenants');
           this.auth.isAdmin = true;
+          this.page = 'tenants';
         } catch {
           // Try tenant key instead
           await this.api('/api/settings');
