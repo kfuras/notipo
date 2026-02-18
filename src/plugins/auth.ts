@@ -19,8 +19,8 @@ async function auth(app: FastifyInstance) {
   app.decorateRequest("isAdmin", false);
 
   app.addHook("onRequest", async (request: FastifyRequest, reply) => {
-    // Skip auth for health check
-    if (request.url === "/health") return;
+    // Skip auth for health check and admin UI static files
+    if (request.url === "/health" || request.url.startsWith("/admin")) return;
 
     const apiKey = request.headers["x-api-key"] as string | undefined;
     if (!apiKey) {
