@@ -109,6 +109,11 @@ export class WordPressService {
     return ids;
   }
 
+  /** Permanently delete a media item from the WordPress media library. */
+  async deleteMedia(wpMediaId: number) {
+    await this.client.delete(`/media/${wpMediaId}`, { params: { force: true } });
+  }
+
   /** Update Rank Math SEO meta fields on a post. */
   async updateRankMathSeo(wpPostId: number, seo: RankMathSeoPayload) {
     const { data } = await this.client.post(`/posts/${wpPostId}`, {

@@ -11,20 +11,18 @@ import type { PrismaClient } from "@prisma/client";
 import type { WordPressService } from "./wordpress.service.js";
 import type { ImageRef, ProcessedImages } from "../types/index.js";
 import axios from "axios";
+import { logger } from "../lib/logger.js";
 
 /** Strip query parameters from a URL for cache lookup. */
 function baseUrl(url: string): string {
   return url.split("?")[0];
 }
 
-/** Generate a SEO-friendly filename from title and index. */
-function generateFilename(title: string, index: number, url: string): string {
-  const slug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .substring(0, 50);
+/** Generate a filename from post slug and index. */
+function generateFilename(slug: string, index: number, url: string): string {
+  const safe = slug.toLowerCase().replace(/[^a-z0-9]+/g, "-").substring(0, 60);
   const ext = baseUrl(url).split(".").pop() || "png";
-  return `${slug}-${String(index + 1).padStart(2, "0")}.${ext}`;
+  return `${safe}-${String(index + 1).padStart(2, "0")}.${ext}`;
 }
 
 export class ImagePipelineService {
@@ -39,7 +37,7 @@ export class ImagePipelineService {
     postId: string,
     images: ImageRef[],
     originalContent: string,
-    title: string,
+    slug: string,
   ): Promise<ProcessedImages> {
     const urlMap: Record<string, string> = {};
     const mappingIds: string[] = [];
@@ -47,7 +45,7 @@ export class ImagePipelineService {
     for (let i = 0; i < images.length; i++) {
       const img = images[i];
       const base = baseUrl(img.url);
-      const filename = generateFilename(title, i, img.url);
+      const filename = generateFilename(slug, i, img.url);
 
       // Check cache
       const cached = await this.prisma.imageMapping.findUnique({
@@ -93,14 +91,28 @@ export class ImagePipelineService {
     return { urlMap, mappingIds, processedContent };
   }
 
-  /** Remove image mappings not in the current mapping list. */
+  /** Remove image mappings not in the current mapping list, deleting from WordPress too. */
   async cleanupOrphans(tenantId: string, postId: string, currentMappingIds: string[]) {
+    const orphans = await this.prisma.imageMapping.findMany({
+      where: { tenantId, postId, id: { notIn: currentMappingIds } },
+      select: { id: true, wpMediaId: true },
+    });
+
+    if (orphans.length === 0) return;
+
+    // Delete from WordPress (best-effort — don't fail sync if WP delete errors)
+    const results = await Promise.allSettled(
+      orphans.map((o) => this.wp.deleteMedia(o.wpMediaId)),
+    );
+    results.forEach((r, i) => {
+      if (r.status === "rejected") {
+        logger.warn({ wpMediaId: orphans[i].wpMediaId, err: r.reason }, "Failed to delete orphan WP media");
+      }
+    });
+
+    // Delete from DB
     await this.prisma.imageMapping.deleteMany({
-      where: {
-        tenantId,
-        postId,
-        id: { notIn: currentMappingIds },
-      },
+      where: { id: { in: orphans.map((o) => o.id) } },
     });
   }
 }

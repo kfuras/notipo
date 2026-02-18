@@ -85,7 +85,7 @@ export class SyncService {
         post.id,
         result.images,
         result.markdown,
-        result.metadata.title,
+        result.metadata.slug || result.metadata.title,
       );
 
       // Update with processed content and final status
