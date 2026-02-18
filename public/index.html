@@ -417,6 +417,7 @@ function app() {
     auth: {
       apiKey: localStorage.getItem('apiKey') || '',
       isAdmin: localStorage.getItem('isAdmin') === 'true',
+      isTenant: localStorage.getItem('isTenant') !== 'false',
       input: '',
       error: null,
       loading: false,
@@ -439,14 +440,14 @@ function app() {
 
     async init() {
       if (this.auth.apiKey) {
-        if (this.auth.isAdmin) this.page = 'tenants';
+        if (!this.auth.isTenant) this.page = 'tenants';
         await this.loadPage();
       }
     },
 
     navItems() {
       const items = [];
-      if (!this.auth.isAdmin) {
+      if (this.auth.isTenant) {
         items.push(
           { id: 'dashboard', label: 'Dashboard', icon: '◈' },
           { id: 'posts',     label: 'Posts',     icon: '◉' },
@@ -503,18 +504,18 @@ function app() {
       // Temporarily set key to test it
       this.auth.apiKey = key;
       try {
-        // Check if admin key
-        try {
-          await this.api('/api/admin/tenants');
-          this.auth.isAdmin = true;
-          this.page = 'tenants';
-        } catch {
-          // Try tenant key instead
-          await this.api('/api/settings');
-          this.auth.isAdmin = false;
-        }
+        // Check admin and tenant access independently — same key may work for both
+        const [adminOk, tenantOk] = await Promise.all([
+          this.api('/api/admin/tenants').then(() => true).catch(() => false),
+          this.api('/api/settings').then(() => true).catch(() => false),
+        ]);
+        if (!adminOk && !tenantOk) throw new Error('Invalid API key');
+        this.auth.isAdmin = adminOk;
+        this.auth.isTenant = tenantOk;
+        this.page = tenantOk ? 'dashboard' : 'tenants';
         localStorage.setItem('apiKey', key);
-        localStorage.setItem('isAdmin', String(this.auth.isAdmin));
+        localStorage.setItem('isAdmin', String(adminOk));
+        localStorage.setItem('isTenant', String(tenantOk));
         this.auth.input = '';
         await this.loadPage();
       } catch(e) {
@@ -528,8 +529,10 @@ function app() {
     logout() {
       localStorage.removeItem('apiKey');
       localStorage.removeItem('isAdmin');
+      localStorage.removeItem('isTenant');
       this.auth.apiKey = '';
       this.auth.isAdmin = false;
+      this.auth.isTenant = false;
       this.auth.input = '';
     },
 
