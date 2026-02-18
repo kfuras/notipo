@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Tenant {
@@ -19,9 +18,10 @@ model Tenant {
   wordpressCredentials String? // {siteUrl, username, appPassword}
 
   // Notion polling config
-  notionDatabaseId      String?
-  notionPollIntervalSec Int             @default(60)
-  notionTriggerStatus   String          @default("Ready to Publish")
+  notionDatabaseId    String?
+  notionTriggerStatus String @default("Post to Wordpress")
+  notionPublishTriggerStatus String @default("Publish")
+  notionUpdateTriggerStatus  String @default("Update Wordpress")
 
   // WordPress config
   wpSiteUrl       String?
@@ -100,7 +100,7 @@ model Post {
   wpFeaturedMediaId  Int?
 
   // Status tracking
-  status      PostStatus @default(DRAFT)
+  status      PostStatus @default(SYNCED)
   syncedAt    DateTime?
   publishedAt DateTime?
 
@@ -116,10 +116,8 @@ model Post {
 }
 
 enum PostStatus {
-  DRAFT
   SYNCED
   IMAGES_PROCESSING
-  READY_TO_PUBLISH
   PUBLISHING
   PUBLISHED
   UPDATE_PENDING

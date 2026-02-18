@@ -45,57 +45,80 @@ export class PublishService {
       highlighter: post.tenant.codeHighlighter,
     });
 
+    // 2. Generate featured image if not yet uploaded for this post
+    let wpFeaturedMediaId: number | undefined = post.wpFeaturedMediaId ?? undefined;
+    if (!wpFeaturedMediaId && post.category?.backgroundImage && post.featuredImageTitle) {
+      const imgService = new FeaturedImageService();
+      const imageBuffer = await imgService.generate({
+        title: post.featuredImageTitle,
+        category: post.category.name,
+        backgroundImageUrl: post.category.backgroundImage,
+      });
+      const slug = post.slug || post.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      const media = await wp.uploadMedia(imageBuffer, `${slug}-featured.png`);
+      await wp.updateMediaMeta(media.id, {
+        alt_text: post.featuredImageTitle,
+        title: post.featuredImageTitle,
+      });
+      wpFeaturedMediaId = media.id;
+    }
+
+    // Resolve tags: post-level tags from Notion take priority, fall back to category defaults
+    const tagIds =
+      post.tags.length > 0
+        ? await wp.resolveTagIds(post.tags)
+        : (post.category?.wpTagIds ?? []);
+
     if (post.wpPostId) {
-      // UPDATE existing post
-      await wp.editPost(post.wpPostId, { content: wpContent, title: post.title });
+      // UPDATE existing WordPress post
+      await wp.editPost(post.wpPostId, {
+        title: post.title,
+        content: wpContent,
+        ...(wpFeaturedMediaId && { featured_media: wpFeaturedMediaId }),
+        ...(post.category?.wpCategoryId && { categories: [post.category.wpCategoryId] }),
+        ...(tagIds.length && { tags: tagIds }),
+      });
+
+      // Refresh SEO if we have a stored description from the initial publish
+      if (post.seoKeyword && post.seoDescription) {
+        await wp.updateRankMathSeo(post.wpPostId, {
+          rank_math_focus_keyword: post.seoKeyword,
+          rank_math_title: "%title%",
+          rank_math_description: post.seoDescription,
+        });
+      }
 
       await this.prisma.post.update({
         where: { id: postId },
-        data: { wpContent, status: "PUBLISHED", publishedAt: new Date() },
+        data: {
+          wpContent,
+          wpFeaturedMediaId: wpFeaturedMediaId ?? undefined,
+          status: "PUBLISHED",
+          publishedAt: new Date(),
+        },
       });
     } else {
-      // CREATE new post
-      // Generate featured image
-      let wpFeaturedMediaId: number | undefined;
-      if (post.category?.backgroundImage && post.featuredImageTitle) {
-        const imgService = new FeaturedImageService();
-        const imageBuffer = await imgService.generate({
-          title: post.featuredImageTitle,
-          category: post.category.name,
-          backgroundImageUrl: post.category.backgroundImage,
-        });
-
-        const slug = post.slug || post.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-        const media = await wp.uploadMedia(imageBuffer, `${slug}-featured.png`);
-        await wp.updateMediaMeta(media.id, {
-          alt_text: post.featuredImageTitle,
-          title: post.featuredImageTitle,
-        });
-        wpFeaturedMediaId = media.id;
-      }
-
-      // Create WP draft
+      // CREATE new WordPress post as draft
       const wpPost = await wp.createDraft({
         title: post.title,
         content: wpContent,
         status: "draft",
         slug: post.slug ?? undefined,
         categories: post.category?.wpCategoryId ? [post.category.wpCategoryId] : undefined,
-        tags: post.category?.wpTagIds,
+        tags: tagIds.length ? tagIds : undefined,
         featured_media: wpFeaturedMediaId,
       });
 
-      // Set SEO meta
+      // Set SEO meta using WP-generated excerpt as description
+      let seoDescription: string | undefined;
       if (post.seoKeyword) {
         const excerpt = wpPost.excerpt?.rendered || "";
-        const cleanExcerpt = excerpt
+        const clean = excerpt
           .replace(/<[^>]*>/g, " ")
           .replace(/\s+/g, " ")
           .trim();
-        const description =
-          cleanExcerpt.length > 160
-            ? cleanExcerpt.slice(0, 159).trimEnd() + "..."
-            : cleanExcerpt;
+        const description = clean.length > 160 ? clean.slice(0, 159).trimEnd() + "..." : clean;
+        seoDescription = description;
 
         await wp.updateRankMathSeo(wpPost.id, {
           rank_math_focus_keyword: post.seoKeyword,
@@ -107,21 +130,22 @@ export class PublishService {
       // Publish
       await wp.publishPost(wpPost.id);
 
-      // Update DB
+      // Persist wpPostId, wpUrl, featured image ID, and seoDescription for future edits
       await this.prisma.post.update({
         where: { id: postId },
         data: {
           wpPostId: wpPost.id,
           wpUrl: wpPost.link,
           wpContent,
-          wpFeaturedMediaId,
+          wpFeaturedMediaId: wpFeaturedMediaId ?? undefined,
+          seoDescription: seoDescription ?? undefined,
           status: "PUBLISHED",
           publishedAt: new Date(),
         },
       });
     }
 
-    // Update Notion status if we have credentials
+    // Update Notion status
     const notionCreds = await credService.getNotionCredentials(tenantId);
     if (notionCreds && post.notionPageId) {
       const notion = new NotionService(notionCreds.accessToken);

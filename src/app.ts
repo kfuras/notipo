@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
+import { ZodError } from "zod";
 import { config } from "./config.js";
 import { prismaPlugin } from "./plugins/prisma.js";
 import { pgBossPlugin } from "./plugins/pg-boss.js";
@@ -8,6 +9,11 @@ import { authPlugin } from "./plugins/auth.js";
 import { healthRoutes } from "./routes/health.js";
 import { postRoutes } from "./routes/posts.js";
 import { categoryRoutes } from "./routes/categories.js";
+import { settingsRoutes } from "./routes/settings.js";
+import { jobRoutes } from "./routes/jobs.js";
+import { adminRoutes } from "./routes/admin.js";
+import { userRoutes } from "./routes/users.js";
+import { registerAllJobs } from "./jobs/index.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -19,6 +25,18 @@ export async function buildApp() {
     },
   });
 
+  // Convert ZodError validation failures to 400 Bad Request
+  app.setErrorHandler((error, _request, reply) => {
+    if (error instanceof ZodError) {
+      return reply.status(400).send({
+        statusCode: 400,
+        error: "Bad Request",
+        message: error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(", "),
+      });
+    }
+    throw error; // let Fastify handle everything else
+  });
+
   // Plugins
   await app.register(cors);
   await app.register(sensible);
@@ -26,10 +44,17 @@ export async function buildApp() {
   await app.register(pgBossPlugin);
   await app.register(authPlugin);
 
+  // Jobs
+  await registerAllJobs(app.boss, app.prisma);
+
   // Routes
   await app.register(healthRoutes);
   await app.register(postRoutes);
   await app.register(categoryRoutes);
+  await app.register(settingsRoutes);
+  await app.register(jobRoutes);
+  await app.register(adminRoutes);
+  await app.register(userRoutes);
 
   return app;
 }

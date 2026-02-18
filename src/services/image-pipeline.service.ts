@@ -12,25 +12,6 @@ import type { WordPressService } from "./wordpress.service.js";
 import type { ImageRef, ProcessedImages } from "../types/index.js";
 import axios from "axios";
 
-const NOTION_S3_PATTERNS = ["prod-files-secure.s3", "s3.us-west-2.amazonaws.com"];
-
-/** Extract image references from markdown that point to Notion S3. */
-export function extractImages(markdown: string): ImageRef[] {
-  const regex = /!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g;
-  const images: ImageRef[] = [];
-  let match;
-
-  while ((match = regex.exec(markdown)) !== null) {
-    const url = match[2];
-    const isNotionS3 = NOTION_S3_PATTERNS.some((p) => url.includes(p));
-    if (isNotionS3) {
-      images.push({ alt: match[1], url, fullMatch: match[0] });
-    }
-  }
-
-  return images;
-}
-
 /** Strip query parameters from a URL for cache lookup. */
 function baseUrl(url: string): string {
   return url.split("?")[0];

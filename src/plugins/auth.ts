@@ -1,5 +1,6 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import { config } from "../config.js";
 
 interface TenantContext {
   id: string;
@@ -9,11 +10,13 @@ interface TenantContext {
 declare module "fastify" {
   interface FastifyRequest {
     tenant: TenantContext;
+    isAdmin: boolean;
   }
 }
 
 async function auth(app: FastifyInstance) {
-  app.decorateRequest("tenant", null);
+  app.decorateRequest("tenant", null as unknown as TenantContext);
+  app.decorateRequest("isAdmin", false);
 
   app.addHook("onRequest", async (request: FastifyRequest, reply) => {
     // Skip auth for health check
@@ -24,6 +27,16 @@ async function auth(app: FastifyInstance) {
       return reply.unauthorized("Missing x-api-key header");
     }
 
+    // Admin routes use the env API_KEY — no tenant context
+    if (request.url.startsWith("/api/admin")) {
+      if (apiKey !== config.API_KEY) {
+        return reply.unauthorized("Invalid admin API key");
+      }
+      request.isAdmin = true;
+      return;
+    }
+
+    // All other routes: look up user by API key in the DB
     const user = await app.prisma.user.findUnique({
       where: { apiKey },
       include: { tenant: { select: { id: true, slug: true } } },

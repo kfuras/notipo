@@ -12,6 +12,7 @@ Generates a 1200x628 PNG with:
 from PIL import Image, ImageDraw, ImageFont
 import requests
 from io import BytesIO
+import os
 
 WIDTH = 1200
 HEIGHT = 628
@@ -30,10 +31,17 @@ def generate_featured_image(
 ) -> bytes:
     """Generate featured image and return PNG bytes."""
 
-    # Download background image
-    response = requests.get(background_url, timeout=30)
-    response.raise_for_status()
-    bg = Image.open(BytesIO(response.content)).resize((WIDTH, HEIGHT)).convert("RGBA")
+    # Load background image — supports full URLs or local filenames in category-images/
+    if background_url.startswith("http://") or background_url.startswith("https://"):
+        response = requests.get(background_url, timeout=30)
+        response.raise_for_status()
+        bg_data = BytesIO(response.content)
+    else:
+        # Treat as a filename relative to the category-images directory
+        local_path = os.path.join(os.path.dirname(__file__), "category-images", os.path.basename(background_url))
+        with open(local_path, "rb") as f:
+            bg_data = BytesIO(f.read())
+    bg = Image.open(bg_data).resize((WIDTH, HEIGHT)).convert("RGBA")
 
     # Apply dark overlay
     overlay = Image.new("RGBA", bg.size, (0, 0, 0, 100))

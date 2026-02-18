@@ -9,7 +9,9 @@ interface PublishPostPayload {
 }
 
 export async function registerPublishPostJob(boss: PgBoss, prisma: PrismaClient) {
-  await boss.work<PublishPostPayload>("publish-post", { teamSize: 2, teamConcurrency: 1 }, async (job) => {
+  await boss.createQueue("publish-post");
+  await boss.work<PublishPostPayload>("publish-post", { batchSize: 1 }, async (jobs) => {
+    const job = jobs[0];
     const { tenantId, postId } = job.data;
     const log = logger.child({ jobId: job.id, tenantId, postId });
 
@@ -45,6 +47,13 @@ export async function registerPublishPostJob(boss: PgBoss, prisma: PrismaClient)
         where: { id: dbJob.id },
         data: { status: "FAILED", error: message },
       });
+
+      await prisma.post
+        .update({
+          where: { id: postId, tenantId },
+          data: { status: "FAILED" },
+        })
+        .catch(() => undefined);
 
       throw error;
     }

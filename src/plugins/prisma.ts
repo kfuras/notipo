@@ -1,5 +1,6 @@
 import fp from "fastify-plugin";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import type { FastifyInstance } from "fastify";
 
 declare module "fastify" {
@@ -9,7 +10,9 @@ declare module "fastify" {
 }
 
 async function prisma(app: FastifyInstance) {
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
   const client = new PrismaClient({
+    adapter,
     log: app.log.level === "debug" ? ["query", "info", "warn", "error"] : ["error"],
   });
 

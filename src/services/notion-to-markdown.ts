@@ -31,6 +31,7 @@ interface NotionBlock {
 interface NotionPageProperties {
   Name?: { title?: Array<{ plain_text?: string }> };
   Category?: { select?: { name?: string } };
+  Tags?: { multi_select?: Array<{ name?: string }> };
   "Featured Image Title"?: { rich_text?: Array<{ plain_text?: string }> };
   "SEO Keyword"?: { rich_text?: Array<{ plain_text?: string }> };
   Slug?: { rich_text?: Array<{ plain_text?: string }> };
@@ -62,6 +63,9 @@ export function convertNotionBlocksToMarkdown(
 ): NotionConversionResult {
   const title = pageProperties.Name?.title?.[0]?.plain_text || "";
   const category = pageProperties.Category?.select?.name || "";
+  const tags = (pageProperties.Tags?.multi_select ?? [])
+    .map((t) => t.name)
+    .filter((n): n is string => Boolean(n));
   const featuredImageTitle =
     pageProperties["Featured Image Title"]?.rich_text?.[0]?.plain_text || title;
   const seoKeyword = pageProperties["SEO Keyword"]?.rich_text?.[0]?.plain_text;
@@ -155,6 +159,7 @@ export function convertNotionBlocksToMarkdown(
       notionId: notionPageId,
       seoKeyword,
       slug,
+      tags: tags.length > 0 ? tags : undefined,
     },
     images,
   };

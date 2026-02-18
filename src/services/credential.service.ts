@@ -21,7 +21,7 @@ export class CredentialService {
   constructor(private prisma: PrismaClient) {}
 
   async setNotionCredentials(tenantId: string, creds: NotionCredentials) {
-    const encrypted = encryptJson(creds as Record<string, unknown>);
+    const encrypted = encryptJson(creds as unknown as Record<string, unknown>);
     await this.prisma.tenant.update({
       where: { id: tenantId },
       data: { notionCredentials: encrypted },
@@ -35,7 +35,7 @@ export class CredentialService {
   }
 
   async setWordPressCredentials(tenantId: string, creds: WordPressCredentials) {
-    const encrypted = encryptJson(creds as Record<string, unknown>);
+    const encrypted = encryptJson(creds as unknown as Record<string, unknown>);
     await this.prisma.tenant.update({
       where: { id: tenantId },
       data: {

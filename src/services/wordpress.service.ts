@@ -90,6 +90,25 @@ export class WordPressService {
     return data;
   }
 
+  /** Resolve tag slugs to WordPress tag IDs, creating missing tags. */
+  async resolveTagIds(tagNames: string[]): Promise<number[]> {
+    if (tagNames.length === 0) return [];
+    const ids: number[] = [];
+    for (const name of tagNames) {
+      const slug = name.toLowerCase().replace(/\s+/g, "-");
+      const { data: found } = await this.client.get<Array<{ id: number }>>("/tags", {
+        params: { slug, per_page: 1 },
+      });
+      if (found.length > 0) {
+        ids.push(found[0].id);
+      } else {
+        const { data: created } = await this.client.post<{ id: number }>("/tags", { name, slug });
+        ids.push(created.id);
+      }
+    }
+    return ids;
+  }
+
   /** Update Rank Math SEO meta fields on a post. */
   async updateRankMathSeo(wpPostId: number, seo: RankMathSeoPayload) {
     const { data } = await this.client.post(`/posts/${wpPostId}`, {

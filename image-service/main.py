@@ -5,10 +5,17 @@ Generates featured blog images with title text overlay on category backgrounds.
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from generator import generate_featured_image
+import os
 
 app = FastAPI(title="Blog Compiler Image Service")
+
+# Serve local category background images at /categories/<filename>
+_images_dir = os.path.join(os.path.dirname(__file__), "category-images")
+os.makedirs(_images_dir, exist_ok=True)
+app.mount("/categories", StaticFiles(directory=_images_dir), name="categories")
 
 
 class ImageRequest(BaseModel):

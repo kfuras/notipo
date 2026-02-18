@@ -10,6 +10,7 @@ export interface NotionConversionResult {
     notionId: string;
     seoKeyword?: string;
     slug?: string;
+    tags?: string[];
   };
   images: ImageRef[];
 }

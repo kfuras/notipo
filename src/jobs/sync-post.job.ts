@@ -6,11 +6,15 @@ import { logger } from "../lib/logger.js";
 interface SyncPostPayload {
   tenantId: string;
   notionPageId: string;
+  thenPublish?: boolean;
 }
 
 export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient) {
-  await boss.work<SyncPostPayload>("sync-post", { teamSize: 2, teamConcurrency: 1 }, async (job) => {
+  await boss.createQueue("sync-post");
+  await boss.work<SyncPostPayload>("sync-post", { batchSize: 1 }, async (jobs) => {
+    const job = jobs[0];
     const { tenantId, notionPageId } = job.data;
+    const { thenPublish } = job.data;
     const log = logger.child({ jobId: job.id, tenantId, notionPageId });
 
     log.info("Starting post sync");
@@ -29,14 +33,19 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient) {
 
     try {
       const syncService = new SyncService(prisma);
-      await syncService.syncPost(tenantId, notionPageId);
+      const postId = await syncService.syncPost(tenantId, notionPageId);
 
       await prisma.job.update({
         where: { id: dbJob.id },
-        data: { status: "COMPLETED", completedAt: new Date() },
+        data: { postId, status: "COMPLETED", completedAt: new Date() },
       });
 
-      log.info("Post sync completed");
+      if (thenPublish) {
+        await boss.send("publish-post", { tenantId, postId }, { singletonKey: `publish:${postId}` });
+        log.info({ postId }, "Post sync completed, publish enqueued");
+      } else {
+        log.info({ postId }, "Post sync completed, awaiting Publish trigger");
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       log.error({ error: message }, "Post sync failed");
@@ -45,6 +54,14 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient) {
         where: { id: dbJob.id },
         data: { status: "FAILED", error: message },
       });
+
+      // Mark post as FAILED if it exists
+      await prisma.post
+        .update({
+          where: { tenantId_notionPageId: { tenantId, notionPageId } },
+          data: { status: "FAILED" },
+        })
+        .catch(() => undefined); // post may not exist yet if failure was early
 
       throw error; // pg-boss will retry
     }
