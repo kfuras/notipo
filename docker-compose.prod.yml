@@ -1,0 +1,84 @@
+# Production deployment with Traefik reverse proxy + Let's Encrypt TLS.
+# Usage:
+#   1. Copy .env.example to .env and fill in all values
+#   2. docker compose -f docker-compose.prod.yml up -d
+
+services:
+  traefik:
+    image: traefik:v3.3
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      # Redirect all HTTP → HTTPS
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      # Let's Encrypt via HTTP challenge
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+
+  app:
+    build:
+      context: .
+      target: production
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Override DATABASE_URL to use the postgres container hostname
+      DATABASE_URL: postgresql://blogcompiler:${DB_PASSWORD}@postgres:5432/blogcompiler
+      # image-service internal hostname (not the host-mapped port)
+      IMAGE_SERVICE_URL: http://image-service:8000
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      image-service:
+        condition: service_healthy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.app.entrypoints=websecure
+      - traefik.http.routers.app.tls.certresolver=letsencrypt
+      - traefik.http.services.app.loadbalancer.server.port=3000
+
+  image-service:
+    build:
+      context: ./image-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # Not exposed externally — only reachable by the app container
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: blogcompiler
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: blogcompiler
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Not exposed externally — only reachable by the app container
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blogcompiler"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  letsencrypt:
+  pgdata:
