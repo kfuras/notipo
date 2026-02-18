@@ -31,7 +31,7 @@ describe("convertMarkdownToGutenberg", () => {
     const md = "```python\nprint('hello')\n```";
     const result = convertMarkdownToGutenberg(md, { highlighter: "WP_CODE" });
     expect(result).toContain("<!-- wp:code -->");
-    expect(result).toContain('class="language-python"');
+    expect(result).toContain("<code>print('hello')</code>");
     expect(result).toContain("<!-- /wp:code -->");
   });
 

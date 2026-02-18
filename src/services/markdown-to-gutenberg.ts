@@ -106,12 +106,12 @@ function codeBlock(lang: string, code: string, highlighter: CodeHighlighter): st
     case "PRISMATIC":
       return `<!-- wp:prismatic/blocks {"language":"${safeLang}"} -->\n<pre class="wp-block-prismatic-blocks language-${safeLang}"><code class="language-${safeLang}">${safeCode}</code></pre>\n<!-- /wp:prismatic/blocks -->`;
     case "HIGHLIGHT_JS":
-      return `<!-- wp:code -->\n<pre class="wp-block-code"><code class="hljs language-${safeLang}">${safeCode}</code></pre>\n<!-- /wp:code -->`;
+      return `<!-- wp:html -->\n<pre><code class="language-${safeLang}">${safeCode}</code></pre>\n<!-- /wp:html -->`;
     case "PRISM_JS":
-      return `<!-- wp:code -->\n<pre class="wp-block-code"><code class="language-${safeLang}">${safeCode}</code></pre>\n<!-- /wp:code -->`;
+      return `<!-- wp:html -->\n<pre><code class="language-${safeLang}">${safeCode}</code></pre>\n<!-- /wp:html -->`;
     case "WP_CODE":
     default:
-      return `<!-- wp:code -->\n<pre class="wp-block-code"><code class="language-${safeLang}">${safeCode}</code></pre>\n<!-- /wp:code -->`;
+      return `<!-- wp:code -->\n<pre class="wp-block-code"><code>${safeCode}</code></pre>\n<!-- /wp:code -->`;
   }
 }
 

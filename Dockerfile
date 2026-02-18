@@ -28,4 +28,5 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 EXPOSE 3000
-CMD ["node", "dist/index.js"]
+# Run DB migrations + initial setup, then start the app
+CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && node dist/index.js"]

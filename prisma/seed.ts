@@ -72,7 +72,6 @@ async function main() {
       name: tenantName,
       slug: tenantSlug,
       codeHighlighter: "WP_CODE",
-      notionPollIntervalSec: 60,
       notionTriggerStatus: triggerStatus,
     },
   });

@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: blog-compiler-db
+    container_name: blog-compiler-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: blogcompiler
@@ -21,7 +21,7 @@ services:
     build:
       context: ./image-service
       dockerfile: Dockerfile
-    container_name: blog-compiler-images
+    container_name: blog-compiler-image-service
     restart: unless-stopped
     ports:
       - "8100:8000"

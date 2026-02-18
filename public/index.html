@@ -104,7 +104,7 @@
               <div class="flex items-center gap-2">
                 <span x-show="dashboard.settings?.notion?.configured" class="badge badge-success badge-sm">connected</span>
                 <span x-show="!dashboard.settings?.notion?.configured" class="badge badge-error badge-sm">not configured</span>
-                <span class="text-xs text-base-content/50" x-text="dashboard.settings?.notion?.databaseId ? 'DB: ' + dashboard.settings.notion.databaseId.slice(0,8) + '…' : ''"></span>
+                <span class="text-xs text-base-content/50" x-text="dashboard.settings?.notion?.databaseId ? 'DB: ' + dashboard.settings.notion.databaseId : ''"></span>
               </div>
             </div>
           </div>
@@ -125,20 +125,21 @@
         <div class="overflow-x-auto">
           <table class="table table-sm bg-base-200 rounded-box">
             <thead>
-              <tr><th>Type</th><th>Status</th><th>Started</th><th>Duration</th><th>Error</th></tr>
+              <tr><th>Type</th><th>Status</th><th>Post</th><th>Started</th><th>Duration</th><th>Error</th></tr>
             </thead>
             <tbody>
               <template x-for="job in dashboard.recentJobs" :key="job.id">
                 <tr>
                   <td class="font-mono text-xs" x-text="job.type.replace(/_/g,' ')"></td>
                   <td><span class="badge badge-sm" :class="jobBadge(job.status)" x-text="job.status"></span></td>
+                  <td class="text-xs text-base-content/60 max-w-xs truncate" x-text="job.post?.title || (job.postId ? job.postId.slice(0,8)+'…' : '—')"></td>
                   <td class="text-xs text-base-content/60" x-text="job.startedAt ? timeAgo(job.startedAt) : '—'"></td>
                   <td class="text-xs" x-text="jobDuration(job)"></td>
                   <td class="text-xs text-error max-w-xs truncate" x-text="job.error || ''"></td>
                 </tr>
               </template>
               <tr x-show="dashboard.recentJobs.length === 0">
-                <td colspan="5" class="text-center text-base-content/40">No jobs yet</td>
+                <td colspan="6" class="text-center text-base-content/40">No jobs yet</td>
               </tr>
             </tbody>
           </table>
@@ -180,8 +181,9 @@
                   <td class="text-xs" x-text="post.category?.name || '—'"></td>
                   <td><span class="badge badge-sm" :class="postBadge(post.status)" x-text="post.status.replace(/_/g,' ')"></span></td>
                   <td class="text-xs text-base-content/60" x-text="post.syncedAt ? timeAgo(post.syncedAt) : '—'"></td>
-                  <td>
-                    <a x-show="post.wpUrl" :href="post.wpUrl" target="_blank" class="btn btn-xs btn-ghost" @click.stop>↗</a>
+                  <td class="flex gap-1">
+                    <a x-show="post.wpUrl" :href="post.wpUrl" target="_blank" class="btn btn-xs btn-ghost" title="View post" @click.stop>↗</a>
+                    <a x-show="post.wpPostId && post.wpUrl" :href="new URL(post.wpUrl).origin + '/wp-admin/post.php?post=' + post.wpPostId + '&action=edit'" target="_blank" class="btn btn-xs btn-ghost" title="Edit in WordPress" @click.stop>✎</a>
                     <span x-show="!post.wpUrl" class="text-base-content/30 text-xs">—</span>
                   </td>
                 </tr>
@@ -220,7 +222,7 @@
                 <tr>
                   <td class="font-mono text-xs" x-text="job.type.replace(/_/g,' ')"></td>
                   <td><span class="badge badge-sm" :class="jobBadge(job.status)" x-text="job.status"></span></td>
-                  <td class="text-xs text-base-content/60" x-text="job.postId ? job.postId.slice(0,8)+'…' : '—'"></td>
+                  <td class="text-xs text-base-content/60 max-w-xs truncate" x-text="job.post?.title || (job.postId ? job.postId.slice(0,8)+'…' : '—')"></td>
                   <td class="text-xs text-base-content/60" x-text="job.startedAt ? timeAgo(job.startedAt) : '—'"></td>
                   <td class="text-xs" x-text="jobDuration(job)"></td>
                   <td class="text-xs text-error max-w-xs">
@@ -323,10 +325,10 @@
             <label class="form-control w-64">
               <div class="label"><span class="label-text text-xs">Code highlighter</span></div>
               <select class="select select-bordered select-sm" x-model="forms.general.codeHighlighter">
-                <option value="PRISMATIC">Prismatic</option>
-                <option value="WP_CODE">WP Code</option>
-                <option value="HIGHLIGHT_JS">Highlight.js</option>
-                <option value="PRISM_JS">Prism.js</option>
+                <option value="PRISMATIC">Prismatic (requires Prismatic plugin)</option>
+                <option value="WP_CODE">WP Code (no plugin needed)</option>
+                <option value="HIGHLIGHT_JS">Highlight.js (requires PHP code in theme)</option>
+                <option value="PRISM_JS">Prism.js (requires PHP code in theme)</option>
               </select>
             </label>
             <div class="card-actions justify-end mt-2">
@@ -346,7 +348,7 @@
         <div class="overflow-x-auto">
           <table class="table table-sm bg-base-200 rounded-box">
             <thead>
-              <tr><th>Name</th><th>Slug</th><th>Posts</th><th>Users</th><th>WP Site</th><th>Created</th></tr>
+              <tr><th>Name</th><th>Slug</th><th>Posts</th><th>Users</th><th>WP Site</th><th>Created</th><th></th></tr>
             </thead>
             <tbody>
               <template x-for="t in tenants.list" :key="t.id">
@@ -357,10 +359,11 @@
                   <td x-text="t._count.users"></td>
                   <td class="text-xs text-base-content/60" x-text="t.wpSiteUrl || '—'"></td>
                   <td class="text-xs text-base-content/60" x-text="formatDate(t.createdAt)"></td>
+                  <td><button class="btn btn-xs btn-error btn-outline" @click="deleteTenant(t.id, t.name)">Delete</button></td>
                 </tr>
               </template>
               <tr x-show="tenants.list.length === 0">
-                <td colspan="6" class="text-center text-base-content/40">No tenants</td>
+                <td colspan="7" class="text-center text-base-content/40">No tenants</td>
               </tr>
             </tbody>
           </table>
@@ -432,6 +435,7 @@ function app() {
       generalLoading: false, generalSaved: false,
     },
     tenants: { list: [], showCreate: false, creating: false, createdKey: null, form: { name: '', slug: '', ownerEmail: '' } },
+    _pollTimer: null,
 
     async init() {
       if (this.auth.apiKey) await this.loadPage();
@@ -449,6 +453,8 @@ function app() {
     },
 
     navigate(id) {
+      clearInterval(this._pollTimer);
+      this._pollTimer = null;
       this.page = id;
       this.error = null;
       this.loadPage();
@@ -473,7 +479,7 @@ function app() {
     async api(path, opts = {}) {
       const res = await fetch(path, {
         ...opts,
-        headers: { 'x-api-key': this.auth.apiKey, 'Content-Type': 'application/json', ...opts.headers },
+        headers: { 'x-api-key': this.auth.apiKey, ...(opts.body ? { 'Content-Type': 'application/json' } : {}), ...opts.headers },
         body: opts.body ? JSON.stringify(opts.body) : undefined,
       });
       if (res.status === 204) return null;
@@ -536,6 +542,27 @@ function app() {
       ];
       this.dashboard.recentJobs = jobsRes.data;
       this.dashboard.settings = settingsRes.data;
+
+      if (!this._pollTimer) {
+        this._pollTimer = setInterval(async () => {
+          if (this.page !== 'dashboard') return;
+          try {
+            const [jr, pr] = await Promise.all([
+              this.api('/api/jobs?limit=10'),
+              this.api('/api/posts'),
+            ]);
+            this.dashboard.recentJobs = jr.data;
+            const ps = pr.data;
+            const bs = (s) => ps.filter(p => p.status === s).length;
+            this.dashboard.stats = [
+              { label: 'Published',  value: bs('PUBLISHED'),  color: 'text-success' },
+              { label: 'Failed',     value: bs('FAILED'),     color: 'text-error' },
+              { label: 'Processing', value: ps.filter(p => ['IMAGES_PROCESSING','PUBLISHING'].includes(p.status)).length, color: 'text-warning' },
+              { label: 'Total',      value: ps.length,        color: '' },
+            ];
+          } catch (_) {}
+        }, 5000);
+      }
     },
 
     async loadPosts() {
@@ -637,6 +664,16 @@ function app() {
         alert('Error: ' + e.message);
       } finally {
         this.tenants.creating = false;
+      }
+    },
+
+    async deleteTenant(id, name) {
+      if (!confirm(`Delete tenant "${name}" and all its data? This cannot be undone.`)) return;
+      try {
+        await this.api('/api/admin/tenants/' + id, { method: 'DELETE' });
+        await this.loadTenants();
+      } catch(e) {
+        alert('Error: ' + e.message);
       }
     },
 

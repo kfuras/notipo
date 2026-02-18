@@ -5,6 +5,7 @@
 
 services:
   traefik:
+    container_name: blog-compiler-traefik
     image: traefik:v3.3
     restart: unless-stopped
     command:
@@ -28,6 +29,7 @@ services:
       - letsencrypt:/letsencrypt
 
   app:
+    container_name: blog-compiler-app
     build:
       context: .
       target: production
@@ -55,6 +57,7 @@ services:
     build:
       context: ./image-service
       dockerfile: Dockerfile
+    container_name: blog-compiler-image-service
     restart: unless-stopped
     # Not exposed externally — only reachable by the app container
     healthcheck:
@@ -64,6 +67,7 @@ services:
       retries: 5
 
   postgres:
+    container_name: blog-compiler-postgres
     image: postgres:16-alpine
     restart: unless-stopped
     environment:

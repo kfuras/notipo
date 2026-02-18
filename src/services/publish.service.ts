@@ -127,15 +127,15 @@ export class PublishService {
         });
       }
 
-      // Publish
-      await wp.publishPost(wpPost.id);
+      // Publish — use the returned link as it reflects the final permalink
+      const published = await wp.publishPost(wpPost.id);
 
       // Persist wpPostId, wpUrl, featured image ID, and seoDescription for future edits
       await this.prisma.post.update({
         where: { id: postId },
         data: {
           wpPostId: wpPost.id,
-          wpUrl: wpPost.link,
+          wpUrl: published.link ?? wpPost.link,
           wpContent,
           wpFeaturedMediaId: wpFeaturedMediaId ?? undefined,
           seoDescription: seoDescription ?? undefined,

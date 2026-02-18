@@ -44,6 +44,7 @@ export async function jobRoutes(app: FastifyInstance) {
           createdAt: true,
           startedAt: true,
           completedAt: true,
+          post: { select: { title: true } },
         },
       }),
       app.prisma.job.count({
