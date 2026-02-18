@@ -46,7 +46,7 @@ async function main() {
   const tenantName = process.env.SEED_TENANT_NAME ?? "Dev Tenant";
   const tenantSlug = process.env.SEED_TENANT_SLUG ?? "dev";
   const ownerEmail = process.env.SEED_OWNER_EMAIL ?? "dev@blog-compiler.local";
-  const apiKey = process.env.SEED_API_KEY ?? process.env.API_KEY ?? "dev-api-key-change-me";
+  const apiKey = process.env.SEED_API_KEY || process.env.API_KEY || "dev-api-key-change-me";
   const triggerStatus = process.env.SEED_NOTION_TRIGGER_STATUS ?? "Ready to Publish";
 
   // Build tag name → ID lookup from SEED_WP_TAGS, e.g. {"tech":200030,"featured":100013}
