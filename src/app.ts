@@ -40,12 +40,13 @@ export async function buildApp() {
     throw error; // let Fastify handle everything else
   });
 
-  // Admin UI — served at /admin
+  // Admin UI — served at /admin/
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   await app.register(fastifyStatic, {
     root: path.join(__dirname, "..", "public"),
-    prefix: "/admin",
+    prefix: "/admin/",
   });
+  app.get("/admin", (_req, reply) => reply.redirect("/admin/"));
 
   // Plugins
   await app.register(cors);
