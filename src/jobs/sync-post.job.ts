@@ -71,8 +71,18 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient, ev
       eventBus.emit("job:update", { tenantId, jobId: dbJob.id, type: "SYNC_POST", status: "COMPLETED", postId });
 
       if (thenPublish) {
-        await boss.send("publish-post", { tenantId, postId }, { singletonKey: `publish:${postId}` });
-        log.info({ postId }, "Post sync completed, publish enqueued");
+        // Only auto-publish if the post was previously published — drafts
+        // should go through the explicit Publish trigger from Notion.
+        const syncedPost = await prisma.post.findUnique({
+          where: { id: postId },
+          select: { wpUrl: true },
+        });
+        if (syncedPost?.wpUrl) {
+          await boss.send("publish-post", { tenantId, postId }, { singletonKey: `publish:${postId}` });
+          log.info({ postId }, "Post sync completed, publish enqueued");
+        } else {
+          log.info({ postId }, "Post sync completed, skipping auto-publish (post not yet published)");
+        }
       } else {
         log.info({ postId }, "Post sync completed, awaiting Publish trigger");
       }
