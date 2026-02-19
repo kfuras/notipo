@@ -17,5 +17,21 @@ services:
       timeout: 5s
       retries: 10
 
+  app:
+    profiles: ["full"]
+    build:
+      context: .
+      target: production
+    container_name: blog-compiler-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://blogcompiler:localdev@postgres:5432/blogcompiler
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   pgdata:
