@@ -56,15 +56,7 @@ export class SyncService {
         })
       : null;
 
-    logger.info({
-      title: result.metadata.title,
-      slug: result.metadata.slug,
-      featuredImageTitle: result.metadata.featuredImageTitle,
-      category: result.metadata.category,
-      categoryFound: !!category,
-      categoryBackgroundImage: category?.backgroundImage ?? null,
-      imageCount: result.images.length,
-    }, "Notion content parsed");
+    logger.info({ title: result.metadata.title, category: result.metadata.category, imageCount: result.images.length }, "Notion content parsed");
 
     // Determine final status: re-syncing a published post → UPDATE_PENDING
     const existing = await this.prisma.post.findUnique({
@@ -192,6 +184,13 @@ export class SyncService {
 
       // Generate featured image
       let wpFeaturedMediaId: number | undefined;
+      if (!category) {
+        logger.warn({ notionCategory: result.metadata.category }, "Category not found in DB — skipping featured image");
+      } else if (!category.backgroundImage) {
+        logger.warn({ categoryName: category.name }, "Category has no backgroundImage — skipping featured image");
+      } else if (!result.metadata.featuredImageTitle) {
+        logger.warn("featuredImageTitle is empty — skipping featured image");
+      }
       if (category?.backgroundImage && result.metadata.featuredImageTitle) {
         const imgService = new FeaturedImageService();
         const slug = result.metadata.slug || result.metadata.title;
