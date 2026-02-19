@@ -16,8 +16,8 @@ import { logger } from "../lib/logger.js";
 export class SyncService {
   constructor(private prisma: PrismaClient) {}
 
-  /** Sync a single Notion page to the database. Returns the post's database ID. */
-  async syncPost(tenantId: string, notionPageId: string, onStep?: (step: string) => void): Promise<string> {
+  /** Sync a single Notion page to the database. Returns the post ID and WP status. */
+  async syncPost(tenantId: string, notionPageId: string, onStep?: (step: string) => void): Promise<{ postId: string; wpStatus: string | null }> {
     const credService = new CredentialService(this.prisma);
 
     // Get tenant credentials
@@ -132,11 +132,13 @@ export class SyncService {
     // If the existing WP post was deleted, fall back to creating a new draft and
     // re-upload any images whose WP media was also deleted.
     let needsNewDraft = !isUpdate;
+    let wpStatus: string | null = null;
     if (isUpdate) {
       const wpContent = convertMarkdownToGutenberg(finalMarkdown, { highlighter });
       let wpPostGone = false;
       try {
         const updated = await wp.editPost(existing!.wpPostId!, { title: result.metadata.title, content: wpContent });
+        wpStatus = updated.status ?? null;
         // WP returns 200 even for trashed posts — treat trash the same as deleted
         if (updated.status === "trash") {
           logger.warn({ wpPostId: existing!.wpPostId }, "WP post is trashed, re-creating draft");
@@ -241,7 +243,7 @@ export class SyncService {
     await notion.updatePageStatus(notionPageId, "Ready to Review");
 
     logger.info({ tenantId, notionPageId, postId }, "Post synced successfully");
-    return postId;
+    return { postId, wpStatus };
   }
 
   private async upsertPost(

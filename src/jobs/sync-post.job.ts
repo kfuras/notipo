@@ -40,7 +40,7 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient, ev
         await prisma.job.update({ where: { id: dbJob.id }, data: { result: { step } } });
         eventBus.emit("job:update", { tenantId, jobId: dbJob.id, type: "SYNC_POST", status: "RUNNING", step });
       };
-      const postId = await syncService.syncPost(tenantId, notionPageId, onStep);
+      const { postId, wpStatus } = await syncService.syncPost(tenantId, notionPageId, onStep);
 
       // Build result summary from the synced post
       const post = await prisma.post.findUnique({
@@ -71,17 +71,13 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient, ev
       eventBus.emit("job:update", { tenantId, jobId: dbJob.id, type: "SYNC_POST", status: "COMPLETED", postId });
 
       if (thenPublish) {
-        // Only auto-publish if the post was previously published — drafts
-        // should go through the explicit Publish trigger from Notion.
-        const syncedPost = await prisma.post.findUnique({
-          where: { id: postId },
-          select: { wpUrl: true },
-        });
-        if (syncedPost?.wpUrl) {
+        // Only auto-publish if the WP post is currently live — if the user
+        // set it back to draft in WordPress, respect that.
+        if (wpStatus === "publish") {
           await boss.send("publish-post", { tenantId, postId }, { singletonKey: `publish:${postId}` });
           log.info({ postId }, "Post sync completed, publish enqueued");
         } else {
-          log.info({ postId }, "Post sync completed, skipping auto-publish (post not yet published)");
+          log.info({ postId, wpStatus }, "Post sync completed, skipping auto-publish (WP post is not live)");
         }
       } else {
         log.info({ postId }, "Post sync completed, awaiting Publish trigger");
