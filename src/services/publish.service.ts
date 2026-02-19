@@ -71,7 +71,7 @@ export class PublishService {
 
     if (post.wpPostId) {
       // UPDATE existing WordPress post (draft being published for the first time, or re-publish)
-      const updatedWpPost = await wp.editPost(post.wpPostId, {
+      await wp.editPost(post.wpPostId, {
         title: post.title,
         content: wpContent,
         ...(wpFeaturedMediaId && { featured_media: wpFeaturedMediaId }),
@@ -79,26 +79,30 @@ export class PublishService {
         ...(tagIds.length && { tags: tagIds }),
       });
 
-      // Generate or refresh SEO description
+      // Publish (makes live if draft, refreshes if already live)
+      // Do this before SEO so the excerpt is fully generated from the published content
+      const published = await wp.publishPost(post.wpPostId);
+
+      // Apply Rank Math SEO meta (requires "SEO Keyword" to be set in Notion)
       let seoDescription = post.seoDescription;
       if (post.seoKeyword) {
         if (!seoDescription) {
-          // First publish — derive description from WP-generated excerpt
-          const excerpt = updatedWpPost.excerpt?.rendered || "";
+          // Derive description from WP-generated excerpt on first publish
+          const excerpt = published.excerpt?.rendered || "";
           const clean = excerpt.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-          seoDescription = clean.length > 160 ? clean.slice(0, 159).trimEnd() + "..." : clean || undefined;
+          if (clean) {
+            seoDescription = clean.length > 160 ? clean.slice(0, 159).trimEnd() + "..." : clean;
+          }
         }
-        if (seoDescription) {
-          await wp.updateRankMathSeo(post.wpPostId, {
-            rank_math_focus_keyword: post.seoKeyword,
-            rank_math_title: "%title%",
-            rank_math_description: seoDescription,
-          });
-        }
+        await wp.updateRankMathSeo(post.wpPostId, {
+          rank_math_focus_keyword: post.seoKeyword,
+          rank_math_title: "%title%",
+          rank_math_description: seoDescription ?? "",
+        });
+        logger.info({ wpPostId: post.wpPostId, seoKeyword: post.seoKeyword }, "Rank Math SEO meta applied");
+      } else {
+        logger.warn({ postId }, "seoKeyword not set — skipping Rank Math SEO (set 'SEO Keyword' in Notion)");
       }
-
-      // Publish (makes live if draft, refreshes if already live)
-      const published = await wp.publishPost(post.wpPostId);
 
       await this.prisma.post.update({
         where: { id: postId },
@@ -123,26 +127,30 @@ export class PublishService {
         featured_media: wpFeaturedMediaId,
       });
 
-      // Set SEO meta using WP-generated excerpt as description
+      // Publish — use the returned link as it reflects the final permalink
+      // Do this before SEO so the excerpt is fully generated from the published content
+      const published = await wp.publishPost(wpPost.id);
+
+      // Apply Rank Math SEO meta (requires "SEO Keyword" to be set in Notion)
       let seoDescription: string | undefined;
       if (post.seoKeyword) {
-        const excerpt = wpPost.excerpt?.rendered || "";
+        const excerpt = published.excerpt?.rendered || "";
         const clean = excerpt
           .replace(/<[^>]*>/g, " ")
           .replace(/\s+/g, " ")
           .trim();
-        const description = clean.length > 160 ? clean.slice(0, 159).trimEnd() + "..." : clean;
-        seoDescription = description;
-
+        if (clean) {
+          seoDescription = clean.length > 160 ? clean.slice(0, 159).trimEnd() + "..." : clean;
+        }
         await wp.updateRankMathSeo(wpPost.id, {
           rank_math_focus_keyword: post.seoKeyword,
           rank_math_title: "%title%",
-          rank_math_description: description,
+          rank_math_description: seoDescription ?? "",
         });
+        logger.info({ wpPostId: wpPost.id, seoKeyword: post.seoKeyword }, "Rank Math SEO meta applied");
+      } else {
+        logger.warn({ postId }, "seoKeyword not set — skipping Rank Math SEO (set 'SEO Keyword' in Notion)");
       }
-
-      // Publish — use the returned link as it reflects the final permalink
-      const published = await wp.publishPost(wpPost.id);
 
       // Persist wpPostId, wpUrl, featured image ID, and seoDescription for future edits
       await this.prisma.post.update({
