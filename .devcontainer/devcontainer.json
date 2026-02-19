@@ -19,5 +19,5 @@
     }
   },
   "postCreateCommand": "npm install && npx prisma generate",
-  "postStartCommand": "npx prisma migrate dev --name init 2>/dev/null; echo 'Ready'"
+  "postStartCommand": "npx prisma migrate dev --name init 2>/dev/null; npx prisma db seed; echo 'Ready'"
 }
