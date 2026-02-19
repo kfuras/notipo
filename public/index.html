@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Blog Compiler Admin</title>
+  <title>Pressflow Admin</title>
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
@@ -18,7 +18,7 @@
 <div x-show="!auth.apiKey" class="min-h-screen flex items-center justify-center bg-base-200">
   <div class="card w-96 bg-base-100 shadow-xl">
     <div class="card-body">
-      <h2 class="card-title text-2xl justify-center mb-2">Blog Compiler</h2>
+      <h2 class="card-title text-2xl justify-center mb-2">Pressflow</h2>
       <p class="text-base-content/60 text-center text-sm mb-4">Enter your API key to continue</p>
       <div x-show="auth.error" class="alert alert-error text-sm mb-3">
         <span x-text="auth.error"></span>
@@ -43,7 +43,7 @@
   <!-- Navbar -->
   <div class="navbar bg-base-300 px-4 shadow-md">
     <div class="flex-1">
-      <span class="text-lg font-bold">Blog Compiler</span>
+      <span class="text-lg font-bold">Pressflow</span>
       <span x-show="auth.isAdmin" class="badge badge-warning badge-sm ml-2">admin</span>
     </div>
     <div class="flex-none gap-2">
