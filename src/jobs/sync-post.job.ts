@@ -36,13 +36,17 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient, ev
 
     try {
       const syncService = new SyncService(prisma);
-      const postId = await syncService.syncPost(tenantId, notionPageId);
+      const onStep = async (step: string) => {
+        await prisma.job.update({ where: { id: dbJob.id }, data: { result: { step } } });
+        eventBus.emit("job:update", { tenantId, jobId: dbJob.id, type: "SYNC_POST", status: "RUNNING", step });
+      };
+      const postId = await syncService.syncPost(tenantId, notionPageId, onStep);
 
       // Build result summary from the synced post
       const post = await prisma.post.findUnique({
         where: { id: postId },
         select: {
-          wpPostId: true, status: true,
+          wpPostId: true, wpUrl: true, status: true,
           category: { select: { name: true } },
           _count: { select: { imageMappings: true } },
         },
@@ -58,6 +62,7 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient, ev
             category: post?.category?.name ?? null,
             images: post?._count.imageMappings ?? 0,
             wpPostId: post?.wpPostId ?? null,
+            wpUrl: post?.wpUrl ?? null,
             postStatus: post?.status ?? null,
           },
         },

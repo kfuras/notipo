@@ -34,7 +34,11 @@ export async function registerPublishPostJob(boss: PgBoss, prisma: PrismaClient,
 
     try {
       const publishService = new PublishService(prisma);
-      await publishService.publishPost(tenantId, postId);
+      const onStep = async (step: string) => {
+        await prisma.job.update({ where: { id: dbJob.id }, data: { result: { step } } });
+        eventBus.emit("job:update", { tenantId, jobId: dbJob.id, type: "PUBLISH_POST", status: "RUNNING", postId, step });
+      };
+      await publishService.publishPost(tenantId, postId, onStep);
 
       const post = await prisma.post.findUnique({
         where: { id: postId },

@@ -17,7 +17,7 @@ export class SyncService {
   constructor(private prisma: PrismaClient) {}
 
   /** Sync a single Notion page to the database. Returns the post's database ID. */
-  async syncPost(tenantId: string, notionPageId: string): Promise<string> {
+  async syncPost(tenantId: string, notionPageId: string, onStep?: (step: string) => void): Promise<string> {
     const credService = new CredentialService(this.prisma);
 
     // Get tenant credentials
@@ -33,6 +33,7 @@ export class SyncService {
     logger.info({ tenantId, notionPageId }, "Syncing post from Notion");
 
     // 1. Get page properties and blocks
+    onStep?.("Fetching from Notion…");
     const page = await notion.getPageProperties(notionPageId);
     const blocks = await notion.getPageBlocks(notionPageId);
 
@@ -43,6 +44,7 @@ export class SyncService {
       : undefined;
 
     // 2. Convert to markdown
+    onStep?.("Converting to markdown…");
     const result = convertNotionBlocksToMarkdown(
       blocks as Array<Record<string, unknown>>,
       pageObj.properties as Record<string, unknown>,
@@ -71,6 +73,7 @@ export class SyncService {
     let finalMarkdown = result.markdown;
 
     if (result.images.length > 0) {
+      onStep?.(`Processing ${result.images.length} image${result.images.length === 1 ? "" : "s"}…`);
       const pipeline = new ImagePipelineService(this.prisma, wp);
 
       // Upsert post first (need ID for image mapping) and mark as processing
@@ -118,6 +121,7 @@ export class SyncService {
     }
 
     // 5. Create or update WordPress draft
+    onStep?.(isUpdate ? "Updating WP post…" : "Creating WP draft…");
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
       select: { codeHighlighter: true },
@@ -192,6 +196,7 @@ export class SyncService {
         logger.warn("featuredImageTitle is empty — skipping featured image");
       }
       if (category?.backgroundImage && result.metadata.featuredImageTitle) {
+        onStep?.("Generating featured image…");
         const imgService = new FeaturedImageService();
         const slug = result.metadata.slug || result.metadata.title;
         const safeSlug = slug.toLowerCase().replace(/[^a-z0-9]+/g, "-").substring(0, 60);
@@ -232,6 +237,7 @@ export class SyncService {
 
     // 6. Update Notion status → always "Ready to Review" after sync.
     // Publish service will set it to "Published" if thenPublish=true was passed to the job.
+    onStep?.("Updating Notion status…");
     await notion.updatePageStatus(notionPageId, "Ready to Review");
 
     logger.info({ tenantId, notionPageId, postId }, "Post synced successfully");

@@ -133,7 +133,7 @@
                   <td class="font-mono text-xs" x-text="job.type.replace(/_/g,' ')"></td>
                   <td><span class="badge badge-sm" :class="jobBadge(job.status)" x-text="job.status"></span></td>
                   <td class="text-xs text-base-content/60 max-w-xs truncate" x-text="job.post?.title || (job.postId ? job.postId.slice(0,8)+'…' : '—')"></td>
-                  <td class="text-xs text-base-content/60" x-text="jobDetails(job)"></td>
+                  <td class="text-xs text-base-content/60" x-html="jobDetails(job)"></td>
                   <td class="text-xs text-base-content/60" x-text="job.startedAt ? timeAgo(job.startedAt) : '—'"></td>
                   <td class="text-xs" x-text="jobDuration(job)"></td>
                   <td class="text-xs text-error max-w-xs truncate" x-text="job.error || ''"></td>
@@ -224,7 +224,7 @@
                   <td class="font-mono text-xs" x-text="job.type.replace(/_/g,' ')"></td>
                   <td><span class="badge badge-sm" :class="jobBadge(job.status)" x-text="job.status"></span></td>
                   <td class="text-xs text-base-content/60 max-w-xs truncate" x-text="job.post?.title || (job.postId ? job.postId.slice(0,8)+'…' : '—')"></td>
-                  <td class="text-xs text-base-content/60" x-text="jobDetails(job)"></td>
+                  <td class="text-xs text-base-content/60" x-html="jobDetails(job)"></td>
                   <td class="text-xs text-base-content/60" x-text="job.startedAt ? timeAgo(job.startedAt) : '—'"></td>
                   <td class="text-xs" x-text="jobDuration(job)"></td>
                   <td class="text-xs text-error max-w-xs">
@@ -759,15 +759,26 @@ function app() {
 
     jobDetails(job) {
       const r = job.result;
-      if (!r) return job.status === 'RUNNING' ? 'syncing…' : '—';
+      if (!r) return job.status === 'RUNNING' ? '<span class="loading loading-dots loading-xs"></span> starting…' : '—';
+      // Running with step progress
+      if (job.status === 'RUNNING' && r.step) {
+        return `<span class="loading loading-dots loading-xs"></span> ${this.escapeHtml(r.step)}`;
+      }
       const parts = [];
-      if (r.category) parts.push(r.category);
+      if (r.category) parts.push(this.escapeHtml(r.category));
       if (r.images != null) parts.push(`${r.images} img`);
-      if (r.wpPostId) parts.push(`WP #${r.wpPostId}`);
+      if (r.wpUrl) parts.push(`<a href="${this.escapeHtml(r.wpUrl)}" target="_blank" class="link link-primary">WP #${r.wpPostId}</a>`);
+      else if (r.wpPostId) parts.push(`WP #${r.wpPostId}`);
       if (r.wpUrl) parts.push('published');
       else if (r.postStatus === 'SYNCED') parts.push('draft');
       else if (r.postStatus === 'UPDATE_PENDING') parts.push('updated');
       return parts.join(' · ') || '—';
+    },
+
+    escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
     },
 
     jobDuration(job) {

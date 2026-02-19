@@ -15,7 +15,7 @@ export class PublishService {
   constructor(private prisma: PrismaClient) {}
 
   /** Publish a post from the database to WordPress. */
-  async publishPost(tenantId: string, postId: string) {
+  async publishPost(tenantId: string, postId: string, onStep?: (step: string) => void) {
     const credService = new CredentialService(this.prisma);
 
     // Load post with relations
@@ -41,6 +41,7 @@ export class PublishService {
     logger.info({ tenantId, postId }, "Publishing post to WordPress");
 
     // 1. Convert markdown to Gutenberg blocks
+    onStep?.("Converting to Gutenberg…");
     const wpContent = convertMarkdownToGutenberg(post.markdownContent, {
       highlighter: post.tenant.codeHighlighter,
     });
@@ -48,6 +49,7 @@ export class PublishService {
     // 2. Generate featured image if not yet uploaded for this post
     let wpFeaturedMediaId: number | undefined = post.wpFeaturedMediaId ?? undefined;
     if (!wpFeaturedMediaId && post.category?.backgroundImage && post.featuredImageTitle) {
+      onStep?.("Generating featured image…");
       const imgService = new FeaturedImageService();
       const imageBuffer = await imgService.generate({
         title: post.featuredImageTitle,
@@ -71,6 +73,7 @@ export class PublishService {
 
     if (post.wpPostId) {
       // UPDATE existing WordPress post (draft being published for the first time, or re-publish)
+      onStep?.("Updating WP post…");
       await wp.editPost(post.wpPostId, {
         title: post.title,
         content: wpContent,
@@ -81,9 +84,11 @@ export class PublishService {
 
       // Publish (makes live if draft, refreshes if already live)
       // Do this before SEO so the excerpt is fully generated from the published content
+      onStep?.("Publishing…");
       const published = await wp.publishPost(post.wpPostId);
 
       // Apply Rank Math SEO meta (requires "SEO Keyword" to be set in Notion)
+      onStep?.("Setting SEO metadata…");
       let seoDescription = post.seoDescription;
       if (post.seoKeyword) {
         if (!seoDescription) {
@@ -117,6 +122,7 @@ export class PublishService {
       });
     } else {
       // CREATE new WordPress post as draft
+      onStep?.("Creating WP draft…");
       const wpPost = await wp.createDraft({
         title: post.title,
         content: wpContent,
@@ -129,9 +135,11 @@ export class PublishService {
 
       // Publish — use the returned link as it reflects the final permalink
       // Do this before SEO so the excerpt is fully generated from the published content
+      onStep?.("Publishing…");
       const published = await wp.publishPost(wpPost.id);
 
       // Apply Rank Math SEO meta (requires "SEO Keyword" to be set in Notion)
+      onStep?.("Setting SEO metadata…");
       let seoDescription: string | undefined;
       if (post.seoKeyword) {
         const excerpt = published.excerpt?.rendered || "";
@@ -168,6 +176,7 @@ export class PublishService {
     }
 
     // Update Notion status
+    onStep?.("Updating Notion status…");
     const notionCreds = await credService.getNotionCredentials(tenantId);
     if (notionCreds && post.notionPageId) {
       const notion = new NotionService(notionCreds.accessToken);
