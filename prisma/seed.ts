@@ -33,14 +33,6 @@ interface CategorySeed {
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
-/** Resolve a backgroundImage value to a storable URL.
- *  - Full URL  → returned as-is
- *  - Filename  → served from the image-service /categories/ static path */
-function resolveBackgroundImage(value: string): string {
-  if (value.startsWith("http://") || value.startsWith("https://")) return value;
-  const imageServiceUrl = process.env.IMAGE_SERVICE_URL ?? "http://localhost:8100";
-  return `${imageServiceUrl}/categories/${value}`;
-}
 
 async function main() {
   const tenantName = process.env.SEED_TENANT_NAME ?? "Dev Tenant";
@@ -74,7 +66,7 @@ async function main() {
       name,
       wpCategoryId,
       wpTagIds,
-      backgroundImage: bgImage ? resolveBackgroundImage(bgImage) : undefined,
+      backgroundImage: bgImage || undefined,
     });
   }
 
