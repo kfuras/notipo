@@ -439,6 +439,7 @@ function app() {
     },
     tenants: { list: [], showCreate: false, creating: false, createdKey: null, form: { name: '', slug: '', ownerEmail: '' } },
     _pollTimer: null,
+    _eventSource: null,
 
     async init() {
       if (this.auth.apiKey) {
@@ -464,6 +465,7 @@ function app() {
     navigate(id) {
       clearInterval(this._pollTimer);
       this._pollTimer = null;
+      if (this._eventSource) { this._eventSource.close(); this._eventSource = null; }
       this.page = id;
       this.error = null;
       this.loadPage();
@@ -529,6 +531,9 @@ function app() {
     },
 
     logout() {
+      clearInterval(this._pollTimer);
+      this._pollTimer = null;
+      if (this._eventSource) { this._eventSource.close(); this._eventSource = null; }
       localStorage.removeItem('apiKey');
       localStorage.removeItem('isAdmin');
       localStorage.removeItem('isTenant');
@@ -557,28 +562,45 @@ function app() {
       this.dashboard.recentJobs = jobsRes.data;
       this.dashboard.settings = settingsRes.data;
 
-      if (!this._pollTimer) {
-        this._pollTimer = setInterval(async () => {
+      // SSE: instant refresh on job events
+      if (!this._eventSource && this.auth.apiKey) {
+        const es = new EventSource(`/api/events?token=${encodeURIComponent(this.auth.apiKey)}`);
+        this._eventSource = es;
+        es.addEventListener('job_update', () => {
           if (this.page !== 'dashboard') return;
-          try {
-            const [jr, pr] = await Promise.all([
-              this.api('/api/jobs?limit=10'),
-              this.api('/api/posts'),
-            ]);
-            this.dashboard.recentJobs = jr.data;
-            const ps = pr.data;
-            const bs = (s) => ps.filter(p => p.status === s).length;
-            this.dashboard.stats = [
-              { label: 'Published',      value: bs('PUBLISHED'),      color: 'text-success' },
-              { label: 'Synced (draft)', value: bs('SYNCED'),         color: 'text-info' },
-              { label: 'Processing',     value: ps.filter(p => ['IMAGES_PROCESSING','PUBLISHING'].includes(p.status)).length, color: 'text-warning' },
-              { label: 'Failed',         value: bs('FAILED'),         color: 'text-error' },
-              { label: 'Update Pending', value: bs('UPDATE_PENDING'), color: 'text-info' },
-              { label: 'Total',          value: ps.length,            color: '' },
-            ];
-          } catch (_) {}
-        }, 15000);
+          this._refreshDashboardData();
+        });
+        es.onerror = () => {
+          // Browser will auto-reconnect; no action needed
+        };
       }
+      // Fallback poll every 60s in case SSE disconnects
+      if (!this._pollTimer) {
+        this._pollTimer = setInterval(() => {
+          if (this.page !== 'dashboard') return;
+          this._refreshDashboardData();
+        }, 60000);
+      }
+    },
+
+    async _refreshDashboardData() {
+      try {
+        const [jr, pr] = await Promise.all([
+          this.api('/api/jobs?limit=10'),
+          this.api('/api/posts'),
+        ]);
+        this.dashboard.recentJobs = jr.data;
+        const ps = pr.data;
+        const bs = (s) => ps.filter(p => p.status === s).length;
+        this.dashboard.stats = [
+          { label: 'Published',      value: bs('PUBLISHED'),      color: 'text-success' },
+          { label: 'Synced (draft)', value: bs('SYNCED'),         color: 'text-info' },
+          { label: 'Processing',     value: ps.filter(p => ['IMAGES_PROCESSING','PUBLISHING'].includes(p.status)).length, color: 'text-warning' },
+          { label: 'Failed',         value: bs('FAILED'),         color: 'text-error' },
+          { label: 'Update Pending', value: bs('UPDATE_PENDING'), color: 'text-info' },
+          { label: 'Total',          value: ps.length,            color: '' },
+        ];
+      } catch (_) {}
     },
 
     async loadPosts() {

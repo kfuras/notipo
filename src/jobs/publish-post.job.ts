@@ -1,5 +1,6 @@
 import type PgBoss from "pg-boss";
 import type { PrismaClient } from "@prisma/client";
+import type { EventEmitter } from "events";
 import { PublishService } from "../services/publish.service.js";
 import { logger } from "../lib/logger.js";
 
@@ -8,7 +9,7 @@ interface PublishPostPayload {
   postId: string;
 }
 
-export async function registerPublishPostJob(boss: PgBoss, prisma: PrismaClient) {
+export async function registerPublishPostJob(boss: PgBoss, prisma: PrismaClient, eventBus: EventEmitter) {
   await boss.createQueue("publish-post");
   await boss.work<PublishPostPayload>("publish-post", { batchSize: 1 }, async (jobs) => {
     const job = jobs[0];
@@ -28,6 +29,8 @@ export async function registerPublishPostJob(boss: PgBoss, prisma: PrismaClient)
         startedAt: new Date(),
       },
     });
+
+    eventBus.emit("job:update", { tenantId, jobId: dbJob.id, type: "PUBLISH_POST", status: "RUNNING", postId });
 
     try {
       const publishService = new PublishService(prisma);
@@ -51,6 +54,8 @@ export async function registerPublishPostJob(boss: PgBoss, prisma: PrismaClient)
         },
       });
 
+      eventBus.emit("job:update", { tenantId, jobId: dbJob.id, type: "PUBLISH_POST", status: "COMPLETED", postId });
+
       log.info("Post publish completed");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -60,6 +65,8 @@ export async function registerPublishPostJob(boss: PgBoss, prisma: PrismaClient)
         where: { id: dbJob.id },
         data: { status: "FAILED", error: message },
       });
+
+      eventBus.emit("job:update", { tenantId, jobId: dbJob.id, type: "PUBLISH_POST", status: "FAILED", postId });
 
       await prisma.post
         .update({

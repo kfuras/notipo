@@ -16,6 +16,8 @@ import { settingsRoutes } from "./routes/settings.js";
 import { jobRoutes } from "./routes/jobs.js";
 import { adminRoutes } from "./routes/admin.js";
 import { userRoutes } from "./routes/users.js";
+import { eventBusPlugin } from "./plugins/event-bus.js";
+import { eventsRoutes } from "./routes/events.js";
 import { registerAllJobs } from "./jobs/index.js";
 
 export async function buildApp() {
@@ -54,12 +56,14 @@ export async function buildApp() {
   await app.register(prismaPlugin);
   await app.register(pgBossPlugin);
   await app.register(authPlugin);
+  await app.register(eventBusPlugin);
 
   // Jobs
-  await registerAllJobs(app.boss, app.prisma);
+  await registerAllJobs(app.boss, app.prisma, app.eventBus);
 
   // Routes
   await app.register(healthRoutes);
+  await app.register(eventsRoutes);
   await app.register(postRoutes);
   await app.register(categoryRoutes);
   await app.register(settingsRoutes);

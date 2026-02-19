@@ -1,5 +1,6 @@
 import type PgBoss from "pg-boss";
 import type { PrismaClient } from "@prisma/client";
+import type { EventEmitter } from "events";
 import { SyncService } from "../services/sync.service.js";
 import { logger } from "../lib/logger.js";
 
@@ -9,7 +10,7 @@ interface SyncPostPayload {
   thenPublish?: boolean;
 }
 
-export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient) {
+export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient, eventBus: EventEmitter) {
   await boss.createQueue("sync-post");
   await boss.work<SyncPostPayload>("sync-post", { batchSize: 1 }, async (jobs) => {
     const job = jobs[0];
@@ -30,6 +31,8 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient) {
         startedAt: new Date(),
       },
     });
+
+    eventBus.emit("job:update", { tenantId, jobId: dbJob.id, type: "SYNC_POST", status: "RUNNING" });
 
     try {
       const syncService = new SyncService(prisma);
@@ -60,6 +63,8 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient) {
         },
       });
 
+      eventBus.emit("job:update", { tenantId, jobId: dbJob.id, type: "SYNC_POST", status: "COMPLETED", postId });
+
       if (thenPublish) {
         await boss.send("publish-post", { tenantId, postId }, { singletonKey: `publish:${postId}` });
         log.info({ postId }, "Post sync completed, publish enqueued");
@@ -74,6 +79,8 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient) {
         where: { id: dbJob.id },
         data: { status: "FAILED", error: message },
       });
+
+      eventBus.emit("job:update", { tenantId, jobId: dbJob.id, type: "SYNC_POST", status: "FAILED" });
 
       // Mark post as FAILED if it exists
       await prisma.post

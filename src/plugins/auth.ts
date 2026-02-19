@@ -22,7 +22,10 @@ async function auth(app: FastifyInstance) {
     // Skip auth for health check and admin UI static files
     if (request.url === "/health" || request.url === "/favicon.ico" || request.url.startsWith("/admin")) return;
 
-    const apiKey = request.headers["x-api-key"] as string | undefined;
+    // Accept x-api-key header or ?token= query param (needed for EventSource SSE)
+    const apiKey =
+      (request.headers["x-api-key"] as string | undefined) ||
+      (request.query as Record<string, string>)["token"];
     if (!apiKey) {
       return reply.unauthorized("Missing x-api-key header");
     }
