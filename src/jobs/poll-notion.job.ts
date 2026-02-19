@@ -35,6 +35,16 @@ export async function registerPollNotionJob(boss: PgBoss, prisma: PrismaClient) 
         );
         for (const page of syncPages) {
           const pageId = (page as { id: string }).id;
+
+          // Skip if there's already a running sync job for this page
+          const runningJob = await prisma.job.findFirst({
+            where: { tenantId: tenant.id, type: "SYNC_POST", status: "RUNNING", payload: { path: ["notionPageId"], equals: pageId } },
+          });
+          if (runningJob) {
+            log.debug({ tenantId: tenant.id, pageId }, "Sync already running, skipping");
+            continue;
+          }
+
           log.info({ tenantId: tenant.id, pageId }, "Found post to sync, enqueuing sync-post");
           await boss.send(
             "sync-post",
@@ -78,6 +88,15 @@ export async function registerPollNotionJob(boss: PgBoss, prisma: PrismaClient) 
         );
         for (const page of updatePages) {
           const pageId = (page as { id: string }).id;
+
+          const runningUpdateJob = await prisma.job.findFirst({
+            where: { tenantId: tenant.id, type: "SYNC_POST", status: "RUNNING", payload: { path: ["notionPageId"], equals: pageId } },
+          });
+          if (runningUpdateJob) {
+            log.debug({ tenantId: tenant.id, pageId }, "Sync already running, skipping update");
+            continue;
+          }
+
           log.info({ tenantId: tenant.id, pageId }, "Found post to update, enqueuing sync-post (with publish)");
           await boss.send(
             "sync-post",

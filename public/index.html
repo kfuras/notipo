@@ -87,7 +87,7 @@
         <h1 class="text-2xl font-bold mb-6">Dashboard</h1>
 
         <!-- Stats -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           <template x-for="stat in dashboard.stats" :key="stat.label">
             <div class="stat bg-base-200 rounded-box">
               <div class="stat-title text-xs" x-text="stat.label"></div>
@@ -545,10 +545,12 @@ function app() {
       const posts = postsRes.data;
       const byStatus = (s) => posts.filter(p => p.status === s).length;
       this.dashboard.stats = [
-        { label: 'Published',   value: byStatus('PUBLISHED'),   color: 'text-success' },
-        { label: 'Failed',      value: byStatus('FAILED'),      color: 'text-error' },
-        { label: 'Processing',  value: posts.filter(p => ['IMAGES_PROCESSING','PUBLISHING'].includes(p.status)).length, color: 'text-warning' },
-        { label: 'Total',       value: posts.length,            color: '' },
+        { label: 'Published',      value: byStatus('PUBLISHED'),      color: 'text-success' },
+        { label: 'Synced (draft)', value: byStatus('SYNCED'),         color: 'text-info' },
+        { label: 'Processing',     value: posts.filter(p => ['IMAGES_PROCESSING','PUBLISHING'].includes(p.status)).length, color: 'text-warning' },
+        { label: 'Failed',         value: byStatus('FAILED'),         color: 'text-error' },
+        { label: 'Update Pending', value: byStatus('UPDATE_PENDING'), color: 'text-info' },
+        { label: 'Total',          value: posts.length,               color: '' },
       ];
       this.dashboard.recentJobs = jobsRes.data;
       this.dashboard.settings = settingsRes.data;
@@ -565,13 +567,15 @@ function app() {
             const ps = pr.data;
             const bs = (s) => ps.filter(p => p.status === s).length;
             this.dashboard.stats = [
-              { label: 'Published',  value: bs('PUBLISHED'),  color: 'text-success' },
-              { label: 'Failed',     value: bs('FAILED'),     color: 'text-error' },
-              { label: 'Processing', value: ps.filter(p => ['IMAGES_PROCESSING','PUBLISHING'].includes(p.status)).length, color: 'text-warning' },
-              { label: 'Total',      value: ps.length,        color: '' },
+              { label: 'Published',      value: bs('PUBLISHED'),      color: 'text-success' },
+              { label: 'Synced (draft)', value: bs('SYNCED'),         color: 'text-info' },
+              { label: 'Processing',     value: ps.filter(p => ['IMAGES_PROCESSING','PUBLISHING'].includes(p.status)).length, color: 'text-warning' },
+              { label: 'Failed',         value: bs('FAILED'),         color: 'text-error' },
+              { label: 'Update Pending', value: bs('UPDATE_PENDING'), color: 'text-info' },
+              { label: 'Total',          value: ps.length,            color: '' },
             ];
           } catch (_) {}
-        }, 5000);
+        }, 15000);
       }
     },
 
