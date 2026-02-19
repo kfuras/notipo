@@ -6,6 +6,7 @@
 
 import axios, { type AxiosInstance } from "axios";
 import type { WPPostPayload, WPMediaUpload, RankMathSeoPayload } from "../types/index.js";
+import { logger } from "../lib/logger.js";
 
 export interface WordPressCredentials {
   siteUrl: string;
@@ -31,11 +32,12 @@ export class WordPressService {
 
   /** Create a draft post. */
   async createDraft(payload: WPPostPayload) {
-    const { data } = await this.client.post("/posts", {
+    const response = await this.client.post("/posts", {
       ...payload,
       status: "draft",
     });
-    return data;
+    logger.info({ wpStatus: response.status, wpPostId: response.data?.id, wpPostStatus: response.data?.status, wpLink: response.data?.link }, "WP createDraft response");
+    return response.data;
   }
 
   /** Edit an existing post's content. */

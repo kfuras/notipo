@@ -122,14 +122,46 @@ export class SyncService {
       where: { id: tenantId },
       select: { codeHighlighter: true },
     });
-    const wpContent = convertMarkdownToGutenberg(finalMarkdown, {
-      highlighter: tenant!.codeHighlighter,
-    });
+    const highlighter = tenant!.codeHighlighter;
 
+    // Determine whether to update the existing WP post or create a new draft.
+    // If the existing WP post was deleted, fall back to creating a new draft and
+    // re-upload any images whose WP media was also deleted.
+    let needsNewDraft = !isUpdate;
     if (isUpdate) {
-      // Update the existing WP post content (will be published by publish service)
-      await wp.editPost(existing!.wpPostId!, { title: result.metadata.title, content: wpContent });
-    } else {
+      const wpContent = convertMarkdownToGutenberg(finalMarkdown, { highlighter });
+      try {
+        await wp.editPost(existing!.wpPostId!, { title: result.metadata.title, content: wpContent });
+      } catch (err: unknown) {
+        const status = (err as { response?: { status?: number } }).response?.status;
+        if (status === 404) {
+          logger.warn({ wpPostId: existing!.wpPostId }, "WP post not found (deleted?), re-creating draft");
+          needsNewDraft = true;
+
+          // Clear stale image mappings so processImages re-uploads fresh copies
+          if (result.images.length > 0) {
+            await this.prisma.imageMapping.deleteMany({ where: { tenantId, postId } });
+            const pipeline = new ImagePipelineService(this.prisma, wp);
+            const imgSlug = result.metadata.slug || result.metadata.title;
+            const reimageResult = await pipeline.processImages(
+              tenantId, postId, result.images, result.markdown, imgSlug,
+            );
+            finalMarkdown = reimageResult.processedContent;
+            await this.prisma.post.update({
+              where: { id: postId },
+              data: { markdownContent: finalMarkdown },
+            });
+          }
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    if (needsNewDraft) {
+      // Re-convert markdown → Gutenberg using the (possibly refreshed) finalMarkdown
+      const wpContent = convertMarkdownToGutenberg(finalMarkdown, { highlighter });
+
       // Resolve tag IDs (post tags take priority over category defaults)
       const tagNames = result.metadata.tags ?? [];
       const tagIds = tagNames.length > 0
@@ -153,6 +185,7 @@ export class SyncService {
           title: result.metadata.featuredImageTitle,
         });
         wpFeaturedMediaId = media.id;
+        logger.info({ wpFeaturedMediaId }, "Featured image uploaded to WP");
       }
 
       // Create a new WP draft for review
@@ -165,20 +198,21 @@ export class SyncService {
         tags: tagIds.length ? tagIds : undefined,
         featured_media: wpFeaturedMediaId,
       });
+      logger.info({ wpPostId: wpPost.id, wpPostStatus: wpPost.status, wpPostLink: wpPost.link }, "WP draft created");
       await this.prisma.post.update({
         where: { id: postId },
         data: {
           wpPostId: wpPost.id,
+          wpFeaturedMediaId: wpFeaturedMediaId ?? null,
           wpContent,
-          ...(wpFeaturedMediaId && { wpFeaturedMediaId }),
         },
       });
     }
 
     // 7. Update Notion status
-    // New post → "Ready to Review" so the user can review the WP draft before publishing
-    // Update → leave as "Processing"; publish service will set "Published" immediately after
-    await notion.updatePageStatus(notionPageId, isUpdate ? "Processing" : "Ready to Review");
+    // New draft created → "Ready to Review" (new post, or existing WP post was deleted and recreated)
+    // Update to existing WP post → "Processing" (publish service will set "Published" immediately after)
+    await notion.updatePageStatus(notionPageId, needsNewDraft ? "Ready to Review" : "Processing");
 
     logger.info({ tenantId, notionPageId, postId }, "Post synced successfully");
     return postId;
