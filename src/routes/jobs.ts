@@ -39,6 +39,7 @@ export async function jobRoutes(app: FastifyInstance) {
           type: true,
           status: true,
           postId: true,
+          result: true,
           error: true,
           pgBossJobId: true,
           createdAt: true,

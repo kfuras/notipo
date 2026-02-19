@@ -125,7 +125,7 @@
         <div class="overflow-x-auto">
           <table class="table table-sm bg-base-200 rounded-box">
             <thead>
-              <tr><th>Type</th><th>Status</th><th>Post</th><th>Started</th><th>Duration</th><th>Error</th></tr>
+              <tr><th>Type</th><th>Status</th><th>Post</th><th>Details</th><th>Started</th><th>Duration</th><th>Error</th></tr>
             </thead>
             <tbody>
               <template x-for="job in dashboard.recentJobs" :key="job.id">
@@ -133,13 +133,14 @@
                   <td class="font-mono text-xs" x-text="job.type.replace(/_/g,' ')"></td>
                   <td><span class="badge badge-sm" :class="jobBadge(job.status)" x-text="job.status"></span></td>
                   <td class="text-xs text-base-content/60 max-w-xs truncate" x-text="job.post?.title || (job.postId ? job.postId.slice(0,8)+'…' : '—')"></td>
+                  <td class="text-xs text-base-content/60" x-text="jobDetails(job)"></td>
                   <td class="text-xs text-base-content/60" x-text="job.startedAt ? timeAgo(job.startedAt) : '—'"></td>
                   <td class="text-xs" x-text="jobDuration(job)"></td>
                   <td class="text-xs text-error max-w-xs truncate" x-text="job.error || ''"></td>
                 </tr>
               </template>
               <tr x-show="dashboard.recentJobs.length === 0">
-                <td colspan="6" class="text-center text-base-content/40">No jobs yet</td>
+                <td colspan="7" class="text-center text-base-content/40">No jobs yet</td>
               </tr>
             </tbody>
           </table>
@@ -215,7 +216,7 @@
         <div class="overflow-x-auto">
           <table class="table table-sm bg-base-200 rounded-box">
             <thead>
-              <tr><th>Type</th><th>Status</th><th>Post</th><th>Started</th><th>Duration</th><th>Error</th></tr>
+              <tr><th>Type</th><th>Status</th><th>Post</th><th>Details</th><th>Started</th><th>Duration</th><th>Error</th></tr>
             </thead>
             <tbody>
               <template x-for="job in jobs.list" :key="job.id">
@@ -223,6 +224,7 @@
                   <td class="font-mono text-xs" x-text="job.type.replace(/_/g,' ')"></td>
                   <td><span class="badge badge-sm" :class="jobBadge(job.status)" x-text="job.status"></span></td>
                   <td class="text-xs text-base-content/60 max-w-xs truncate" x-text="job.post?.title || (job.postId ? job.postId.slice(0,8)+'…' : '—')"></td>
+                  <td class="text-xs text-base-content/60" x-text="jobDetails(job)"></td>
                   <td class="text-xs text-base-content/60" x-text="job.startedAt ? timeAgo(job.startedAt) : '—'"></td>
                   <td class="text-xs" x-text="jobDuration(job)"></td>
                   <td class="text-xs text-error max-w-xs">
@@ -233,7 +235,7 @@
                 </tr>
               </template>
               <tr x-show="jobs.list.length === 0">
-                <td colspan="6" class="text-center text-base-content/40">No jobs</td>
+                <td colspan="7" class="text-center text-base-content/40">No jobs</td>
               </tr>
             </tbody>
           </table>
@@ -731,6 +733,19 @@ function app() {
       const hrs = Math.floor(mins / 60);
       if (hrs < 24)  return `${hrs}h ago`;
       return `${Math.floor(hrs / 24)}d ago`;
+    },
+
+    jobDetails(job) {
+      const r = job.result;
+      if (!r) return job.status === 'RUNNING' ? 'syncing…' : '—';
+      const parts = [];
+      if (r.category) parts.push(r.category);
+      if (r.images != null) parts.push(`${r.images} img`);
+      if (r.wpPostId) parts.push(`WP #${r.wpPostId}`);
+      if (r.wpUrl) parts.push('published');
+      else if (r.postStatus === 'SYNCED') parts.push('draft');
+      else if (r.postStatus === 'UPDATE_PENDING') parts.push('updated');
+      return parts.join(' · ') || '—';
     },
 
     jobDuration(job) {

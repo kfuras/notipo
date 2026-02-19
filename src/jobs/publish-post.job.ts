@@ -33,9 +33,22 @@ export async function registerPublishPostJob(boss: PgBoss, prisma: PrismaClient)
       const publishService = new PublishService(prisma);
       await publishService.publishPost(tenantId, postId);
 
+      const post = await prisma.post.findUnique({
+        where: { id: postId },
+        select: { wpPostId: true, wpUrl: true, status: true },
+      });
+
       await prisma.job.update({
         where: { id: dbJob.id },
-        data: { status: "COMPLETED", completedAt: new Date() },
+        data: {
+          status: "COMPLETED",
+          completedAt: new Date(),
+          result: {
+            wpPostId: post?.wpPostId ?? null,
+            wpUrl: post?.wpUrl ?? null,
+            postStatus: post?.status ?? null,
+          },
+        },
       });
 
       log.info("Post publish completed");

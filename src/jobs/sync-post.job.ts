@@ -35,9 +35,29 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient) {
       const syncService = new SyncService(prisma);
       const postId = await syncService.syncPost(tenantId, notionPageId);
 
+      // Build result summary from the synced post
+      const post = await prisma.post.findUnique({
+        where: { id: postId },
+        select: {
+          wpPostId: true, status: true,
+          category: { select: { name: true } },
+          _count: { select: { imageMappings: true } },
+        },
+      });
+
       await prisma.job.update({
         where: { id: dbJob.id },
-        data: { postId, status: "COMPLETED", completedAt: new Date() },
+        data: {
+          postId,
+          status: "COMPLETED",
+          completedAt: new Date(),
+          result: {
+            category: post?.category?.name ?? null,
+            images: post?._count.imageMappings ?? 0,
+            wpPostId: post?.wpPostId ?? null,
+            postStatus: post?.status ?? null,
+          },
+        },
       });
 
       if (thenPublish) {
