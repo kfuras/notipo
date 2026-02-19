@@ -5,14 +5,14 @@ const createCategorySchema = z.object({
   name: z.string().min(1),
   wpCategoryId: z.number().optional(),
   wpTagIds: z.array(z.number()).optional(),
-  backgroundImage: z.string().url().optional(),
+  backgroundImage: z.string().min(1).optional(),
 });
 
 const updateCategorySchema = z.object({
   name: z.string().min(1).optional(),
   wpCategoryId: z.number().nullable().optional(),
   wpTagIds: z.array(z.number()).optional(),
-  backgroundImage: z.string().url().nullable().optional(),
+  backgroundImage: z.string().min(1).nullable().optional(),
 });
 
 export async function categoryRoutes(app: FastifyInstance) {

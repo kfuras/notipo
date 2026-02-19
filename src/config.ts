@@ -5,7 +5,6 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   ENCRYPTION_KEY: z.string().min(64),
   API_KEY: z.string().min(8),
-  IMAGE_SERVICE_URL: z.string().url().default("http://localhost:8100"),
   PORT: z.coerce.number().default(3000),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),

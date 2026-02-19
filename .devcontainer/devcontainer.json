@@ -4,14 +4,13 @@
   "service": "app",
   "workspaceFolder": "/workspace",
   "shutdownAction": "stopCompose",
-  "forwardPorts": [3000, 5432, 8100],
+  "forwardPorts": [3000, 5432],
   "customizations": {
     "vscode": {
       "extensions": [
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "Prisma.prisma",
-        "ms-python.python"
+        "Prisma.prisma"
       ],
       "settings": {
         "editor.defaultFormatter": "esbenp.prettier-vscode",

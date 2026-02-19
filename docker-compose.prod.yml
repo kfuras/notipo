@@ -38,13 +38,9 @@ services:
       NODE_ENV: production
       # Override DATABASE_URL to use the postgres container hostname
       DATABASE_URL: postgresql://blogcompiler:${DB_PASSWORD}@postgres:5432/blogcompiler
-      # image-service internal hostname (not the host-mapped port)
-      IMAGE_SERVICE_URL: http://image-service:8000
     env_file: .env
     depends_on:
       postgres:
-        condition: service_healthy
-      image-service:
         condition: service_healthy
     labels:
       - traefik.enable=true
@@ -53,19 +49,6 @@ services:
       - traefik.http.routers.app.tls=true
       - traefik.http.routers.app.tls.certresolver=letsencrypt
       - traefik.http.services.app.loadbalancer.server.port=3000
-
-  image-service:
-    build:
-      context: ./image-service
-      dockerfile: Dockerfile
-    container_name: blog-compiler-image-service
-    restart: unless-stopped
-    # Not exposed externally — only reachable by the app container
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   postgres:
     container_name: blog-compiler-postgres

@@ -17,19 +17,5 @@ services:
       timeout: 5s
       retries: 10
 
-  image-service:
-    build:
-      context: ./image-service
-      dockerfile: Dockerfile
-    container_name: blog-compiler-image-service
-    restart: unless-stopped
-    ports:
-      - "8100:8000"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
 volumes:
   pgdata:

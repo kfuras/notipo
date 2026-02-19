@@ -11,11 +11,8 @@ services:
     environment:
       # Override host-based URLs to use Docker service names
       DATABASE_URL: postgresql://blogcompiler:localdev@postgres:5432/blogcompiler
-      IMAGE_SERVICE_URL: http://image-service:8000
     ports:
       - "3000:3000"
     depends_on:
       postgres:
-        condition: service_healthy
-      image-service:
         condition: service_healthy
