@@ -39,7 +39,7 @@ services:
     environment:
       NODE_ENV: production
       # Override DATABASE_URL to use the postgres container hostname
-      DATABASE_URL: postgresql://blogcompiler:${DB_PASSWORD}@postgres:5432/blogcompiler
+      DATABASE_URL: postgresql://pressflow:${DB_PASSWORD}@postgres:5432/pressflow
     env_file: .env
     depends_on:
       postgres:
@@ -57,14 +57,14 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: blogcompiler
+      POSTGRES_USER: pressflow
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: blogcompiler
+      POSTGRES_DB: pressflow
     volumes:
       - pgdata:/var/lib/postgresql/data
     # Not exposed externally — only reachable by the app container
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U blogcompiler"]
+      test: ["CMD-SHELL", "pg_isready -U pressflow"]
       interval: 5s
       timeout: 5s
       retries: 10

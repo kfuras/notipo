@@ -101,10 +101,11 @@ cp .env.example .env
 # DATABASE_URL defaults to localhost:5432 — correct for this mode
 ```
 
-**4. Run migrations:**
+**4. Run migrations and seed:**
 
 ```bash
 npx prisma migrate dev
+npx prisma db seed
 ```
 
 **5. Start the app:**
