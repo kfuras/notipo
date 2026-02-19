@@ -56,6 +56,16 @@ export class SyncService {
         })
       : null;
 
+    logger.info({
+      title: result.metadata.title,
+      slug: result.metadata.slug,
+      featuredImageTitle: result.metadata.featuredImageTitle,
+      category: result.metadata.category,
+      categoryFound: !!category,
+      categoryBackgroundImage: category?.backgroundImage ?? null,
+      imageCount: result.images.length,
+    }, "Notion content parsed");
+
     // Determine final status: re-syncing a published post → UPDATE_PENDING
     const existing = await this.prisma.post.findUnique({
       where: { tenantId_notionPageId: { tenantId, notionPageId } },
