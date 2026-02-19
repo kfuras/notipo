@@ -128,30 +128,44 @@ export class SyncService {
     let needsNewDraft = !isUpdate;
     if (isUpdate) {
       const wpContent = convertMarkdownToGutenberg(finalMarkdown, { highlighter });
+      let wpPostGone = false;
       try {
-        await wp.editPost(existing!.wpPostId!, { title: result.metadata.title, content: wpContent });
+        const updated = await wp.editPost(existing!.wpPostId!, { title: result.metadata.title, content: wpContent });
+        // WP returns 200 even for trashed posts — treat trash the same as deleted
+        if (updated.status === "trash") {
+          logger.warn({ wpPostId: existing!.wpPostId }, "WP post is trashed, re-creating draft");
+          wpPostGone = true;
+        }
       } catch (err: unknown) {
         const status = (err as { response?: { status?: number } }).response?.status;
         if (status === 404) {
           logger.warn({ wpPostId: existing!.wpPostId }, "WP post not found (deleted?), re-creating draft");
-          needsNewDraft = true;
-
-          // Clear stale image mappings so processImages re-uploads fresh copies
-          if (result.images.length > 0) {
-            await this.prisma.imageMapping.deleteMany({ where: { tenantId, postId } });
-            const pipeline = new ImagePipelineService(this.prisma, wp);
-            const imgSlug = result.metadata.slug || result.metadata.title;
-            const reimageResult = await pipeline.processImages(
-              tenantId, postId, result.images, result.markdown, imgSlug,
-            );
-            finalMarkdown = reimageResult.processedContent;
-            await this.prisma.post.update({
-              where: { id: postId },
-              data: { markdownContent: finalMarkdown },
-            });
-          }
+          wpPostGone = true;
         } else {
           throw err;
+        }
+      }
+
+      if (wpPostGone) {
+        needsNewDraft = true;
+        // Clear stale wpPostId/featured media so the new draft ID gets stored cleanly
+        await this.prisma.post.update({
+          where: { id: postId },
+          data: { wpPostId: null, wpFeaturedMediaId: null },
+        });
+        // Clear stale image mappings so processImages re-uploads fresh copies
+        if (result.images.length > 0) {
+          await this.prisma.imageMapping.deleteMany({ where: { tenantId, postId } });
+          const pipeline = new ImagePipelineService(this.prisma, wp);
+          const imgSlug = result.metadata.slug || result.metadata.title;
+          const reimageResult = await pipeline.processImages(
+            tenantId, postId, result.images, result.markdown, imgSlug,
+          );
+          finalMarkdown = reimageResult.processedContent;
+          await this.prisma.post.update({
+            where: { id: postId },
+            data: { markdownContent: finalMarkdown },
+          });
         }
       }
     }
