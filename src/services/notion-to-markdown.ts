@@ -61,15 +61,20 @@ export function convertNotionBlocksToMarkdown(
   pageProperties: NotionPageProperties,
   notionPageId: string,
 ): NotionConversionResult {
-  const title = pageProperties.Name?.title?.[0]?.plain_text || "";
+  // Join all rich_text segments — Notion can split a property value into multiple
+  // runs (different formatting, copy-paste artefacts), so [0] alone would miss them.
+  const joinText = (arr?: Array<{ plain_text?: string }>) =>
+    (arr ?? []).map((t) => t.plain_text ?? "").join("") || undefined;
+
+  const title = joinText(pageProperties.Name?.title) ?? "";
   const category = pageProperties.Category?.select?.name || "";
   const tags = (pageProperties.Tags?.multi_select ?? [])
     .map((t) => t.name)
     .filter((n): n is string => Boolean(n));
   const featuredImageTitle =
-    pageProperties["Featured Image Title"]?.rich_text?.[0]?.plain_text || title;
-  const seoKeyword = pageProperties["SEO Keyword"]?.rich_text?.[0]?.plain_text;
-  const slug = pageProperties.Slug?.rich_text?.[0]?.plain_text;
+    joinText(pageProperties["Featured Image Title"]?.rich_text) ?? title;
+  const seoKeyword = joinText(pageProperties["SEO Keyword"]?.rich_text);
+  const slug = joinText(pageProperties.Slug?.rich_text);
 
   let markdown = "";
   let prevType: string | null = null;
