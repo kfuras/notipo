@@ -70,8 +70,8 @@ export class PublishService {
         : (post.category?.wpTagIds ?? []);
 
     if (post.wpPostId) {
-      // UPDATE existing WordPress post
-      await wp.editPost(post.wpPostId, {
+      // UPDATE existing WordPress post (draft being published for the first time, or re-publish)
+      const updatedWpPost = await wp.editPost(post.wpPostId, {
         title: post.title,
         content: wpContent,
         ...(wpFeaturedMediaId && { featured_media: wpFeaturedMediaId }),
@@ -79,20 +79,34 @@ export class PublishService {
         ...(tagIds.length && { tags: tagIds }),
       });
 
-      // Refresh SEO if we have a stored description from the initial publish
-      if (post.seoKeyword && post.seoDescription) {
-        await wp.updateRankMathSeo(post.wpPostId, {
-          rank_math_focus_keyword: post.seoKeyword,
-          rank_math_title: "%title%",
-          rank_math_description: post.seoDescription,
-        });
+      // Generate or refresh SEO description
+      let seoDescription = post.seoDescription;
+      if (post.seoKeyword) {
+        if (!seoDescription) {
+          // First publish — derive description from WP-generated excerpt
+          const excerpt = updatedWpPost.excerpt?.rendered || "";
+          const clean = excerpt.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+          seoDescription = clean.length > 160 ? clean.slice(0, 159).trimEnd() + "..." : clean || undefined;
+        }
+        if (seoDescription) {
+          await wp.updateRankMathSeo(post.wpPostId, {
+            rank_math_focus_keyword: post.seoKeyword,
+            rank_math_title: "%title%",
+            rank_math_description: seoDescription,
+          });
+        }
       }
+
+      // Publish (makes live if draft, refreshes if already live)
+      const published = await wp.publishPost(post.wpPostId);
 
       await this.prisma.post.update({
         where: { id: postId },
         data: {
           wpContent,
+          wpUrl: published.link ?? post.wpUrl,
           wpFeaturedMediaId: wpFeaturedMediaId ?? undefined,
+          seoDescription: seoDescription ?? undefined,
           status: "PUBLISHED",
           publishedAt: new Date(),
         },

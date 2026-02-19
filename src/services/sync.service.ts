@@ -1,5 +1,5 @@
 /**
- * Sync orchestrator: Notion → Database.
+ * Sync orchestrator: Notion → Database → WordPress draft.
  * Replaces the entire "Notion to Airtable Sync" n8n workflow.
  */
 
@@ -9,6 +9,8 @@ import { convertNotionBlocksToMarkdown } from "./notion-to-markdown.js";
 import { ImagePipelineService } from "./image-pipeline.service.js";
 import { WordPressService } from "./wordpress.service.js";
 import { CredentialService } from "./credential.service.js";
+import { convertMarkdownToGutenberg } from "./markdown-to-gutenberg.js";
+import { FeaturedImageService } from "./featured-image.service.js";
 import { logger } from "../lib/logger.js";
 
 export class SyncService {
@@ -22,7 +24,11 @@ export class SyncService {
     const notionCreds = await credService.getNotionCredentials(tenantId);
     if (!notionCreds) throw new Error("Notion credentials not configured");
 
+    const wpCreds = await credService.getWordPressCredentials(tenantId);
+    if (!wpCreds) throw new Error("WordPress credentials not configured");
+
     const notion = new NotionService(notionCreds.accessToken);
+    const wp = new WordPressService(wpCreds);
 
     // 1. Set Notion status to "Processing"
     await notion.updatePageStatus(notionPageId, "Processing");
@@ -62,11 +68,9 @@ export class SyncService {
 
     // 5. Process images if any
     let postId: string;
-    if (result.images.length > 0) {
-      const wpCreds = await credService.getWordPressCredentials(tenantId);
-      if (!wpCreds) throw new Error("WordPress credentials not configured");
+    let finalMarkdown = result.markdown;
 
-      const wp = new WordPressService(wpCreds);
+    if (result.images.length > 0) {
       const pipeline = new ImagePipelineService(this.prisma, wp);
 
       // Upsert post first (need ID for image mapping) and mark as processing
@@ -88,11 +92,13 @@ export class SyncService {
         result.metadata.slug || result.metadata.title,
       );
 
+      finalMarkdown = imageResult.processedContent;
+
       // Update with processed content and final status
       await this.prisma.post.update({
         where: { id: post.id },
         data: {
-          markdownContent: imageResult.processedContent,
+          markdownContent: finalMarkdown,
           status: finalStatus,
           syncedAt: new Date(),
         },
@@ -111,7 +117,65 @@ export class SyncService {
       postId = post.id;
     }
 
-    // 6. Update Notion status
+    // 6. Create or update WordPress draft
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { codeHighlighter: true },
+    });
+    const wpContent = convertMarkdownToGutenberg(finalMarkdown, {
+      highlighter: tenant!.codeHighlighter,
+    });
+
+    if (isUpdate) {
+      // Update the existing WP post content (will be published by publish service)
+      await wp.editPost(existing!.wpPostId!, { title: result.metadata.title, content: wpContent });
+    } else {
+      // Resolve tag IDs (post tags take priority over category defaults)
+      const tagNames = result.metadata.tags ?? [];
+      const tagIds = tagNames.length > 0
+        ? await wp.resolveTagIds(tagNames)
+        : (category?.wpTagIds ?? []);
+
+      // Generate featured image
+      let wpFeaturedMediaId: number | undefined;
+      if (category?.backgroundImage && result.metadata.featuredImageTitle) {
+        const imgService = new FeaturedImageService();
+        const slug = result.metadata.slug || result.metadata.title;
+        const safeSlug = slug.toLowerCase().replace(/[^a-z0-9]+/g, "-").substring(0, 60);
+        const imageBuffer = await imgService.generate({
+          title: result.metadata.featuredImageTitle,
+          category: category.name,
+          backgroundImageUrl: category.backgroundImage,
+        });
+        const media = await wp.uploadMedia(imageBuffer, `${safeSlug}-featured.png`);
+        await wp.updateMediaMeta(media.id, {
+          alt_text: result.metadata.featuredImageTitle,
+          title: result.metadata.featuredImageTitle,
+        });
+        wpFeaturedMediaId = media.id;
+      }
+
+      // Create a new WP draft for review
+      const wpPost = await wp.createDraft({
+        title: result.metadata.title,
+        content: wpContent,
+        status: "draft",
+        slug: result.metadata.slug ?? undefined,
+        categories: category?.wpCategoryId ? [category.wpCategoryId] : undefined,
+        tags: tagIds.length ? tagIds : undefined,
+        featured_media: wpFeaturedMediaId,
+      });
+      await this.prisma.post.update({
+        where: { id: postId },
+        data: {
+          wpPostId: wpPost.id,
+          wpContent,
+          ...(wpFeaturedMediaId && { wpFeaturedMediaId }),
+        },
+      });
+    }
+
+    // 7. Update Notion status
     // New post → "Ready to Review" so the user can review the WP draft before publishing
     // Update → leave as "Processing"; publish service will set "Published" immediately after
     await notion.updatePageStatus(notionPageId, isUpdate ? "Processing" : "Ready to Review");
