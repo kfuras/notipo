@@ -1,9 +1,9 @@
-name: blog-compiler
+name: blog-compiler-dev
 
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: blog-compiler-postgres
+    container_name: blog-compiler-dev-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: blogcompiler
@@ -24,7 +24,7 @@ services:
     build:
       context: .
       target: production
-    container_name: blog-compiler-app
+    container_name: blog-compiler-dev-app
     restart: unless-stopped
     ports:
       - "3000:3000"
