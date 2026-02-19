@@ -30,11 +30,9 @@ export class SyncService {
     const notion = new NotionService(notionCreds.accessToken);
     const wp = new WordPressService(wpCreds);
 
-    // 1. Set Notion status to "Processing"
-    await notion.updatePageStatus(notionPageId, "Processing");
     logger.info({ tenantId, notionPageId }, "Syncing post from Notion");
 
-    // 2. Get page properties and blocks
+    // 1. Get page properties and blocks
     const page = await notion.getPageProperties(notionPageId);
     const blocks = await notion.getPageBlocks(notionPageId);
 
@@ -44,14 +42,14 @@ export class SyncService {
       ? new Date(pageObj.last_edited_time as string)
       : undefined;
 
-    // 3. Convert to markdown
+    // 2. Convert to markdown
     const result = convertNotionBlocksToMarkdown(
       blocks as Array<Record<string, unknown>>,
       pageObj.properties as Record<string, unknown>,
       notionPageId,
     );
 
-    // 4. Resolve category
+    // 3. Resolve category
     const category = result.metadata.category
       ? await this.prisma.category.findUnique({
           where: { tenantId_name: { tenantId, name: result.metadata.category } },
@@ -66,7 +64,7 @@ export class SyncService {
     const isUpdate = existing?.wpPostId != null;
     const finalStatus = isUpdate ? "UPDATE_PENDING" : "SYNCED";
 
-    // 5. Process images if any
+    // 4. Process images if any
     let postId: string;
     let finalMarkdown = result.markdown;
 
@@ -117,7 +115,7 @@ export class SyncService {
       postId = post.id;
     }
 
-    // 6. Create or update WordPress draft
+    // 5. Create or update WordPress draft
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
       select: { codeHighlighter: true },
@@ -209,10 +207,9 @@ export class SyncService {
       });
     }
 
-    // 7. Update Notion status
-    // New draft created → "Ready to Review" (new post, or existing WP post was deleted and recreated)
-    // Update to existing WP post → "Processing" (publish service will set "Published" immediately after)
-    await notion.updatePageStatus(notionPageId, needsNewDraft ? "Ready to Review" : "Processing");
+    // 6. Update Notion status → always "Ready to Review" after sync.
+    // Publish service will set it to "Published" if thenPublish=true was passed to the job.
+    await notion.updatePageStatus(notionPageId, "Ready to Review");
 
     logger.info({ tenantId, notionPageId, postId }, "Post synced successfully");
     return postId;
