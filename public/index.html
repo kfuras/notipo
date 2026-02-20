@@ -205,40 +205,22 @@
             @click="syncCategories()" :disabled="categories.syncing">Sync from WordPress</button>
         </div>
 
-        <p class="text-xs text-base-content/50 mb-4">Categories are imported automatically from WordPress. Set a background image per category for featured image generation.</p>
+        <p class="text-xs text-base-content/50 mb-4">Imported automatically from WordPress. New categories are picked up every 5 minutes.</p>
 
         <div class="overflow-x-auto">
           <table class="table table-sm bg-base-200 rounded-box">
             <thead>
-              <tr><th>Name</th><th>WP ID</th><th>Background Image</th><th>Posts</th><th></th></tr>
+              <tr><th>Name</th><th>WP ID</th></tr>
             </thead>
             <tbody>
               <template x-for="cat in categories.list" :key="cat.id">
                 <tr>
                   <td class="font-medium text-sm" x-text="cat.name"></td>
                   <td class="text-xs" x-text="cat.wpCategoryId ?? '—'"></td>
-                  <td class="text-xs">
-                    <template x-if="categories.editingId !== cat.id">
-                      <span class="cursor-pointer hover:underline" @click="editCategoryBg(cat)"
-                        x-text="cat.backgroundImage || 'click to set'" :class="cat.backgroundImage ? 'text-base-content/60' : 'text-warning'"></span>
-                    </template>
-                    <template x-if="categories.editingId === cat.id">
-                      <span class="flex items-center gap-1">
-                        <input type="text" class="input input-bordered input-xs w-48" x-model="categories.bgEdit"
-                          placeholder="e.g. automation.png" @keydown.enter="saveBgImage(cat.id)" @keydown.escape="categories.editingId = null" x-ref="bgInput" />
-                        <button class="btn btn-xs btn-primary" @click="saveBgImage(cat.id)">Save</button>
-                        <button class="btn btn-xs btn-ghost" @click="categories.editingId = null">Cancel</button>
-                      </span>
-                    </template>
-                  </td>
-                  <td class="text-xs" x-text="cat._count?.posts ?? '—'"></td>
-                  <td>
-                    <button x-show="cat._count?.posts === 0" class="btn btn-xs btn-error btn-outline" @click="deleteCategory(cat.id, cat.name)">Delete</button>
-                  </td>
                 </tr>
               </template>
               <tr x-show="categories.list.length === 0">
-                <td colspan="5" class="text-center text-base-content/40">No categories — sync from WordPress to import</td>
+                <td colspan="2" class="text-center text-base-content/40">No categories — sync from WordPress to import</td>
               </tr>
             </tbody>
           </table>
@@ -479,9 +461,7 @@ function app() {
 
     dashboard: { stats: [], recentJobs: [], settings: null },
     posts: { list: [], filter: 'ALL', expanded: null },
-    categories: {
-      list: [], syncing: false, editingId: null, bgEdit: '',
-    },
+    categories: { list: [], syncing: false },
     jobs: { list: [], total: 0, filter: 'ALL', offset: 0, limit: 50 },
     settings: {},
     forms: {
@@ -674,25 +654,6 @@ function app() {
         alert('Error: ' + e.message);
       } finally {
         this.categories.syncing = false;
-      }
-    },
-
-    editCategoryBg(cat) {
-      this.categories.editingId = cat.id;
-      this.categories.bgEdit = cat.backgroundImage || '';
-      this.$nextTick(() => { if (this.$refs.bgInput) this.$refs.bgInput.focus(); });
-    },
-
-    async saveBgImage(catId) {
-      try {
-        await this.api('/api/categories/' + catId, {
-          method: 'PATCH',
-          body: { backgroundImage: this.categories.bgEdit || null },
-        });
-        this.categories.editingId = null;
-        await this.loadCategories();
-      } catch (e) {
-        alert('Error: ' + e.message);
       }
     },
 
