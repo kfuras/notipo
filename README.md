@@ -8,7 +8,7 @@ A self-hosted backend that publishes blog posts from Notion to WordPress automat
 
 You write posts in Notion. When you change the status to your configured trigger value (e.g. "Post to Wordpress"), the app syncs the post to a WordPress draft. When you set it to "Publish", it goes live. To update content after syncing or publishing, use "Update Wordpress" — it re-syncs the content and only auto-publishes if the WP post is currently live. Drafts stay as drafts.
 
-The app receives real-time Notion webhook events and also polls every 5 minutes as a safety net. WordPress categories and tags are automatically imported so you never need to look up numeric IDs. All credentials are stored encrypted in the database — never in plain environment variables.
+The app receives real-time Notion webhook events and also polls every 5 minutes as a safety net. WordPress categories and tags are automatically imported and pushed to your Notion database as dropdown options, so you never need to look up numeric IDs or type names manually. After each sync or publish, the WordPress post URL is written back to a `WordPress Link` property on the Notion page. All credentials are stored encrypted in the database — never in plain environment variables.
 
 ---
 
@@ -22,6 +22,7 @@ The app receives real-time Notion webhook events and also polls every 5 minutes 
 - [Production — VPS self-hosted](#production--vps-self-hosted)
 - [Production — Railway](#production--railway)
 - [First-run setup](#first-run-setup)
+- [Notion database setup](#notion-database-setup)
 - [Admin UI](#admin-ui)
 
 ---
@@ -51,6 +52,14 @@ cp .env.example .env
 | `DATABASE_URL` | PostgreSQL connection string |
 | `ENCRYPTION_KEY` | 64-char hex string — `openssl rand -hex 32` |
 | `API_KEY` | Admin API key for `/api/admin/*` routes — `openssl rand -hex 16` |
+
+**Notion OAuth** (optional — enables "Connect to Notion" button):
+
+| Variable | Description |
+|----------|-------------|
+| `NOTION_OAUTH_CLIENT_ID` | From your Notion public integration |
+| `NOTION_OAUTH_CLIENT_SECRET` | From your Notion public integration |
+| `NOTION_OAUTH_REDIRECT_URI` | `https://yourdomain.com/api/notion/oauth/callback` |
 
 **Required for VPS deployment only:**
 
@@ -266,19 +275,36 @@ The start command in `railway.toml` runs `prisma migrate deploy` before the app 
 
 After the app starts for the first time, the seed has created your tenant and owner user. You now need to connect Notion and WordPress credentials.
 
-Open the admin UI (`/admin`) and enter your API key (the value of `SEED_API_KEY` or `API_KEY`). Then go to **Settings** and fill in:
+Open the admin UI (`/admin`) and enter your API key (the value of `SEED_API_KEY` or `API_KEY`). Then go to **Settings** and connect:
 
-**Notion:**
-- Integration token (from [notion.so/my-integrations](https://www.notion.so/my-integrations))
-- Database ID (the long ID from your Notion database URL)
-- Trigger status value (e.g. `Post to Wordpress`)
+**Notion** (choose one):
+- **OAuth** (recommended): Click "Connect to Notion" → authorize in Notion's consent screen → select which database to share. Credentials and database ID are configured automatically. Requires OAuth env vars to be set.
+- **Manual token**: Create an internal integration at [notion.so/my-integrations](https://www.notion.so/my-integrations), copy the token, and paste it in Settings along with the database ID.
 
 **WordPress:**
 - Site URL (e.g. `https://yourblog.com`)
 - Username
 - Application password (WP Admin → Users → Application Passwords)
 
-When you save WordPress credentials, all your WP categories and tags are automatically imported into Pressflow. They stay in sync — new categories or tags you create in WordPress are picked up every 5 minutes. You can also trigger a manual sync from the **Categories & Tags** page.
+When you save WordPress credentials, all your WP categories and tags are automatically imported into Pressflow and pushed to your Notion database as `Category` select and `Tags` multi-select options. They stay in sync — new categories or tags you create in WordPress are picked up every 5 minutes and appear in Notion automatically. You can also trigger a manual sync from the **Categories & Tags** page.
+
+---
+
+## Notion database setup
+
+Your Notion database needs these properties:
+
+| Property | Type | Notes |
+|----------|------|-------|
+| Name | Title | Post title (default Notion title column) |
+| Status | Select | Options: `Post to Wordpress`, `Publish`, `Update Wordpress`, `Ready to Review`, `Published` |
+| Category | Select | Auto-populated from WordPress categories |
+| Tags | Multi-select | Auto-populated from WordPress tags |
+| Slug | Text | URL slug for the WordPress post |
+| SEO Keyword | Text | Rank Math focus keyword |
+| WordPress Link | URL | Auto-filled with the WP post URL after sync/publish |
+
+The `Status` options are configurable per tenant — the names above are defaults. `Category` and `Tags` options are automatically synced from your WordPress site once you connect WP credentials. After syncing or publishing a post, the `WordPress Link` property is updated with a direct link to the post in WordPress.
 
 ---
 
@@ -292,6 +318,6 @@ Pages available:
 - **Posts** — full post list with status badges, WordPress links, expandable detail rows
 - **Categories & Tags** — auto-imported from WordPress, synced every 5 minutes. Manual sync available via button.
 - **Jobs** — background job activity log with error display, status filtering, and clickable WP links
-- **Settings** — Notion credentials, WordPress credentials, trigger statuses, code highlighter
+- **Settings** — Notion connection (OAuth or manual token), WordPress credentials, trigger statuses, code highlighter
 - **Tenants** — admin-only page for creating and managing tenants (API key shown once on creation)
 
