@@ -222,12 +222,12 @@
                 <tr>
                   <td class="font-medium text-sm" x-text="cat.name"></td>
                   <td class="text-xs">
-                    <span x-show="cat.wpCategoryId" class="badge badge-ghost badge-sm" x-text="wpCategoryName(cat.wpCategoryId)"></span>
+                    <span x-show="cat.wpCategoryId" class="badge badge-ghost badge-sm" x-text="wpCategoryName(cat.wpCategoryId) + ' (#' + cat.wpCategoryId + ')'"></span>
                     <span x-show="!cat.wpCategoryId" class="text-base-content/30">unmapped</span>
                   </td>
                   <td class="text-xs">
                     <template x-for="tagId in (cat.wpTagIds || [])" :key="tagId">
-                      <span class="badge badge-ghost badge-sm mr-1" x-text="wpTagName(tagId)"></span>
+                      <span class="badge badge-ghost badge-sm mr-1" x-text="wpTagName(tagId) + ' (#' + tagId + ')'"></span>
                     </template>
                     <span x-show="!cat.wpTagIds?.length" class="text-base-content/30">none</span>
                   </td>
