@@ -32,6 +32,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       select: {
         notionCredentials: true,
         wordpressCredentials: true,
+        notionWorkspaceId: true,
         notionDatabaseId: true,
         notionTriggerStatus: true,
         notionPublishTriggerStatus: true,
@@ -45,6 +46,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       data: {
         notion: {
           configured: tenant.notionCredentials !== null,
+          workspaceId: tenant.notionWorkspaceId,
           databaseId: tenant.notionDatabaseId,
           triggerStatus: tenant.notionTriggerStatus,
           publishTriggerStatus: tenant.notionPublishTriggerStatus,

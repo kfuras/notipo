@@ -272,6 +272,10 @@
                 <input type="text" class="input input-bordered input-sm" placeholder="xxxxxxxx-xxxx-…" x-model="forms.notion.databaseId" />
               </label>
               <label class="form-control">
+                <div class="label"><span class="label-text text-xs">Workspace ID</span></div>
+                <input type="text" class="input input-bordered input-sm" placeholder="xxxxxxxx-xxxx-…" x-model="forms.notion.workspaceId" />
+              </label>
+              <label class="form-control">
                 <div class="label"><span class="label-text text-xs">Sync trigger status</span></div>
                 <input type="text" class="input input-bordered input-sm" x-model="forms.notion.triggerStatus" />
               </label>
@@ -430,7 +434,7 @@ function app() {
     jobs: { list: [], total: 0, filter: 'ALL', offset: 0, limit: 50 },
     settings: {},
     forms: {
-      notion: { accessToken: '', databaseId: '', triggerStatus: '', publishTriggerStatus: '', updateTriggerStatus: '' },
+      notion: { accessToken: '', databaseId: '', workspaceId: '', triggerStatus: '', publishTriggerStatus: '', updateTriggerStatus: '' },
       wp: { siteUrl: '', username: '', appPassword: '' },
       general: { codeHighlighter: 'PRISMATIC' },
       notionLoading: false, notionSaved: false,
@@ -639,6 +643,7 @@ function app() {
       this.forms.notion.publishTriggerStatus = res.data.notion?.publishTriggerStatus || 'Publish';
       this.forms.notion.updateTriggerStatus = res.data.notion?.updateTriggerStatus || 'Update Wordpress';
       this.forms.notion.databaseId = res.data.notion?.databaseId || '';
+      this.forms.notion.workspaceId = res.data.notion?.workspaceId || '';
       this.forms.wp.siteUrl = res.data.wordpress?.siteUrl || '';
       this.forms.general.codeHighlighter = res.data.codeHighlighter || 'PRISMATIC';
     },
