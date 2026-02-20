@@ -22,14 +22,6 @@ function encryptJson(data: Record<string, unknown>): string {
   return [iv.toString("base64"), tag.toString("base64"), encrypted.toString("base64")].join(":");
 }
 
-interface CategorySeed {
-  name: string;
-  wpCategoryId?: number;
-  wpTagIds?: number[];
-  /** Plain filename (e.g. automation.png) or full https:// URL */
-  backgroundImage?: string;
-}
-
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
@@ -40,40 +32,6 @@ async function main() {
   const ownerEmail = process.env.SEED_OWNER_EMAIL ?? "dev@pressflow.local";
   const apiKey = process.env.SEED_API_KEY || process.env.API_KEY || "dev-api-key-change-me";
   const triggerStatus = process.env.SEED_NOTION_TRIGGER_STATUS ?? "Ready to Publish";
-
-  // Build tag name → ID lookup from SEED_WP_TAGS, e.g. {"tech":200030,"featured":100013}
-  const tagLookup: Record<string, number> = process.env.SEED_WP_TAGS
-    ? (JSON.parse(process.env.SEED_WP_TAGS) as Record<string, number>)
-    : {};
-
-  // Read SEED_CAT_1, SEED_CAT_2, … until no more vars are found.
-  // Format: "Name | WP Category ID | tag1,tag2 | backgroundImage"
-  const categories: CategorySeed[] = [];
-  for (let i = 1; ; i++) {
-    const raw = process.env[`SEED_CAT_${i}`];
-    if (!raw) break;
-    const [name, wpCatStr, tagsStr, bgImage] = raw.split("|").map((s) => s.trim());
-    const wpCategoryId = wpCatStr ? parseInt(wpCatStr, 10) : undefined;
-    const wpTagNames = tagsStr ? tagsStr.split(",").map((t) => t.trim()).filter(Boolean) : [];
-    const wpTagIds = wpTagNames
-      .map((n) => {
-        const id = tagLookup[n];
-        if (id === undefined) console.warn(`  Warning: tag "${n}" not found in SEED_WP_TAGS`);
-        return id;
-      })
-      .filter((id): id is number => id !== undefined);
-    categories.push({
-      name,
-      wpCategoryId,
-      wpTagIds,
-      backgroundImage: bgImage || undefined,
-    });
-  }
-
-  if (categories.length === 0) {
-    // Fallback for bare dev setup with no SEED_CAT_* vars
-    categories.push({ name: "Tech" }, { name: "Automation" }, { name: "Tutorial" });
-  }
 
   // Create or update tenant
   const tenant = await prisma.tenant.upsert({
@@ -133,28 +91,8 @@ async function main() {
     },
   });
 
-  // Create categories
-  for (const cat of categories) {
-    await prisma.category.upsert({
-      where: { tenantId_name: { tenantId: tenant.id, name: cat.name } },
-      // Only overwrite WP fields when explicitly provided — prevents wiping IDs set via API
-      update: {
-        ...(cat.wpCategoryId !== undefined && { wpCategoryId: cat.wpCategoryId }),
-        ...(cat.wpTagIds !== undefined && { wpTagIds: cat.wpTagIds }),
-        ...(cat.backgroundImage !== undefined && { backgroundImage: cat.backgroundImage }),
-      },
-      create: {
-        name: cat.name,
-        tenantId: tenant.id,
-        wpCategoryId: cat.wpCategoryId ?? null,
-        wpTagIds: cat.wpTagIds ?? [],
-        backgroundImage: cat.backgroundImage ?? null,
-      },
-    });
-  }
-
   console.log(
-    `Seed complete: tenant "${tenantName}" (${tenantSlug}), ${categories.length} categories, API key: ${apiKey}`,
+    `Seed complete: tenant "${tenantName}" (${tenantSlug}), API key: ${apiKey}`,
   );
 }
 
