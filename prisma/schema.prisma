@@ -18,6 +18,7 @@ model Tenant {
   wordpressCredentials String? // {siteUrl, username, appPassword}
 
   // Notion config
+  notionAuthMode      String?   // "internal" | "oauth"
   notionWorkspaceId   String?
   notionDatabaseId    String?
   notionTriggerStatus String @default("Post to Wordpress")

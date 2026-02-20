@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CredentialService } from "../services/credential.service.js";
 import { WordPressService } from "../services/wordpress.service.js";
 import { syncWpCategories } from "../lib/sync-wp-categories.js";
+import { config } from "../config.js";
 import { logger } from "../lib/logger.js";
 
 const notionSettingsSchema = z.object({
@@ -34,6 +35,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       where: { id: request.tenant.id },
       select: {
         notionCredentials: true,
+        notionAuthMode: true,
         wordpressCredentials: true,
         notionWorkspaceId: true,
         notionDatabaseId: true,
@@ -49,6 +51,8 @@ export async function settingsRoutes(app: FastifyInstance) {
       data: {
         notion: {
           configured: tenant.notionCredentials !== null,
+          authMode: tenant.notionAuthMode || "internal",
+          oauthAvailable: !!(config.NOTION_OAUTH_CLIENT_ID && config.NOTION_OAUTH_CLIENT_SECRET && config.NOTION_OAUTH_REDIRECT_URI),
           workspaceId: tenant.notionWorkspaceId,
           databaseId: tenant.notionDatabaseId,
           triggerStatus: tenant.notionTriggerStatus,
@@ -74,18 +78,17 @@ export async function settingsRoutes(app: FastifyInstance) {
       workspaceId: body.workspaceId,
     });
 
-    if (body.databaseId !== undefined || body.triggerStatus !== undefined || body.publishTriggerStatus !== undefined || body.updateTriggerStatus !== undefined || body.workspaceId !== undefined) {
-      await app.prisma.tenant.update({
-        where: { id: request.tenant.id },
-        data: {
-          ...(body.databaseId !== undefined && { notionDatabaseId: body.databaseId }),
-          ...(body.triggerStatus !== undefined && { notionTriggerStatus: body.triggerStatus }),
-          ...(body.publishTriggerStatus !== undefined && { notionPublishTriggerStatus: body.publishTriggerStatus }),
-          ...(body.updateTriggerStatus !== undefined && { notionUpdateTriggerStatus: body.updateTriggerStatus }),
-          ...(body.workspaceId !== undefined && { notionWorkspaceId: body.workspaceId }),
-        },
-      });
-    }
+    await app.prisma.tenant.update({
+      where: { id: request.tenant.id },
+      data: {
+        notionAuthMode: "internal",
+        ...(body.databaseId !== undefined && { notionDatabaseId: body.databaseId }),
+        ...(body.triggerStatus !== undefined && { notionTriggerStatus: body.triggerStatus }),
+        ...(body.publishTriggerStatus !== undefined && { notionPublishTriggerStatus: body.publishTriggerStatus }),
+        ...(body.updateTriggerStatus !== undefined && { notionUpdateTriggerStatus: body.updateTriggerStatus }),
+        ...(body.workspaceId !== undefined && { notionWorkspaceId: body.workspaceId }),
+      },
+    });
 
     return reply.code(204).send();
   });

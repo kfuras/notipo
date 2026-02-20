@@ -20,7 +20,7 @@ async function auth(app: FastifyInstance) {
 
   app.addHook("onRequest", async (request: FastifyRequest, reply) => {
     // Skip auth for health check, admin UI, and Notion webhook (uses HMAC signature instead)
-    if (request.url === "/health" || request.url === "/favicon.ico" || request.url.startsWith("/admin") || request.url === "/api/notion/webhook") return;
+    if (request.url === "/health" || request.url === "/favicon.ico" || request.url.startsWith("/admin") || request.url === "/api/notion/webhook" || request.url.startsWith("/api/notion/oauth/callback")) return;
 
     // Accept x-api-key header or ?token= query param (needed for EventSource SSE)
     const apiKey =

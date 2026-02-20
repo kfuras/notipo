@@ -303,43 +303,72 @@
       <div x-show="page === 'settings' && !loading && !error">
         <h1 class="text-2xl font-bold mb-6">Settings</h1>
 
+        <!-- OAuth toast -->
+        <div x-show="oauthMessage" x-transition class="mb-4">
+          <div class="alert" :class="oauthMessage?.type === 'success' ? 'alert-success' : 'alert-error'">
+            <span x-text="oauthMessage?.text"></span>
+          </div>
+        </div>
+
         <!-- Notion -->
         <div class="card bg-base-200 mb-4">
           <div class="card-body">
             <h2 class="card-title text-base">
               Notion
-              <span x-show="settings.notion?.configured" class="badge badge-success badge-sm">connected</span>
+              <span x-show="settings.notion?.configured && settings.notion?.authMode === 'oauth'" class="badge badge-success badge-sm">connected via OAuth</span>
+              <span x-show="settings.notion?.configured && settings.notion?.authMode !== 'oauth'" class="badge badge-success badge-sm">connected</span>
               <span x-show="!settings.notion?.configured" class="badge badge-warning badge-sm">not configured</span>
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <label class="form-control">
-                <div class="label"><span class="label-text text-xs">Access Token</span></div>
-                <input type="password" class="input input-bordered input-sm" placeholder="ntn_xxxx" x-model="forms.notion.accessToken" />
-              </label>
-              <label class="form-control">
-                <div class="label"><span class="label-text text-xs">Database ID</span></div>
-                <input type="text" class="input input-bordered input-sm" placeholder="xxxxxxxx-xxxx-…" x-model="forms.notion.databaseId" />
-              </label>
-              <label class="form-control">
-                <div class="label"><span class="label-text text-xs">Workspace ID</span></div>
-                <input type="text" class="input input-bordered input-sm" placeholder="xxxxxxxx-xxxx-…" x-model="forms.notion.workspaceId" />
-              </label>
-              <label class="form-control">
-                <div class="label"><span class="label-text text-xs">Sync trigger status</span></div>
-                <input type="text" class="input input-bordered input-sm" x-model="forms.notion.triggerStatus" />
-              </label>
-              <label class="form-control">
-                <div class="label"><span class="label-text text-xs">Publish trigger status</span></div>
-                <input type="text" class="input input-bordered input-sm" x-model="forms.notion.publishTriggerStatus" />
-              </label>
-              <label class="form-control">
-                <div class="label"><span class="label-text text-xs">Update trigger status</span></div>
-                <input type="text" class="input input-bordered input-sm" x-model="forms.notion.updateTriggerStatus" />
-              </label>
+
+            <!-- OAuth connect button (shown when OAuth is available) -->
+            <div x-show="settings.notion?.oauthAvailable" class="mb-3">
+              <div x-show="!settings.notion?.configured || settings.notion?.authMode !== 'oauth'">
+                <p class="text-sm text-base-content/60 mb-2">Connect your Notion workspace to get started.</p>
+                <button class="btn btn-primary btn-sm" @click="connectNotion()">Connect to Notion</button>
+              </div>
+              <div x-show="settings.notion?.configured && settings.notion?.authMode === 'oauth'" class="flex items-center gap-3">
+                <span class="text-sm text-base-content/60">Workspace: <span class="font-mono" x-text="settings.notion?.workspaceId || '—'"></span></span>
+                <button class="btn btn-ghost btn-xs" @click="connectNotion()">Reconnect</button>
+              </div>
             </div>
-            <div class="card-actions justify-end mt-2">
-              <span x-show="forms.notionSaved" class="text-success text-sm">Saved ✓</span>
-              <button class="btn btn-primary btn-sm" :class="forms.notionLoading && 'loading'" @click="saveNotion()">Save Notion</button>
+
+            <!-- Manual token form (collapsible when OAuth is available) -->
+            <div x-show="settings.notion?.oauthAvailable && settings.notion?.authMode === 'oauth'" class="mb-2">
+              <button class="btn btn-ghost btn-xs" @click="forms.showManualNotion = !forms.showManualNotion">
+                <span x-text="forms.showManualNotion ? '▾ Hide manual setup' : '▸ Advanced: manual token'"></span>
+              </button>
+            </div>
+            <div x-show="!settings.notion?.oauthAvailable || !settings.notion?.configured || settings.notion?.authMode !== 'oauth' || forms.showManualNotion">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label class="form-control">
+                  <div class="label"><span class="label-text text-xs">Access Token</span></div>
+                  <input type="password" class="input input-bordered input-sm" placeholder="ntn_xxxx" x-model="forms.notion.accessToken" />
+                </label>
+                <label class="form-control">
+                  <div class="label"><span class="label-text text-xs">Database ID</span></div>
+                  <input type="text" class="input input-bordered input-sm" placeholder="xxxxxxxx-xxxx-…" x-model="forms.notion.databaseId" />
+                </label>
+                <label class="form-control">
+                  <div class="label"><span class="label-text text-xs">Workspace ID</span></div>
+                  <input type="text" class="input input-bordered input-sm" placeholder="xxxxxxxx-xxxx-…" x-model="forms.notion.workspaceId" />
+                </label>
+                <label class="form-control">
+                  <div class="label"><span class="label-text text-xs">Sync trigger status</span></div>
+                  <input type="text" class="input input-bordered input-sm" x-model="forms.notion.triggerStatus" />
+                </label>
+                <label class="form-control">
+                  <div class="label"><span class="label-text text-xs">Publish trigger status</span></div>
+                  <input type="text" class="input input-bordered input-sm" x-model="forms.notion.publishTriggerStatus" />
+                </label>
+                <label class="form-control">
+                  <div class="label"><span class="label-text text-xs">Update trigger status</span></div>
+                  <input type="text" class="input input-bordered input-sm" x-model="forms.notion.updateTriggerStatus" />
+                </label>
+              </div>
+              <div class="card-actions justify-end mt-2">
+                <span x-show="forms.notionSaved" class="text-success text-sm">Saved ✓</span>
+                <button class="btn btn-primary btn-sm" :class="forms.notionLoading && 'loading'" @click="saveNotion()">Save Notion</button>
+              </div>
             </div>
           </div>
         </div>
@@ -487,6 +516,7 @@ function app() {
       notion: { accessToken: '', databaseId: '', workspaceId: '', triggerStatus: '', publishTriggerStatus: '', updateTriggerStatus: '' },
       wp: { siteUrl: '', username: '', appPassword: '' },
       general: { codeHighlighter: 'PRISMATIC' },
+      showManualNotion: false,
       notionLoading: false, notionSaved: false,
       wpLoading: false, wpSaved: false,
       generalLoading: false, generalSaved: false,
@@ -495,7 +525,23 @@ function app() {
     _pollTimer: null,
     _eventSource: null,
 
+    oauthMessage: null,
+
     async init() {
+      // Handle OAuth redirect result
+      const params = new URLSearchParams(window.location.search);
+      const oauthResult = params.get('notion_oauth');
+      if (oauthResult) {
+        history.replaceState({}, '', '/admin/');
+        if (oauthResult === 'success') {
+          this.oauthMessage = { type: 'success', text: 'Notion connected successfully!' };
+        } else {
+          const reason = params.get('reason') || 'unknown error';
+          this.oauthMessage = { type: 'error', text: `Notion connection failed: ${reason}` };
+        }
+        setTimeout(() => this.oauthMessage = null, 5000);
+      }
+
       if (this.auth.apiKey) {
         if (!this.auth.isTenant) this.page = 'tenants';
         await this.loadPage();
@@ -773,6 +819,15 @@ function app() {
         alert('Error: ' + e.message);
       } finally {
         this.forms.generalLoading = false;
+      }
+    },
+
+    async connectNotion() {
+      try {
+        const res = await this.api('/api/notion/oauth/authorize');
+        window.location.href = res.data.url;
+      } catch (e) {
+        alert('Error: ' + e.message);
       }
     },
 

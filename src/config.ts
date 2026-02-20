@@ -9,6 +9,9 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   NOTION_WEBHOOK_SECRET: z.string().optional(),
+  NOTION_OAUTH_CLIENT_ID: z.string().optional(),
+  NOTION_OAUTH_CLIENT_SECRET: z.string().optional(),
+  NOTION_OAUTH_REDIRECT_URI: z.string().url().optional(),
 });
 
 export type Config = z.infer<typeof envSchema>;
