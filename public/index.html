@@ -197,33 +197,52 @@
         </div>
       </div>
 
-      <!-- ── Categories ──────────────────────────────────────────────── -->
+      <!-- ── Categories & Tags ───────────────────────────────────────── -->
       <div x-show="page === 'categories' && !loading && !error">
         <div class="flex items-center justify-between mb-6">
-          <h1 class="text-2xl font-bold">Categories</h1>
+          <h1 class="text-2xl font-bold">Categories & Tags</h1>
           <button class="btn btn-ghost btn-sm" :class="categories.syncing && 'loading'"
             @click="syncCategories()" :disabled="categories.syncing">Sync from WordPress</button>
         </div>
 
-        <p class="text-xs text-base-content/50 mb-4">Imported automatically from WordPress. New categories are picked up every 5 minutes.</p>
+        <p class="text-xs text-base-content/50 mb-4">Imported automatically from WordPress. New entries are picked up every 5 minutes.</p>
 
-        <div class="overflow-x-auto">
-          <table class="table table-sm bg-base-200 rounded-box">
-            <thead>
-              <tr><th>Name</th><th>WP ID</th></tr>
-            </thead>
-            <tbody>
-              <template x-for="cat in categories.list" :key="cat.id">
-                <tr>
-                  <td class="font-medium text-sm" x-text="cat.name"></td>
-                  <td class="text-xs" x-text="cat.wpCategoryId ?? '—'"></td>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h2 class="text-sm font-semibold mb-2">Categories</h2>
+            <table class="table table-sm bg-base-200 rounded-box">
+              <thead><tr><th>Name</th><th>WP ID</th></tr></thead>
+              <tbody>
+                <template x-for="cat in categories.list" :key="cat.id">
+                  <tr>
+                    <td class="font-medium text-sm" x-text="cat.name"></td>
+                    <td class="text-xs" x-text="cat.wpCategoryId ?? '—'"></td>
+                  </tr>
+                </template>
+                <tr x-show="categories.list.length === 0">
+                  <td colspan="2" class="text-center text-base-content/40">No categories</td>
                 </tr>
-              </template>
-              <tr x-show="categories.list.length === 0">
-                <td colspan="2" class="text-center text-base-content/40">No categories — sync from WordPress to import</td>
-              </tr>
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <h2 class="text-sm font-semibold mb-2">Tags</h2>
+            <table class="table table-sm bg-base-200 rounded-box">
+              <thead><tr><th>Name</th><th>WP ID</th></tr></thead>
+              <tbody>
+                <template x-for="tag in categories.tags" :key="tag.id">
+                  <tr>
+                    <td class="font-medium text-sm" x-text="tag.name"></td>
+                    <td class="text-xs" x-text="tag.wpTagId ?? '—'"></td>
+                  </tr>
+                </template>
+                <tr x-show="categories.tags.length === 0">
+                  <td colspan="2" class="text-center text-base-content/40">No tags</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -461,7 +480,7 @@ function app() {
 
     dashboard: { stats: [], recentJobs: [], settings: null },
     posts: { list: [], filter: 'ALL', expanded: null },
-    categories: { list: [], syncing: false },
+    categories: { list: [], tags: [], syncing: false },
     jobs: { list: [], total: 0, filter: 'ALL', offset: 0, limit: 50 },
     settings: {},
     forms: {
@@ -641,15 +660,20 @@ function app() {
     },
 
     async loadCategories() {
-      const res = await this.api('/api/categories');
-      this.categories.list = res.data;
+      const [catRes, tagRes] = await Promise.all([
+        this.api('/api/categories'),
+        this.api('/api/tags'),
+      ]);
+      this.categories.list = catRes.data;
+      this.categories.tags = tagRes.data;
     },
 
     async syncCategories() {
       this.categories.syncing = true;
       try {
         const res = await this.api('/api/categories/sync', { method: 'POST' });
-        this.categories.list = res.data;
+        this.categories.list = res.data.categories;
+        this.categories.tags = res.data.tags;
       } catch (e) {
         alert('Error: ' + e.message);
       } finally {

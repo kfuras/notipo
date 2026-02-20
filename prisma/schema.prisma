@@ -31,6 +31,7 @@ model Tenant {
   users      User[]
   posts      Post[]
   categories Category[]
+  tags       Tag[]
   imageCache ImageMapping[]
   jobs       Job[]
 
@@ -143,6 +144,21 @@ model Category {
 
   @@unique([tenantId, name])
   @@map("categories")
+}
+
+model Tag {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name    String
+  wpTagId Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, name])
+  @@map("tags")
 }
 
 model ImageMapping {

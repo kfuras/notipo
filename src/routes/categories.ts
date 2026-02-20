@@ -13,26 +13,32 @@ export async function categoryRoutes(app: FastifyInstance) {
     const categories = await app.prisma.category.findMany({
       where: { tenantId: request.tenant.id },
       orderBy: { name: "asc" },
-      include: { _count: { select: { posts: true } } },
     });
     return { data: categories };
   });
 
-  /** Sync categories from the tenant's WordPress site into the DB. */
+  app.get("/api/tags", async (request) => {
+    const tags = await app.prisma.tag.findMany({
+      where: { tenantId: request.tenant.id },
+      orderBy: { name: "asc" },
+    });
+    return { data: tags };
+  });
+
+  /** Sync categories and tags from the tenant's WordPress site into the DB. */
   app.post("/api/categories/sync", async (request, reply) => {
     const credService = new CredentialService(app.prisma);
     const wpCreds = await credService.getWordPressCredentials(request.tenant.id);
     if (!wpCreds) return reply.badRequest("WordPress credentials not configured");
 
     const wp = new WordPressService(wpCreds);
-    const count = await syncWpCategories(app.prisma, request.tenant.id, wp);
+    const synced = await syncWpCategories(app.prisma, request.tenant.id, wp);
 
-    const categories = await app.prisma.category.findMany({
-      where: { tenantId: request.tenant.id },
-      orderBy: { name: "asc" },
-      include: { _count: { select: { posts: true } } },
-    });
-    return { data: categories, synced: count };
+    const [categories, tags] = await Promise.all([
+      app.prisma.category.findMany({ where: { tenantId: request.tenant.id }, orderBy: { name: "asc" } }),
+      app.prisma.tag.findMany({ where: { tenantId: request.tenant.id }, orderBy: { name: "asc" } }),
+    ]);
+    return { data: { categories, tags }, synced };
   });
 
   /** Update a category's background image. */
@@ -62,16 +68,5 @@ export async function categoryRoutes(app: FastifyInstance) {
     });
     if (result.count === 0) return reply.notFound("Category not found");
     return reply.code(204).send();
-  });
-
-  /** Fetch tags from the tenant's WordPress site (live, not stored). */
-  app.get("/api/wordpress/tags", async (request, reply) => {
-    const credService = new CredentialService(app.prisma);
-    const wpCreds = await credService.getWordPressCredentials(request.tenant.id);
-    if (!wpCreds) return reply.badRequest("WordPress credentials not configured");
-
-    const wp = new WordPressService(wpCreds);
-    const tags = await wp.listTags();
-    return { data: tags };
   });
 }
