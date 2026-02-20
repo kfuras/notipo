@@ -18,6 +18,7 @@ import { adminRoutes } from "./routes/admin.js";
 import { userRoutes } from "./routes/users.js";
 import { eventBusPlugin } from "./plugins/event-bus.js";
 import { eventsRoutes } from "./routes/events.js";
+import { notionWebhookRoutes } from "./routes/notion-webhook.js";
 import { registerAllJobs } from "./jobs/index.js";
 
 export async function buildApp() {
@@ -70,6 +71,7 @@ export async function buildApp() {
   await app.register(jobRoutes);
   await app.register(adminRoutes);
   await app.register(userRoutes);
+  await app.register(notionWebhookRoutes);
 
   return app;
 }

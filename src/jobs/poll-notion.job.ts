@@ -111,8 +111,8 @@ export async function registerPollNotionJob(boss: PgBoss, prisma: PrismaClient) 
     }
   });
 
-  // Poll every 15 seconds using setInterval (pg-boss cron minimum is 1 minute)
-  const POLL_INTERVAL_MS = 15_000;
+  // Poll every 5 minutes as a safety net (webhooks handle real-time delivery)
+  const POLL_INTERVAL_MS = 300_000;
   setInterval(() => {
     boss.send("poll-notion", {}, { singletonKey: "poll-notion" }).catch((err: unknown) => {
       logger.error({ err }, "Failed to enqueue poll-notion job");

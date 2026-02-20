@@ -24,7 +24,10 @@ export class CredentialService {
     const encrypted = encryptJson(creds as unknown as Record<string, unknown>);
     await this.prisma.tenant.update({
       where: { id: tenantId },
-      data: { notionCredentials: encrypted },
+      data: {
+        notionCredentials: encrypted,
+        ...(creds.workspaceId !== undefined && { notionWorkspaceId: creds.workspaceId }),
+      },
     });
   }
 

@@ -17,7 +17,8 @@ model Tenant {
   notionCredentials    String? // {accessToken, workspaceId}
   wordpressCredentials String? // {siteUrl, username, appPassword}
 
-  // Notion polling config
+  // Notion config
+  notionWorkspaceId   String?
   notionDatabaseId    String?
   notionTriggerStatus String @default("Post to Wordpress")
   notionPublishTriggerStatus String @default("Publish")
@@ -33,6 +34,7 @@ model Tenant {
   imageCache ImageMapping[]
   jobs       Job[]
 
+  @@index([notionWorkspaceId])
   @@map("tenants")
 }
 

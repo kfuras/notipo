@@ -57,4 +57,12 @@ export class NotionService {
   async getPageProperties(pageId: string) {
     return this.client.pages.retrieve({ page_id: pageId });
   }
+
+  /** Get a page's Status select value (returns null if not set). */
+  async getPageStatus(pageId: string): Promise<string | null> {
+    const page = await this.getPageProperties(pageId);
+    const props = (page as { properties?: Record<string, unknown> }).properties;
+    const status = props?.["Status"] as { select?: { name?: string } } | undefined;
+    return status?.select?.name ?? null;
+  }
 }

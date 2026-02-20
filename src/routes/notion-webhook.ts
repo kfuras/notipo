@@ -1,0 +1,193 @@
+import type { FastifyInstance, FastifyRequest } from "fastify";
+import { createHmac, timingSafeEqual } from "crypto";
+import { config } from "../config.js";
+import { NotionService } from "../services/notion.service.js";
+import { CredentialService } from "../services/credential.service.js";
+import { logger } from "../lib/logger.js";
+
+const log = logger.child({ route: "notion-webhook" });
+
+declare module "fastify" {
+  interface FastifyRequest {
+    rawBody?: Buffer;
+  }
+}
+
+export async function notionWebhookRoutes(app: FastifyInstance) {
+  app.decorateRequest("rawBody", undefined);
+
+  // Preserve raw body for HMAC signature verification.
+  // Fastify's default JSON parser discards the original bytes, but HMAC
+  // must be computed over the exact bytes Notion sent.
+  app.addContentTypeParser(
+    "application/json",
+    { parseAs: "buffer" },
+    (req: FastifyRequest, body: Buffer, done) => {
+      req.rawBody = body;
+      try {
+        done(null, JSON.parse(body.toString()));
+      } catch (err) {
+        done(err as Error, undefined);
+      }
+    },
+  );
+
+  app.post("/api/notion/webhook", async (request, reply) => {
+    const body = request.body as Record<string, unknown>;
+
+    // ── Verification request (one-time during subscription setup) ──
+    if (body.verification_token && !body.type) {
+      log.info(
+        { token: body.verification_token },
+        "Notion webhook verification token received — set NOTION_WEBHOOK_SECRET env var to this value",
+      );
+      return reply.code(200).send();
+    }
+
+    // ── HMAC signature verification ──
+    const secret = config.NOTION_WEBHOOK_SECRET;
+    if (!secret) {
+      log.warn("Received webhook event but NOTION_WEBHOOK_SECRET is not set — ignoring");
+      return reply.code(200).send();
+    }
+
+    const signature = request.headers["x-notion-signature"] as string | undefined;
+    if (!signature) {
+      log.warn("Missing X-Notion-Signature header");
+      return reply.code(401).send();
+    }
+
+    const rawBody = request.rawBody;
+    if (!rawBody) {
+      log.warn("No raw body available for signature verification");
+      return reply.code(401).send();
+    }
+
+    const expected = `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}`;
+
+    try {
+      const isValid = timingSafeEqual(
+        Buffer.from(expected),
+        Buffer.from(signature),
+      );
+      if (!isValid) {
+        log.warn("Invalid webhook signature");
+        return reply.code(401).send();
+      }
+    } catch {
+      log.warn("Webhook signature verification failed (length mismatch)");
+      return reply.code(401).send();
+    }
+
+    // ── Handle event ──
+    const eventType = body.type as string;
+    if (eventType !== "page.content_updated") {
+      log.debug({ eventType }, "Ignoring non-page-content event");
+      return reply.code(200).send();
+    }
+
+    const workspaceId = body.workspace_id as string;
+    const entity = body.entity as { id: string; type: string };
+    const pageId = entity.id;
+
+    log.info({ workspaceId, pageId, eventType }, "Received Notion webhook event");
+
+    // Look up tenant by workspace ID
+    const tenant = await app.prisma.tenant.findFirst({
+      where: { notionWorkspaceId: workspaceId },
+    });
+
+    if (!tenant) {
+      log.warn({ workspaceId }, "No tenant found for workspace — ignoring");
+      return reply.code(200).send();
+    }
+
+    // Get tenant's Notion credentials
+    const credService = new CredentialService(app.prisma);
+    const creds = await credService.getNotionCredentials(tenant.id);
+    if (!creds) {
+      log.warn({ tenantId: tenant.id }, "Tenant has no Notion credentials");
+      return reply.code(200).send();
+    }
+
+    // Fetch current page status from Notion
+    const notion = new NotionService(creds.accessToken);
+    let status: string | null;
+    try {
+      status = await notion.getPageStatus(pageId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      log.error({ tenantId: tenant.id, pageId, error: message }, "Failed to fetch page status");
+      return reply.code(200).send();
+    }
+
+    if (!status) {
+      log.debug({ tenantId: tenant.id, pageId }, "Page has no Status — ignoring");
+      return reply.code(200).send();
+    }
+
+    // ── Route to the appropriate job based on status ──
+
+    // "Post to Wordpress" → sync only (creates WP draft)
+    if (status === tenant.notionTriggerStatus) {
+      const runningJob = await app.prisma.job.findFirst({
+        where: { tenantId: tenant.id, type: "SYNC_POST", status: "RUNNING", payload: { path: ["notionPageId"], equals: pageId } },
+      });
+      if (runningJob) {
+        log.debug({ tenantId: tenant.id, pageId }, "Sync already running, skipping");
+        return reply.code(200).send();
+      }
+
+      log.info({ tenantId: tenant.id, pageId }, "Webhook: enqueuing sync-post");
+      await app.boss.send(
+        "sync-post",
+        { tenantId: tenant.id, notionPageId: pageId },
+        { singletonKey: `sync:${pageId}` },
+      );
+      return reply.code(200).send();
+    }
+
+    // "Publish" → publish the existing draft live
+    if (status === tenant.notionPublishTriggerStatus) {
+      const post = await app.prisma.post.findUnique({
+        where: { tenantId_notionPageId: { tenantId: tenant.id, notionPageId: pageId } },
+        select: { id: true },
+      });
+
+      if (!post) {
+        log.warn({ tenantId: tenant.id, pageId }, "Publish triggered but post not in DB — run sync first");
+        return reply.code(200).send();
+      }
+
+      log.info({ tenantId: tenant.id, pageId, postId: post.id }, "Webhook: enqueuing publish-post");
+      await app.boss.send(
+        "publish-post",
+        { tenantId: tenant.id, postId: post.id },
+        { singletonKey: `publish:${post.id}` },
+      );
+      return reply.code(200).send();
+    }
+
+    // "Update Wordpress" → re-sync then auto-publish if live
+    if (status === tenant.notionUpdateTriggerStatus) {
+      const runningJob = await app.prisma.job.findFirst({
+        where: { tenantId: tenant.id, type: "SYNC_POST", status: "RUNNING", payload: { path: ["notionPageId"], equals: pageId } },
+      });
+      if (runningJob) {
+        log.debug({ tenantId: tenant.id, pageId }, "Sync already running, skipping update");
+        return reply.code(200).send();
+      }
+
+      log.info({ tenantId: tenant.id, pageId }, "Webhook: enqueuing sync-post (with publish)");
+      await app.boss.send(
+        "sync-post",
+        { tenantId: tenant.id, notionPageId: pageId, thenPublish: true },
+        { singletonKey: `sync:${pageId}` },
+      );
+      return reply.code(200).send();
+    }
+
+    log.debug({ tenantId: tenant.id, pageId, status }, "Status does not match any trigger — ignoring");
+    return reply.code(200).send();
+  });
+}

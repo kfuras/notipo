@@ -69,7 +69,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       workspaceId: body.workspaceId,
     });
 
-    if (body.databaseId !== undefined || body.triggerStatus !== undefined || body.publishTriggerStatus !== undefined || body.updateTriggerStatus !== undefined) {
+    if (body.databaseId !== undefined || body.triggerStatus !== undefined || body.publishTriggerStatus !== undefined || body.updateTriggerStatus !== undefined || body.workspaceId !== undefined) {
       await app.prisma.tenant.update({
         where: { id: request.tenant.id },
         data: {
@@ -77,6 +77,7 @@ export async function settingsRoutes(app: FastifyInstance) {
           ...(body.triggerStatus !== undefined && { notionTriggerStatus: body.triggerStatus }),
           ...(body.publishTriggerStatus !== undefined && { notionPublishTriggerStatus: body.publishTriggerStatus }),
           ...(body.updateTriggerStatus !== undefined && { notionUpdateTriggerStatus: body.updateTriggerStatus }),
+          ...(body.workspaceId !== undefined && { notionWorkspaceId: body.workspaceId }),
         },
       });
     }
