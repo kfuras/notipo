@@ -197,6 +197,117 @@
         </div>
       </div>
 
+      <!-- ── Categories ──────────────────────────────────────────────── -->
+      <div x-show="page === 'categories' && !loading && !error">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-bold">Categories</h1>
+          <div class="flex gap-2">
+            <button class="btn btn-ghost btn-sm" :class="categories.wpLoading && 'loading'"
+              @click="fetchWpTaxonomy()" :disabled="categories.wpLoading">Refresh WP data</button>
+            <button class="btn btn-primary btn-sm" @click="openCreateCategory()">+ New Category</button>
+          </div>
+        </div>
+
+        <div x-show="categories.wpCategories.length === 0 && !categories.wpLoading" class="alert alert-warning mb-4 text-sm">
+          <span>WordPress categories/tags not loaded. Configure WordPress credentials in Settings first, then click "Refresh WP data".</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="table table-sm bg-base-200 rounded-box">
+            <thead>
+              <tr><th>Name</th><th>WP Category</th><th>WP Tags</th><th>Background Image</th><th>Posts</th><th></th></tr>
+            </thead>
+            <tbody>
+              <template x-for="cat in categories.list" :key="cat.id">
+                <tr>
+                  <td class="font-medium text-sm" x-text="cat.name"></td>
+                  <td class="text-xs">
+                    <span x-show="cat.wpCategoryId" class="badge badge-ghost badge-sm" x-text="wpCategoryName(cat.wpCategoryId)"></span>
+                    <span x-show="!cat.wpCategoryId" class="text-base-content/30">unmapped</span>
+                  </td>
+                  <td class="text-xs">
+                    <template x-for="tagId in (cat.wpTagIds || [])" :key="tagId">
+                      <span class="badge badge-ghost badge-sm mr-1" x-text="wpTagName(tagId)"></span>
+                    </template>
+                    <span x-show="!cat.wpTagIds?.length" class="text-base-content/30">none</span>
+                  </td>
+                  <td class="text-xs text-base-content/60 max-w-48 truncate" x-text="cat.backgroundImage || '—'"></td>
+                  <td class="text-xs" x-text="cat._count?.posts ?? '—'"></td>
+                  <td class="flex gap-1">
+                    <button class="btn btn-xs btn-ghost" @click="editCategory(cat)">Edit</button>
+                    <button class="btn btn-xs btn-error btn-outline" @click="deleteCategory(cat.id, cat.name)">Delete</button>
+                  </td>
+                </tr>
+              </template>
+              <tr x-show="categories.list.length === 0">
+                <td colspan="6" class="text-center text-base-content/40">No categories yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Create/Edit Category Modal -->
+        <dialog class="modal" :class="categories.showForm && 'modal-open'">
+          <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4" x-text="categories.editingId ? 'Edit Category' : 'New Category'"></h3>
+            <div class="space-y-4">
+              <label class="form-control">
+                <div class="label"><span class="label-text text-xs">Category Name</span></div>
+                <input type="text" class="input input-bordered input-sm" x-model="categories.form.name" placeholder="e.g. Automation" />
+              </label>
+
+              <label class="form-control">
+                <div class="label"><span class="label-text text-xs">WordPress Category</span></div>
+                <select class="select select-bordered select-sm"
+                  :value="categories.form.wpCategoryId ?? ''"
+                  @change="categories.form.wpCategoryId = $event.target.value ? Number($event.target.value) : null">
+                  <option value="">-- None --</option>
+                  <template x-for="wc in categories.wpCategories" :key="wc.id">
+                    <option :value="wc.id" :selected="categories.form.wpCategoryId === wc.id" x-text="`${wc.name} (${wc.count} posts)`"></option>
+                  </template>
+                </select>
+                <div x-show="categories.wpCategories.length === 0" class="label">
+                  <span class="label-text-alt text-warning text-xs">No WP categories loaded. Click "Refresh WP data".</span>
+                </div>
+              </label>
+
+              <div class="form-control">
+                <div class="label"><span class="label-text text-xs">Default WordPress Tags</span></div>
+                <div x-show="categories.wpTags.length > 0" class="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 bg-base-300 rounded-box">
+                  <template x-for="wt in categories.wpTags" :key="wt.id">
+                    <label class="flex items-center gap-1 cursor-pointer">
+                      <input type="checkbox" class="checkbox checkbox-xs"
+                        :checked="categories.form.wpTagIds.includes(wt.id)"
+                        @change="toggleWpTag(wt.id)" />
+                      <span class="text-xs" x-text="wt.name"></span>
+                    </label>
+                  </template>
+                </div>
+                <div x-show="categories.wpTags.length === 0" class="label">
+                  <span class="label-text-alt text-warning text-xs">No WP tags loaded.</span>
+                </div>
+              </div>
+
+              <label class="form-control">
+                <div class="label"><span class="label-text text-xs">Background Image (filename or URL)</span></div>
+                <input type="text" class="input input-bordered input-sm" x-model="categories.form.backgroundImage"
+                  placeholder="e.g. automation.png or https://..." />
+                <div class="label">
+                  <span class="label-text-alt text-xs text-base-content/50">Plain filename loads from /category-images/. Full URL also supported.</span>
+                </div>
+              </label>
+            </div>
+
+            <div class="modal-action">
+              <button class="btn btn-ghost btn-sm" @click="categories.showForm = false">Cancel</button>
+              <button class="btn btn-primary btn-sm" :class="categories.saving && 'loading'" @click="saveCategory()"
+                x-text="categories.editingId ? 'Save' : 'Create'"></button>
+            </div>
+          </div>
+          <div class="modal-backdrop" @click="categories.showForm = false"></div>
+        </dialog>
+      </div>
+
       <!-- ── Jobs ───────────────────────────────────────────────────── -->
       <div x-show="page === 'jobs' && !loading && !error">
         <div class="flex items-center justify-between mb-6">
@@ -431,6 +542,11 @@ function app() {
 
     dashboard: { stats: [], recentJobs: [], settings: null },
     posts: { list: [], filter: 'ALL', expanded: null },
+    categories: {
+      list: [], wpCategories: [], wpTags: [], wpLoading: false,
+      showForm: false, editingId: null, saving: false,
+      form: { name: '', wpCategoryId: null, wpTagIds: [], backgroundImage: '' },
+    },
     jobs: { list: [], total: 0, filter: 'ALL', offset: 0, limit: 50 },
     settings: {},
     forms: {
@@ -457,7 +573,8 @@ function app() {
       if (this.auth.isTenant) {
         items.push(
           { id: 'dashboard', label: 'Dashboard', icon: '◈' },
-          { id: 'posts',     label: 'Posts',     icon: '◉' },
+          { id: 'posts',      label: 'Posts',      icon: '◉' },
+          { id: 'categories', label: 'Categories', icon: '◆' },
           { id: 'jobs',      label: 'Jobs',      icon: '◎' },
           { id: 'settings',  label: 'Settings',  icon: '◇' },
         );
@@ -480,8 +597,9 @@ function app() {
       this.error = null;
       try {
         if (this.page === 'dashboard') await this.loadDashboard();
-        else if (this.page === 'posts')  await this.loadPosts();
-        else if (this.page === 'jobs')   await this.loadJobs();
+        else if (this.page === 'posts')      await this.loadPosts();
+        else if (this.page === 'categories') await this.loadCategories();
+        else if (this.page === 'jobs')       await this.loadJobs();
         else if (this.page === 'settings') await this.loadSettings();
         else if (this.page === 'tenants')  await this.loadTenants();
       } catch(e) {
@@ -605,6 +723,97 @@ function app() {
           { label: 'Total',          value: ps.length,            color: '' },
         ];
       } catch (_) {}
+    },
+
+    async loadCategories() {
+      const [catRes, settingsRes] = await Promise.all([
+        this.api('/api/categories'),
+        this.api('/api/settings'),
+      ]);
+      this.categories.list = catRes.data;
+      if (settingsRes.data.wordpress?.configured) await this.fetchWpTaxonomy();
+    },
+
+    async fetchWpTaxonomy() {
+      this.categories.wpLoading = true;
+      try {
+        const [wpCatRes, wpTagRes] = await Promise.all([
+          this.api('/api/wordpress/categories'),
+          this.api('/api/wordpress/tags'),
+        ]);
+        this.categories.wpCategories = wpCatRes.data;
+        this.categories.wpTags = wpTagRes.data;
+      } catch (e) {
+        console.error('Failed to fetch WP taxonomy:', e);
+      } finally {
+        this.categories.wpLoading = false;
+      }
+    },
+
+    openCreateCategory() {
+      this.categories.form = { name: '', wpCategoryId: null, wpTagIds: [], backgroundImage: '' };
+      this.categories.editingId = null;
+      this.categories.showForm = true;
+    },
+
+    editCategory(cat) {
+      this.categories.form = {
+        name: cat.name,
+        wpCategoryId: cat.wpCategoryId,
+        wpTagIds: [...(cat.wpTagIds || [])],
+        backgroundImage: cat.backgroundImage || '',
+      };
+      this.categories.editingId = cat.id;
+      this.categories.showForm = true;
+    },
+
+    async saveCategory() {
+      this.categories.saving = true;
+      try {
+        const body = {
+          name: this.categories.form.name,
+          wpCategoryId: this.categories.form.wpCategoryId || null,
+          wpTagIds: this.categories.form.wpTagIds,
+          backgroundImage: this.categories.form.backgroundImage || null,
+        };
+        if (this.categories.editingId) {
+          await this.api('/api/categories/' + this.categories.editingId, { method: 'PATCH', body });
+        } else {
+          await this.api('/api/categories', { method: 'POST', body });
+        }
+        this.categories.showForm = false;
+        await this.loadCategories();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      } finally {
+        this.categories.saving = false;
+      }
+    },
+
+    async deleteCategory(id, name) {
+      if (!confirm(`Delete category "${name}"?`)) return;
+      try {
+        await this.api('/api/categories/' + id, { method: 'DELETE' });
+        await this.loadCategories();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    },
+
+    wpCategoryName(id) {
+      const cat = this.categories.wpCategories.find(c => c.id === id);
+      return cat ? cat.name : `#${id}`;
+    },
+
+    wpTagName(id) {
+      const tag = this.categories.wpTags.find(t => t.id === id);
+      return tag ? tag.name : `#${id}`;
+    },
+
+    toggleWpTag(tagId) {
+      const idx = this.categories.form.wpTagIds.indexOf(tagId);
+      if (idx >= 0) this.categories.form.wpTagIds.splice(idx, 1);
+      else this.categories.form.wpTagIds.push(tagId);
     },
 
     async loadPosts() {

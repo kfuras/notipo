@@ -116,6 +116,40 @@ export class WordPressService {
     await this.client.delete(`/media/${wpMediaId}`, { params: { force: true } });
   }
 
+  /** Fetch all categories from the WordPress site. */
+  async listCategories(): Promise<Array<{ id: number; name: string; slug: string; count: number }>> {
+    const results: Array<{ id: number; name: string; slug: string; count: number }> = [];
+    let page = 1;
+    while (true) {
+      const { data } = await this.client.get("/categories", {
+        params: { per_page: 100, page },
+      });
+      for (const c of data) {
+        results.push({ id: c.id, name: c.name, slug: c.slug, count: c.count });
+      }
+      if (data.length < 100) break;
+      page++;
+    }
+    return results;
+  }
+
+  /** Fetch all tags from the WordPress site. */
+  async listTags(): Promise<Array<{ id: number; name: string; slug: string; count: number }>> {
+    const results: Array<{ id: number; name: string; slug: string; count: number }> = [];
+    let page = 1;
+    while (true) {
+      const { data } = await this.client.get("/tags", {
+        params: { per_page: 100, page },
+      });
+      for (const t of data) {
+        results.push({ id: t.id, name: t.name, slug: t.slug, count: t.count });
+      }
+      if (data.length < 100) break;
+      page++;
+    }
+    return results;
+  }
+
   /** Update Rank Math SEO meta fields on a post. */
   async updateRankMathSeo(wpPostId: number, seo: RankMathSeoPayload) {
     const { data } = await this.client.post(`/posts/${wpPostId}`, {
