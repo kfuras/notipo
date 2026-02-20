@@ -58,6 +58,17 @@ export class NotionService {
     return this.client.pages.retrieve({ page_id: pageId });
   }
 
+  /** Update a Notion database's Category select and Tags multi-select options. */
+  async syncDatabaseOptions(databaseId: string, categories: string[], tags: string[]) {
+    await this.client.databases.update({
+      database_id: databaseId,
+      properties: {
+        Category: { select: { options: categories.map((name) => ({ name })) } },
+        Tags: { multi_select: { options: tags.map((name) => ({ name })) } },
+      },
+    });
+  }
+
   /** Get a page's Status select value (returns null if not set). */
   async getPageStatus(pageId: string): Promise<string | null> {
     const page = await this.getPageProperties(pageId);

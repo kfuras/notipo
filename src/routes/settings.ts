@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { CredentialService } from "../services/credential.service.js";
 import { WordPressService } from "../services/wordpress.service.js";
+import { NotionService } from "../services/notion.service.js";
 import { syncWpCategories } from "../lib/sync-wp-categories.js";
 import { config } from "../config.js";
 import { logger } from "../lib/logger.js";
@@ -104,10 +105,13 @@ export async function settingsRoutes(app: FastifyInstance) {
       appPassword: body.appPassword,
     });
 
-    // Auto-sync WP categories into the DB
+    // Auto-sync WP categories into the DB (and push to Notion if connected)
     try {
       const wp = new WordPressService(body);
-      await syncWpCategories(app.prisma, request.tenant.id, wp);
+      const notionCreds = await credService.getNotionCredentials(request.tenant.id);
+      const tenant = await app.prisma.tenant.findUniqueOrThrow({ where: { id: request.tenant.id }, select: { notionDatabaseId: true } });
+      const notion = notionCreds ? new NotionService(notionCreds.accessToken) : undefined;
+      await syncWpCategories(app.prisma, request.tenant.id, wp, notion, tenant.notionDatabaseId ?? undefined);
     } catch (e) {
       logger.warn({ err: e }, "Failed to auto-sync WP categories after credential save");
     }

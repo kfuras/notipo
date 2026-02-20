@@ -27,18 +27,18 @@ export async function registerPollNotionJob(boss: PgBoss, prisma: PrismaClient) 
         const creds = await credService.getNotionCredentials(tenant.id);
         if (!creds || !tenant.notionDatabaseId) continue;
 
-        // Auto-sync WP categories so new ones are picked up
+        const notion = new NotionService(creds.accessToken);
+
+        // Auto-sync WP categories so new ones are picked up (and push to Notion)
         const wpCreds = await credService.getWordPressCredentials(tenant.id);
         if (wpCreds) {
           try {
             const wp = new WordPressService(wpCreds);
-            await syncWpCategories(prisma, tenant.id, wp);
+            await syncWpCategories(prisma, tenant.id, wp, notion, tenant.notionDatabaseId ?? undefined);
           } catch (e) {
             log.warn({ tenantId: tenant.id, err: e }, "Failed to sync WP categories");
           }
         }
-
-        const notion = new NotionService(creds.accessToken);
 
         // ── 1. "Post to Wordpress" → sync only (creates WP draft, waits for Publish) ──
         const syncPages = await notion.getReadyPosts(

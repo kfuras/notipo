@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { CredentialService } from "../services/credential.service.js";
 import { WordPressService } from "../services/wordpress.service.js";
+import { NotionService } from "../services/notion.service.js";
 import { syncWpCategories } from "../lib/sync-wp-categories.js";
 
 const updateCategorySchema = z.object({
@@ -32,7 +33,10 @@ export async function categoryRoutes(app: FastifyInstance) {
     if (!wpCreds) return reply.badRequest("WordPress credentials not configured");
 
     const wp = new WordPressService(wpCreds);
-    const synced = await syncWpCategories(app.prisma, request.tenant.id, wp);
+    const notionCreds = await credService.getNotionCredentials(request.tenant.id);
+    const tenant = await app.prisma.tenant.findUniqueOrThrow({ where: { id: request.tenant.id }, select: { notionDatabaseId: true } });
+    const notion = notionCreds ? new NotionService(notionCreds.accessToken) : undefined;
+    const synced = await syncWpCategories(app.prisma, request.tenant.id, wp, notion, tenant.notionDatabaseId ?? undefined);
 
     const [categories, tags] = await Promise.all([
       app.prisma.category.findMany({ where: { tenantId: request.tenant.id }, orderBy: { name: "asc" } }),
