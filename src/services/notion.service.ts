@@ -60,11 +60,12 @@ export class NotionService {
 
   /** Update a Notion database's Category select and Tags multi-select options. */
   async syncDatabaseOptions(databaseId: string, categories: string[], tags: string[]) {
+    const COLORS = ["blue", "green", "orange", "red", "purple", "pink", "yellow", "brown", "gray", "default"] as const;
     await this.client.databases.update({
       database_id: databaseId,
       properties: {
-        Category: { select: { options: categories.map((name) => ({ name })) } },
-        Tags: { multi_select: { options: tags.map((name) => ({ name })) } },
+        Category: { select: { options: categories.map((name, i) => ({ name, color: COLORS[i % COLORS.length] })) } },
+        Tags: { multi_select: { options: tags.map((name, i) => ({ name, color: COLORS[i % COLORS.length] })) } },
       },
     });
   }
