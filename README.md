@@ -8,7 +8,7 @@ A self-hosted backend that publishes blog posts from Notion to WordPress automat
 
 You write posts in Notion. When you change the status to your configured trigger value (e.g. "Post to Wordpress"), the app syncs the post to a WordPress draft. When you set it to "Publish", it goes live. To update content after syncing or publishing, use "Update Wordpress" — it re-syncs the content and only auto-publishes if the WP post is currently live. Drafts stay as drafts.
 
-The app polls your Notion database every 15 seconds. All credentials are stored encrypted in the database — never in plain environment variables.
+The app receives real-time Notion webhook events and also polls every 5 minutes as a safety net. WordPress categories and tags are automatically imported so you never need to look up numeric IDs. All credentials are stored encrypted in the database — never in plain environment variables.
 
 ---
 
@@ -23,7 +23,6 @@ The app polls your Notion database every 15 seconds. All credentials are stored 
 - [Production — Railway](#production--railway)
 - [First-run setup](#first-run-setup)
 - [Admin UI](#admin-ui)
-- [Adding categories](#adding-categories)
 
 ---
 
@@ -70,10 +69,8 @@ cp .env.example .env
 | `SEED_OWNER_EMAIL` | `dev@pressflow.local` | Your login email |
 | `SEED_API_KEY` | falls back to `API_KEY` | Tenant API key for calling the API |
 | `SEED_NOTION_TRIGGER_STATUS` | `Ready to Publish` | Notion status that triggers sync |
-| `SEED_WP_TAGS` | `{}` | JSON map of tag name to WP tag ID |
-| `SEED_CAT_1` ... `SEED_CAT_N` | — | Category definitions (see below) |
 
-The seed runs automatically on startup and is idempotent — safe to re-run.
+The seed runs automatically on startup and is idempotent — safe to re-run. Categories and tags are imported automatically from WordPress once you connect your WP credentials — no manual configuration needed.
 
 ---
 
@@ -281,6 +278,7 @@ Open the admin UI (`/admin`) and enter your API key (the value of `SEED_API_KEY`
 - Username
 - Application password (WP Admin → Users → Application Passwords)
 
+When you save WordPress credentials, all your WP categories and tags are automatically imported into Pressflow. They stay in sync — new categories or tags you create in WordPress are picked up every 5 minutes. You can also trigger a manual sync from the **Categories & Tags** page.
 
 ---
 
@@ -292,18 +290,8 @@ Pages available:
 
 - **Dashboard** — post status counts, recent jobs with live step progress, config health check. Updates in real-time via Server-Sent Events.
 - **Posts** — full post list with status badges, WordPress links, expandable detail rows
+- **Categories & Tags** — auto-imported from WordPress, synced every 5 minutes. Manual sync available via button.
 - **Jobs** — background job activity log with error display, status filtering, and clickable WP links
 - **Settings** — Notion credentials, WordPress credentials, trigger statuses, code highlighter
 - **Tenants** — admin-only page for creating and managing tenants (API key shown once on creation)
 
----
-
-## Adding categories
-
-Categories map Notion category names to WordPress category IDs and optional tag IDs. They also hold the background image used for featured image generation.
-
-Configure them in `.env` before first deploy using `SEED_CAT_1`, `SEED_CAT_2`, etc. See `.env.example` for the format. The seed runs automatically on startup and is idempotent, so you can update the values and restart to apply changes.
-
-Background images are plain filenames (e.g. `automation.png`) stored in `public/category-images/`, or full `https://` URLs.
-
-To find WordPress category and tag IDs: **WP Admin → Posts → Categories / Tags** — check the URL when editing an item, the `tag_ID` query parameter is the ID you need.
