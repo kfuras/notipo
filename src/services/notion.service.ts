@@ -43,12 +43,13 @@ export class NotionService {
     return blocks;
   }
 
-  /** Update a Notion page's status property. */
-  async updatePageStatus(pageId: string, status: string) {
+  /** Update a Notion page's status property and optionally set the WordPress Link URL. */
+  async updatePageStatus(pageId: string, status: string, wpUrl?: string) {
     await this.client.pages.update({
       page_id: pageId,
       properties: {
         Status: { select: { name: status } },
+        ...(wpUrl && { "WordPress Link": { url: wpUrl } }),
       },
     });
   }

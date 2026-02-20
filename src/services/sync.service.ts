@@ -133,12 +133,14 @@ export class SyncService {
     // re-upload any images whose WP media was also deleted.
     let needsNewDraft = !isUpdate;
     let wpStatus: string | null = null;
+    let wpUrl: string | undefined;
     if (isUpdate) {
       const wpContent = convertMarkdownToGutenberg(finalMarkdown, { highlighter });
       let wpPostGone = false;
       try {
         const updated = await wp.editPost(existing!.wpPostId!, { title: result.metadata.title, content: wpContent });
         wpStatus = updated.status ?? null;
+        wpUrl = updated.link ?? undefined;
         // WP returns 200 even for trashed posts — treat trash the same as deleted
         if (updated.status === "trash") {
           logger.warn({ wpPostId: existing!.wpPostId }, "WP post is trashed, re-creating draft");
@@ -226,6 +228,7 @@ export class SyncService {
         tags: tagIds.length ? tagIds : undefined,
         featured_media: wpFeaturedMediaId,
       });
+      wpUrl = wpPost.link ?? undefined;
       logger.info({ wpPostId: wpPost.id, wpPostStatus: wpPost.status, wpPostLink: wpPost.link }, "WP draft created");
       await this.prisma.post.update({
         where: { id: postId },
@@ -240,7 +243,7 @@ export class SyncService {
     // 6. Update Notion status → always "Ready to Review" after sync.
     // Publish service will set it to "Published" if thenPublish=true was passed to the job.
     onStep?.("Updating Notion status…");
-    await notion.updatePageStatus(notionPageId, "Ready to Review");
+    await notion.updatePageStatus(notionPageId, "Ready to Review", wpUrl);
 
     logger.info({ tenantId, notionPageId, postId }, "Post synced successfully");
     return { postId, wpStatus };

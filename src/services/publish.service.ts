@@ -175,12 +175,13 @@ export class PublishService {
       });
     }
 
-    // Update Notion status
+    // Update Notion status with the published WP URL
     onStep?.("Updating Notion status…");
     const notionCreds = await credService.getNotionCredentials(tenantId);
     if (notionCreds && post.notionPageId) {
+      const updatedPost = await this.prisma.post.findUnique({ where: { id: postId }, select: { wpUrl: true } });
       const notion = new NotionService(notionCreds.accessToken);
-      await notion.updatePageStatus(post.notionPageId, "Published");
+      await notion.updatePageStatus(post.notionPageId, "Published", updatedPost?.wpUrl ?? undefined);
     }
 
     logger.info({ tenantId, postId, wpPostId: post.wpPostId }, "Post published");
