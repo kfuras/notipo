@@ -292,6 +292,8 @@ When you save WordPress credentials, all your WP categories and tags are automat
 
 ## Notion database setup
 
+Start by duplicating the [Pressflow Blog Template](https://free-dentist-6b2.notion.site/30d842af972f8091a104eb8773fbf390?v=30d842af972f8091a104eb8773fbf390) — it has all required properties pre-configured.
+
 Your Notion database needs these properties:
 
 | Property | Type | Notes |

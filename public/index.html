@@ -310,6 +310,35 @@
           </div>
         </div>
 
+        <!-- Onboarding steps (shown when not fully configured) -->
+        <div x-show="!settings.notion?.configured || !settings.wordpress?.configured" class="card bg-base-100 border border-primary/20 mb-6">
+          <div class="card-body">
+            <h2 class="card-title text-base">Getting Started</h2>
+            <ul class="steps steps-vertical text-sm">
+              <li class="step" :class="settings.notion?.configured ? 'step-success' : 'step-primary'">
+                <div class="text-left">
+                  <span class="font-medium">Duplicate the Notion template</span>
+                  <p class="text-xs text-base-content/60">
+                    <a href="https://free-dentist-6b2.notion.site/30d842af972f8091a104eb8773fbf390?v=30d842af972f8091a104eb8773fbf390" target="_blank" class="link link-primary">Open template</a> and click "Duplicate" to add it to your workspace.
+                  </p>
+                </div>
+              </li>
+              <li class="step" :class="settings.notion?.configured ? 'step-success' : ''">
+                <div class="text-left">
+                  <span class="font-medium">Connect Notion</span>
+                  <p class="text-xs text-base-content/60">Click "Connect to Notion" below and select the duplicated database.</p>
+                </div>
+              </li>
+              <li class="step" :class="settings.wordpress?.configured ? 'step-success' : ''">
+                <div class="text-left">
+                  <span class="font-medium">Connect WordPress</span>
+                  <p class="text-xs text-base-content/60">Enter your site URL, username, and application password below.</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
         <!-- Notion -->
         <div class="card bg-base-200 mb-4">
           <div class="card-body">
