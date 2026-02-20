@@ -87,9 +87,35 @@ export async function notionOAuthRoutes(app: FastifyInstance) {
         workspaceId: tokenData.workspace_id,
       });
 
+      // Auto-detect the Notion database the user selected during OAuth
+      let detectedDatabaseId: string | undefined;
+      try {
+        const searchRes = await fetch("https://api.notion.com/v1/search", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${tokenData.access_token}`,
+            "Notion-Version": "2022-06-28",
+          },
+          body: JSON.stringify({ filter: { value: "database", property: "object" } }),
+        });
+        if (searchRes.ok) {
+          const searchData = (await searchRes.json()) as { results: Array<{ id: string }> };
+          if (searchData.results.length === 1) {
+            detectedDatabaseId = searchData.results[0].id;
+            log.info({ tenantId, databaseId: detectedDatabaseId }, "Auto-detected Notion database");
+          }
+        }
+      } catch (e) {
+        log.warn({ err: e }, "Failed to auto-detect Notion database");
+      }
+
       await app.prisma.tenant.update({
         where: { id: tenantId },
-        data: { notionAuthMode: "oauth" },
+        data: {
+          notionAuthMode: "oauth",
+          ...(detectedDatabaseId && { notionDatabaseId: detectedDatabaseId }),
+        },
       });
 
       log.info({ tenantId, workspaceId: tokenData.workspace_id }, "Notion OAuth completed");
