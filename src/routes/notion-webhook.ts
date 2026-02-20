@@ -81,8 +81,8 @@ export async function notionWebhookRoutes(app: FastifyInstance) {
 
     // ── Handle event ──
     const eventType = body.type as string;
-    if (eventType !== "page.content_updated") {
-      log.debug({ eventType }, "Ignoring non-page-content event");
+    if (eventType !== "page.content_updated" && eventType !== "page.properties_updated") {
+      log.debug({ eventType }, "Ignoring unhandled event type");
       return reply.code(200).send();
     }
 
