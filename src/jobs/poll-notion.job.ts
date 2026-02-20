@@ -2,6 +2,8 @@ import type PgBoss from "pg-boss";
 import type { PrismaClient } from "@prisma/client";
 import { NotionService } from "../services/notion.service.js";
 import { CredentialService } from "../services/credential.service.js";
+import { WordPressService } from "../services/wordpress.service.js";
+import { syncWpCategories } from "../lib/sync-wp-categories.js";
 import { logger } from "../lib/logger.js";
 
 export async function registerPollNotionJob(boss: PgBoss, prisma: PrismaClient) {
@@ -24,6 +26,17 @@ export async function registerPollNotionJob(boss: PgBoss, prisma: PrismaClient) 
         const credService = new CredentialService(prisma);
         const creds = await credService.getNotionCredentials(tenant.id);
         if (!creds || !tenant.notionDatabaseId) continue;
+
+        // Auto-sync WP categories so new ones are picked up
+        const wpCreds = await credService.getWordPressCredentials(tenant.id);
+        if (wpCreds) {
+          try {
+            const wp = new WordPressService(wpCreds);
+            await syncWpCategories(prisma, tenant.id, wp);
+          } catch (e) {
+            log.warn({ tenantId: tenant.id, err: e }, "Failed to sync WP categories");
+          }
+        }
 
         const notion = new NotionService(creds.accessToken);
 

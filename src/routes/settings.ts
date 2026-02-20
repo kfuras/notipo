@@ -1,6 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { CredentialService } from "../services/credential.service.js";
+import { WordPressService } from "../services/wordpress.service.js";
+import { syncWpCategories } from "../lib/sync-wp-categories.js";
+import { logger } from "../lib/logger.js";
 
 const notionSettingsSchema = z.object({
   accessToken: z.string().min(1),
@@ -97,6 +100,14 @@ export async function settingsRoutes(app: FastifyInstance) {
       username: body.username,
       appPassword: body.appPassword,
     });
+
+    // Auto-sync WP categories into the DB
+    try {
+      const wp = new WordPressService(body);
+      await syncWpCategories(app.prisma, request.tenant.id, wp);
+    } catch (e) {
+      logger.warn({ err: e }, "Failed to auto-sync WP categories after credential save");
+    }
 
     return reply.code(204).send();
   });
