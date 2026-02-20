@@ -6,7 +6,7 @@ A self-hosted backend that publishes blog posts from Notion to WordPress automat
 
 ## How it works
 
-You write posts in Notion. When you change the status to your configured trigger value (e.g. "Post to Wordpress"), the app syncs the post to a WordPress draft. When you set it to "Publish", it goes live. Updates to already-published posts are handled by a third status ("Update Wordpress").
+You write posts in Notion. When you change the status to your configured trigger value (e.g. "Post to Wordpress"), the app syncs the post to a WordPress draft. When you set it to "Publish", it goes live. To update content after syncing or publishing, use "Update Wordpress" — it re-syncs the content and only auto-publishes if the WP post is currently live. Drafts stay as drafts.
 
 The app polls your Notion database every 15 seconds. All credentials are stored encrypted in the database — never in plain environment variables.
 
@@ -290,9 +290,9 @@ The admin UI is a single-page app served at `/admin`. No login page — enter yo
 
 Pages available:
 
-- **Dashboard** — post status counts, recent jobs, config health check
+- **Dashboard** — post status counts, recent jobs with live step progress, config health check. Updates in real-time via Server-Sent Events.
 - **Posts** — full post list with status badges, WordPress links, expandable detail rows
-- **Jobs** — background job activity log with error display and status filtering
+- **Jobs** — background job activity log with error display, status filtering, and clickable WP links
 - **Settings** — Notion credentials, WordPress credentials, trigger statuses, code highlighter
 - **Tenants** — admin-only page for creating and managing tenants (API key shown once on creation)
 
