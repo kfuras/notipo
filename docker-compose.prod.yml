@@ -46,11 +46,26 @@ services:
         condition: service_healthy
     labels:
       - traefik.enable=true
-      - traefik.http.routers.app.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.app.rule=Host(`${DOMAIN}`) && (PathPrefix(`/api`) || PathPrefix(`/admin`) || Path(`/health`))
       - traefik.http.routers.app.entrypoints=websecure
       - traefik.http.routers.app.tls=true
       - traefik.http.routers.app.tls.certresolver=letsencrypt
+      - traefik.http.routers.app.priority=20
       - traefik.http.services.app.loadbalancer.server.port=3000
+
+  landing:
+    container_name: pressflow-landing
+    build:
+      context: ../pressflow-landing
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.landing.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.landing.entrypoints=websecure
+      - traefik.http.routers.landing.tls=true
+      - traefik.http.routers.landing.tls.certresolver=letsencrypt
+      - traefik.http.routers.landing.priority=10
+      - traefik.http.services.landing.loadbalancer.server.port=80
 
   postgres:
     container_name: pressflow-postgres
