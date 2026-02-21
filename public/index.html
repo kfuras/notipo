@@ -565,7 +565,7 @@ function app() {
       const oauthResult = params.get('notion_oauth');
       if (oauthResult) {
         this.page = 'settings';
-        history.replaceState({}, '', '/admin/');
+        history.replaceState({}, '', '/admin/#settings');
         if (oauthResult === 'success') {
           this.oauthMessage = { type: 'success', text: 'Notion connected successfully!' };
         } else {
@@ -573,6 +573,8 @@ function app() {
           this.oauthMessage = { type: 'error', text: `Notion connection failed: ${reason}` };
         }
         setTimeout(() => this.oauthMessage = null, 5000);
+      } else if (location.hash) {
+        this.page = location.hash.slice(1);
       }
 
       if (this.auth.apiKey) {
@@ -601,6 +603,7 @@ function app() {
       this._pollTimer = null;
       if (this._eventSource) { this._eventSource.close(); this._eventSource = null; }
       this.page = id;
+      location.hash = id;
       this.error = null;
       this.loadPage();
     },
