@@ -40,8 +40,8 @@ export async function registerPublishPostJob(boss: PgBoss, prisma: PrismaClient,
       };
       await publishService.publishPost(tenantId, postId, onStep);
 
-      const post = await prisma.post.findUnique({
-        where: { id: postId },
+      const post = await prisma.post.findFirst({
+        where: { id: postId, tenantId },
         select: { wpPostId: true, wpUrl: true, status: true },
       });
 

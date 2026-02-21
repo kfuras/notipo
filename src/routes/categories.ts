@@ -56,7 +56,7 @@ export async function categoryRoutes(app: FastifyInstance) {
 
     if (category.count === 0) return reply.notFound("Category not found");
 
-    return { data: await app.prisma.category.findUnique({ where: { id: request.params.id } }) };
+    return { data: await app.prisma.category.findFirst({ where: { id: request.params.id, tenantId: request.tenant.id } }) };
   });
 
   app.delete<{ Params: { id: string } }>("/api/categories/:id", async (request, reply) => {

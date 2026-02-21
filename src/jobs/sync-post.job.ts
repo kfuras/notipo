@@ -43,8 +43,8 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient, ev
       const { postId, wpStatus } = await syncService.syncPost(tenantId, notionPageId, onStep);
 
       // Build result summary from the synced post
-      const post = await prisma.post.findUnique({
-        where: { id: postId },
+      const post = await prisma.post.findFirst({
+        where: { id: postId, tenantId },
         select: {
           wpPostId: true, wpUrl: true, status: true,
           category: { select: { name: true } },
