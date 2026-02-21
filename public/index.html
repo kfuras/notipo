@@ -428,6 +428,7 @@
             </div>
             <div class="card-actions justify-end mt-2">
               <span x-show="forms.wpSaved" class="text-success text-sm">Saved ✓</span>
+              <button x-show="settings.wordpress?.configured" class="btn btn-ghost btn-sm text-error" @click="disconnectWordPress()">Disconnect</button>
               <button class="btn btn-primary btn-sm" :class="forms.wpLoading && 'loading'" @click="saveWordPress()">Save WordPress</button>
             </div>
           </div>
@@ -867,6 +868,16 @@ function app() {
       if (!confirm('Disconnect Notion? You can reconnect at any time.')) return;
       try {
         await this.api('/api/settings/notion', { method: 'DELETE' });
+        await this.loadSettings();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    },
+
+    async disconnectWordPress() {
+      if (!confirm('Disconnect WordPress? You can reconnect at any time.')) return;
+      try {
+        await this.api('/api/settings/wordpress', { method: 'DELETE' });
         await this.loadSettings();
       } catch (e) {
         alert('Error: ' + e.message);

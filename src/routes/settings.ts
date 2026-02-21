@@ -109,6 +109,19 @@ export async function settingsRoutes(app: FastifyInstance) {
     return reply.code(204).send();
   });
 
+  /** DELETE /api/settings/wordpress — disconnect WordPress */
+  app.delete("/api/settings/wordpress", async (request, reply) => {
+    await app.prisma.tenant.update({
+      where: { id: request.tenant.id },
+      data: {
+        wordpressCredentials: null,
+        wpSiteUrl: null,
+      },
+    });
+
+    return reply.code(204).send();
+  });
+
   /** PUT /api/settings/wordpress — set WordPress credentials */
   app.put("/api/settings/wordpress", async (request, reply) => {
     const body = wordpressSettingsSchema.parse(request.body);
