@@ -362,12 +362,12 @@
             </div>
 
             <!-- Manual token form (collapsible when OAuth is available) -->
-            <div x-show="settings.notion?.oauthAvailable && settings.notion?.authMode === 'oauth'" class="mb-2">
+            <div x-show="settings.notion?.oauthAvailable" class="mb-2">
               <button class="btn btn-ghost btn-xs" @click="forms.showManualNotion = !forms.showManualNotion">
                 <span x-text="forms.showManualNotion ? '▾ Hide manual setup' : '▸ Advanced: manual token'"></span>
               </button>
             </div>
-            <div x-show="!settings.notion?.oauthAvailable || !settings.notion?.configured || settings.notion?.authMode !== 'oauth' || forms.showManualNotion">
+            <div x-show="!settings.notion?.oauthAvailable || forms.showManualNotion">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label class="form-control">
                   <div class="label"><span class="label-text text-xs">Access Token</span></div>
