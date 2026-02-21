@@ -10,6 +10,8 @@ You write posts in Notion. When you change the status to your configured trigger
 
 The app receives real-time Notion webhook events and also polls every 5 minutes as a safety net. WordPress categories and tags are automatically imported and pushed to your Notion database as dropdown options, so you never need to look up numeric IDs or type names manually. After each sync or publish, the WordPress post URL is written back to a `WordPress Link` property on the Notion page. All credentials are stored encrypted in the database — never in plain environment variables.
 
+New users can sign up with email and password via the admin UI, which creates a tenant and returns an API key. An onboarding stepper guides them through connecting Notion and WordPress. Self-service signup can be disabled by setting `ALLOW_SIGNUP=false`.
+
 ---
 
 ## Table of contents
@@ -52,6 +54,7 @@ cp .env.example .env
 | `DATABASE_URL` | PostgreSQL connection string |
 | `ENCRYPTION_KEY` | 64-char hex string — `openssl rand -hex 32` |
 | `API_KEY` | Admin API key for `/api/admin/*` routes — `openssl rand -hex 16` |
+| `ALLOW_SIGNUP` | Set to `false` to disable self-service registration (default: `true`) |
 
 **Notion OAuth** (optional — enables "Connect to Notion" button):
 
@@ -275,7 +278,7 @@ The start command in `railway.toml` runs `prisma migrate deploy` before the app 
 
 After the app starts for the first time, the seed has created your tenant and owner user. You now need to connect Notion and WordPress credentials.
 
-Open the admin UI (`/admin`) and enter your API key (the value of `SEED_API_KEY` or `API_KEY`). Then go to **Settings** and connect:
+Open the admin UI (`/admin`) and either sign up with email and password (creates a new tenant) or enter your API key (the value of `SEED_API_KEY` or `API_KEY`). An onboarding stepper guides you through the remaining setup. Go to **Settings** and connect:
 
 **Notion** (choose one):
 - **OAuth** (recommended): Click "Connect to Notion" → authorize in Notion's consent screen → select which database to share. Credentials and database ID are configured automatically. Requires OAuth env vars to be set.
@@ -312,7 +315,9 @@ The `Status` options are configurable per tenant — the names above are default
 
 ## Admin UI
 
-The admin UI is a single-page app served at `/admin`. No login page — enter your API key on first visit and it is stored in `localStorage`. The key is auto-detected as admin or tenant-level by probing the tenants endpoint.
+The admin UI is a single-page app served at `/admin`. Sign up with email and password, or enter an existing API key on first visit. The key is stored in `localStorage` and auto-detected as admin or tenant-level by probing the tenants endpoint. The current page persists across browser refreshes via URL hash.
+
+New tenants see an onboarding stepper that guides them through connecting Notion (with a link to the Notion database template) and WordPress. The stepper disappears once both services are configured.
 
 Pages available:
 
@@ -320,6 +325,6 @@ Pages available:
 - **Posts** — full post list with status badges, WordPress links, expandable detail rows
 - **Categories & Tags** — auto-imported from WordPress, synced every 5 minutes. Manual sync available via button.
 - **Jobs** — background job activity log with error display, status filtering, and clickable WP links
-- **Settings** — Notion connection (OAuth or manual token), WordPress credentials, trigger statuses, code highlighter
+- **Settings** — Notion connection (OAuth or manual token, with disconnect button), WordPress credentials (with disconnect button), trigger statuses, code highlighter
 - **Tenants** — admin-only page for creating and managing tenants (API key shown once on creation)
 
