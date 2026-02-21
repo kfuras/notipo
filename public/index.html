@@ -1,24 +1,202 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="night">
+<html lang="en" data-theme="pressflow">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pressflow Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
   <style>
+    /* ── Custom Pressflow Theme (matches landing page) ──────────────── */
+    [data-theme="pressflow"] {
+      color-scheme: dark;
+      --color-base-100: oklch(8.5% 0 0);
+      --color-base-200: oklch(13.5% 0 0);
+      --color-base-300: oklch(18% 0 0);
+      --color-base-content: oklch(97% 0 0);
+      --color-primary: oklch(55% 0.27 293);
+      --color-primary-content: oklch(100% 0 0);
+      --color-secondary: oklch(68% 0.29 328);
+      --color-secondary-content: oklch(100% 0 0);
+      --color-accent: oklch(54% 0.24 265);
+      --color-accent-content: oklch(100% 0 0);
+      --color-neutral: oklch(13.5% 0 0);
+      --color-neutral-content: oklch(70% 0 0);
+      --color-info: oklch(75% 0.14 230);
+      --color-info-content: oklch(100% 0 0);
+      --color-success: oklch(72% 0.19 149);
+      --color-success-content: oklch(100% 0 0);
+      --color-warning: oklch(83% 0.17 84);
+      --color-warning-content: oklch(15% 0 0);
+      --color-error: oklch(63% 0.26 29);
+      --color-error-content: oklch(100% 0 0);
+      --radius-selector: 9999px;
+      --radius-field: 0.5rem;
+      --radius-box: 1.25rem;
+      --size-selector: 0.25rem;
+      --size-field: 0.25rem;
+      --border: 1px;
+      --depth: 0;
+      --noise: 0;
+      font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    }
+
     [x-cloak] { display: none !important; }
     .status-badge { @apply badge badge-sm font-mono; }
+
+    /* ── Card & surface styling ─────────────────────────────────────── */
+    .card {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    /* ── Table styling ──────────────────────────────────────────────── */
+    .table tr:hover td {
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .table thead th {
+      color: rgba(255, 255, 255, 0.5);
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Input styling ──────────────────────────────────────────────── */
+    .input, .select {
+      border-color: rgba(255, 255, 255, 0.1) !important;
+      background: rgba(255, 255, 255, 0.03) !important;
+    }
+    .input:focus, .select:focus {
+      border-color: #A855F7 !important;
+      box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.15) !important;
+    }
+
+    /* ── Login screen ───────────────────────────────────────────────── */
+    .login-bg {
+      background: #0E0E0E;
+      position: relative;
+      overflow: hidden;
+    }
+    .login-bg::before {
+      content: '';
+      position: absolute;
+      top: 20%;
+      left: 30%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.15), transparent 70%);
+      border-radius: 50%;
+      filter: blur(80px);
+    }
+    .login-bg::after {
+      content: '';
+      position: absolute;
+      bottom: 20%;
+      right: 30%;
+      width: 350px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(255, 76, 226, 0.1), transparent 70%);
+      border-radius: 50%;
+      filter: blur(80px);
+    }
+    .login-card-wrapper {
+      background: linear-gradient(135deg, #A855F7, #FF4CE2);
+      border-radius: 1.35rem;
+      padding: 1px;
+      position: relative;
+      z-index: 1;
+    }
+    .login-card-inner {
+      background: #1A1A1A;
+      border-radius: 1.25rem;
+      padding: 2rem;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #A855F7, #FF4CE2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── Navbar ──────────────────────────────────────────────────────── */
+    .navbar-custom {
+      background: rgba(14, 14, 14, 0.8) !important;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    /* ── Sidebar ────────────────────────────────────────────────────── */
+    .sidebar {
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .sidebar .btn-ghost {
+      color: #A1A1AA;
+      transition: all 0.15s ease;
+    }
+    .sidebar .btn-ghost:hover {
+      color: #F5F5F5;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .sidebar .btn-active {
+      color: #F5F5F5 !important;
+      background: rgba(168, 85, 247, 0.1) !important;
+      border-left: 2px solid #A855F7;
+    }
+
+    /* ── Stat cards ─────────────────────────────────────────────────── */
+    .stat {
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    /* ── Onboarding card glow ───────────────────────────────────────── */
+    .onboarding-card {
+      border: 1px solid rgba(168, 85, 247, 0.2) !important;
+      box-shadow: 0 0 30px rgba(168, 85, 247, 0.05);
+    }
+
+    /* ── Modal ──────────────────────────────────────────────────────── */
+    .modal-box {
+      background: #1A1A1A !important;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .modal-backdrop {
+      background: rgba(0, 0, 0, 0.6) !important;
+      backdrop-filter: blur(4px);
+    }
+
+    /* ── Alert styling ──────────────────────────────────────────────── */
+    .alert {
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    /* ── Badge ghost override for dark bg ────────────────────────────── */
+    .badge-ghost {
+      background: rgba(255, 255, 255, 0.06) !important;
+      color: #A1A1AA !important;
+    }
+
+    /* ── Tooltip on dark ────────────────────────────────────────────── */
+    .tooltip::before {
+      background: #242323 !important;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
   </style>
 </head>
 <body x-data="app()" x-cloak>
 
 <!-- ── Login Screen ─────────────────────────────────────────────────────── -->
-<div x-show="!auth.apiKey" class="min-h-screen flex items-center justify-center bg-base-200">
-  <div class="card w-96 bg-base-100 shadow-xl">
-    <div class="card-body">
-      <h2 class="card-title text-2xl justify-center mb-2">Pressflow</h2>
+<div x-show="!auth.apiKey" class="min-h-screen flex items-center justify-center login-bg">
+  <div class="login-card-wrapper w-96">
+    <div class="login-card-inner">
+      <h2 class="text-2xl font-bold text-center mb-2 gradient-text">Pressflow</h2>
 
       <div x-show="auth.error" class="alert alert-error text-sm mb-3">
         <span x-text="auth.error"></span>
@@ -68,10 +246,10 @@
 <div x-show="auth.apiKey" class="min-h-screen flex flex-col">
 
   <!-- Navbar -->
-  <div class="navbar bg-base-300 px-4 shadow-md">
+  <div class="navbar navbar-custom px-4">
     <div class="flex-1">
-      <span class="text-lg font-bold">Pressflow</span>
-      <span x-show="auth.isAdmin" class="badge badge-warning badge-sm ml-2">admin</span>
+      <span class="text-lg font-bold gradient-text">Pressflow</span>
+      <span x-show="auth.isAdmin" class="badge badge-secondary badge-sm ml-2">admin</span>
     </div>
     <div class="flex-none gap-2">
       <span class="text-base-content/50 text-xs hidden sm:block" x-text="auth.userEmail || ('API: ' + auth.apiKey.slice(0,8) + '…')"></span>
@@ -82,7 +260,7 @@
   <div class="flex flex-1 overflow-hidden">
 
     <!-- Sidebar -->
-    <aside class="w-52 bg-base-200 flex-shrink-0 p-3 flex flex-col gap-1">
+    <aside class="sidebar w-52 bg-base-200 flex-shrink-0 p-3 flex flex-col gap-1">
       <template x-for="item in navItems()" :key="item.id">
         <button
           class="btn btn-ghost justify-start gap-2 w-full"
@@ -338,7 +516,7 @@
         </div>
 
         <!-- Onboarding steps (shown when not fully configured) -->
-        <div x-show="!settings.notion?.configured || !settings.wordpress?.configured" class="card bg-base-100 border border-primary/20 mb-6">
+        <div x-show="!settings.notion?.configured || !settings.wordpress?.configured" class="card bg-base-200 onboarding-card mb-6">
           <div class="card-body">
             <h2 class="card-title text-base">Getting Started</h2>
             <ul class="steps steps-vertical text-sm">
