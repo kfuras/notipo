@@ -358,6 +358,7 @@
               <div x-show="settings.notion?.configured && settings.notion?.authMode === 'oauth'" class="flex items-center gap-3">
                 <span class="text-sm text-base-content/60">Workspace: <span class="font-mono" x-text="settings.notion?.workspaceId || '—'"></span></span>
                 <button class="btn btn-ghost btn-xs" @click="connectNotion()">Reconnect</button>
+                <button class="btn btn-ghost btn-xs text-error" @click="disconnectNotion()">Disconnect</button>
               </div>
             </div>
 
@@ -396,6 +397,7 @@
               </div>
               <div class="card-actions justify-end mt-2">
                 <span x-show="forms.notionSaved" class="text-success text-sm">Saved ✓</span>
+                <button x-show="settings.notion?.configured" class="btn btn-ghost btn-sm text-error" @click="disconnectNotion()">Disconnect</button>
                 <button class="btn btn-primary btn-sm" :class="forms.notionLoading && 'loading'" @click="saveNotion()">Save Notion</button>
               </div>
             </div>
@@ -855,6 +857,16 @@ function app() {
       try {
         const res = await this.api('/api/notion/oauth/authorize');
         window.location.href = res.data.url;
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    },
+
+    async disconnectNotion() {
+      if (!confirm('Disconnect Notion? You can reconnect at any time.')) return;
+      try {
+        await this.api('/api/settings/notion', { method: 'DELETE' });
+        await this.loadSettings();
       } catch (e) {
         alert('Error: ' + e.message);
       }

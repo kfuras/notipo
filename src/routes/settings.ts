@@ -94,6 +94,21 @@ export async function settingsRoutes(app: FastifyInstance) {
     return reply.code(204).send();
   });
 
+  /** DELETE /api/settings/notion — disconnect Notion */
+  app.delete("/api/settings/notion", async (request, reply) => {
+    await app.prisma.tenant.update({
+      where: { id: request.tenant.id },
+      data: {
+        notionCredentials: null,
+        notionAuthMode: null,
+        notionWorkspaceId: null,
+        notionDatabaseId: null,
+      },
+    });
+
+    return reply.code(204).send();
+  });
+
   /** PUT /api/settings/wordpress — set WordPress credentials */
   app.put("/api/settings/wordpress", async (request, reply) => {
     const body = wordpressSettingsSchema.parse(request.body);
