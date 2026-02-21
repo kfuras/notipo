@@ -563,6 +563,7 @@ function app() {
       const params = new URLSearchParams(window.location.search);
       const oauthResult = params.get('notion_oauth');
       if (oauthResult) {
+        this.page = 'settings';
         history.replaceState({}, '', '/admin/');
         if (oauthResult === 'success') {
           this.oauthMessage = { type: 'success', text: 'Notion connected successfully!' };
