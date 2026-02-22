@@ -12,7 +12,7 @@ const envSchema = z.object({
   NOTION_OAUTH_CLIENT_ID: z.string().optional(),
   NOTION_OAUTH_CLIENT_SECRET: z.string().optional(),
   NOTION_OAUTH_REDIRECT_URI: z.string().url().optional(),
-  ALLOW_SIGNUP: z.coerce.boolean().default(true),
+  ALLOW_SIGNUP: z.string().default("true").transform((v) => v === "true"),
 });
 
 export type Config = z.infer<typeof envSchema>;
