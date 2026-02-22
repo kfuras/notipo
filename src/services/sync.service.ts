@@ -240,10 +240,13 @@ export class SyncService {
       });
     }
 
-    // 6. Update Notion status → always "Ready to Review" after sync.
-    // Publish service will set it to "Published" if thenPublish=true was passed to the job.
-    onStep?.("Updating Notion status…");
-    await notion.updatePageStatus(notionPageId, "Ready to Review", wpUrl);
+    // 6. Update Notion status.
+    // For updates to live WP posts, skip — the publish job will set "Published" + live URL.
+    // Only set "Ready to Review" for new drafts or updates to non-live posts.
+    if (!(isUpdate && wpStatus === "publish")) {
+      onStep?.("Updating Notion status…");
+      await notion.updatePageStatus(notionPageId, "Ready to Review", wpUrl);
+    }
 
     logger.info({ tenantId, notionPageId, postId }, "Post synced successfully");
     return { postId, wpStatus };
