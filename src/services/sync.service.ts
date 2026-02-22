@@ -139,7 +139,17 @@ export class SyncService {
       const wpContent = convertMarkdownToGutenberg(finalMarkdown, { highlighter });
       let wpPostGone = false;
       try {
-        const updated = await wp.editPost(existing!.wpPostId!, { title: result.metadata.title, content: wpContent });
+        // Fetch current WP status before editing — some WP configs revert to draft
+        // if the status isn't explicitly preserved in the update payload.
+        const currentPost = await wp.getPost(existing!.wpPostId!);
+        const preserveStatus = currentPost?.status === "publish" ? "publish" : undefined;
+        logger.info({ wpPostId: existing!.wpPostId, currentWpStatus: currentPost?.status }, "WP post status before edit");
+
+        const updated = await wp.editPost(existing!.wpPostId!, {
+          title: result.metadata.title,
+          content: wpContent,
+          ...(preserveStatus && { status: preserveStatus }),
+        });
         wpStatus = updated.status ?? null;
         wpUrl = updated.link ?? undefined;
         // WP returns 200 even for trashed posts — treat trash the same as deleted
