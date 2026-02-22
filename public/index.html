@@ -650,15 +650,27 @@
         <div class="card bg-base-200">
           <div class="card-body">
             <h2 class="card-title text-base">General</h2>
-            <label class="form-control w-full md:w-64">
+            <div>
               <div class="label"><span class="label-text text-xs">Code highlighter</span></div>
-              <select class="select select-bordered select-sm" x-model="forms.general.codeHighlighter">
-                <option value="PRISMATIC">Prismatic (requires Prismatic plugin)</option>
-                <option value="WP_CODE">WP Code (no plugin needed)</option>
-                <option value="HIGHLIGHT_JS">Highlight.js (requires PHP code in theme)</option>
-                <option value="PRISM_JS">Prism.js (requires PHP code in theme)</option>
-              </select>
-            </label>
+              <div class="flex flex-col gap-1">
+                <label class="label cursor-pointer justify-start gap-3 rounded-lg px-3 py-2 hover:bg-base-300" :class="forms.general.codeHighlighter === 'WP_CODE' && 'bg-base-300'">
+                  <input type="radio" class="radio radio-sm radio-primary" value="WP_CODE" x-model="forms.general.codeHighlighter">
+                  <span class="label-text">WP Code <span class="opacity-50">— no plugin needed</span></span>
+                </label>
+                <label class="label cursor-pointer justify-start gap-3 rounded-lg px-3 py-2 hover:bg-base-300" :class="forms.general.codeHighlighter === 'PRISMATIC' && 'bg-base-300'">
+                  <input type="radio" class="radio radio-sm radio-primary" value="PRISMATIC" x-model="forms.general.codeHighlighter">
+                  <span class="label-text">Prismatic <span class="opacity-50">— requires plugin</span></span>
+                </label>
+                <label class="label cursor-pointer justify-start gap-3 rounded-lg px-3 py-2 hover:bg-base-300" :class="forms.general.codeHighlighter === 'HIGHLIGHT_JS' && 'bg-base-300'">
+                  <input type="radio" class="radio radio-sm radio-primary" value="HIGHLIGHT_JS" x-model="forms.general.codeHighlighter">
+                  <span class="label-text">Highlight.js <span class="opacity-50">— requires PHP in theme</span></span>
+                </label>
+                <label class="label cursor-pointer justify-start gap-3 rounded-lg px-3 py-2 hover:bg-base-300" :class="forms.general.codeHighlighter === 'PRISM_JS' && 'bg-base-300'">
+                  <input type="radio" class="radio radio-sm radio-primary" value="PRISM_JS" x-model="forms.general.codeHighlighter">
+                  <span class="label-text">Prism.js <span class="opacity-50">— requires PHP in theme</span></span>
+                </label>
+              </div>
+            </div>
             <div class="card-actions justify-end mt-2">
               <span x-show="forms.generalSaved" class="text-success text-sm">Saved ✓</span>
               <button class="btn btn-primary btn-sm" :class="forms.generalLoading && 'loading'" @click="saveGeneral()">Save</button>
