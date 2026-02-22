@@ -45,46 +45,103 @@
       font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
     }
 
+    /* ── Light Theme ────────────────────────────────────────────────── */
+    [data-theme="notipo-light"] {
+      color-scheme: light;
+      --color-base-100: oklch(98% 0 0);
+      --color-base-200: oklch(94% 0 0);
+      --color-base-300: oklch(89% 0 0);
+      --color-base-content: oklch(20% 0 0);
+      --color-primary: oklch(55% 0.27 293);
+      --color-primary-content: oklch(100% 0 0);
+      --color-secondary: oklch(68% 0.29 328);
+      --color-secondary-content: oklch(100% 0 0);
+      --color-accent: oklch(54% 0.24 265);
+      --color-accent-content: oklch(100% 0 0);
+      --color-neutral: oklch(94% 0 0);
+      --color-neutral-content: oklch(40% 0 0);
+      --color-info: oklch(75% 0.14 230);
+      --color-info-content: oklch(100% 0 0);
+      --color-success: oklch(72% 0.19 149);
+      --color-success-content: oklch(100% 0 0);
+      --color-warning: oklch(83% 0.17 84);
+      --color-warning-content: oklch(15% 0 0);
+      --color-error: oklch(63% 0.26 29);
+      --color-error-content: oklch(100% 0 0);
+      --radius-selector: 9999px;
+      --radius-field: 0.5rem;
+      --radius-box: 1.25rem;
+      --size-selector: 0.25rem;
+      --size-field: 0.25rem;
+      --border: 1px;
+      --depth: 0;
+      --noise: 0;
+      font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    }
+
     [x-cloak] { display: none !important; }
     .status-badge { @apply badge badge-sm font-mono; }
     .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
 
     /* ── Card & surface styling ─────────────────────────────────────── */
-    .card {
+    [data-theme="notipo"] .card {
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
-    .card:hover {
+    [data-theme="notipo"] .card:hover {
       border-color: rgba(255, 255, 255, 0.12);
+    }
+    [data-theme="notipo-light"] .card {
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    [data-theme="notipo-light"] .card:hover {
+      border-color: rgba(0, 0, 0, 0.15);
     }
 
     /* ── Table styling ──────────────────────────────────────────────── */
-    .table tr:hover td {
-      background: rgba(255, 255, 255, 0.03);
-    }
     .table thead th {
-      color: rgba(255, 255, 255, 0.5);
       font-weight: 500;
       font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
+    [data-theme="notipo"] .table tr:hover td {
+      background: rgba(255, 255, 255, 0.03);
+    }
+    [data-theme="notipo"] .table thead th {
+      color: rgba(255, 255, 255, 0.5);
+    }
+    [data-theme="notipo-light"] .table tr:hover td {
+      background: rgba(0, 0, 0, 0.03);
+    }
+    [data-theme="notipo-light"] .table thead th {
+      color: rgba(0, 0, 0, 0.45);
+    }
 
     /* ── Input styling ──────────────────────────────────────────────── */
-    .input, .select {
+    [data-theme="notipo"] .input, [data-theme="notipo"] .select {
       border-color: rgba(255, 255, 255, 0.1) !important;
       background: rgba(255, 255, 255, 0.03) !important;
     }
-    .input:focus, .select:focus {
+    [data-theme="notipo"] .input:focus, [data-theme="notipo"] .select:focus {
+      border-color: #A855F7 !important;
+      box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.15) !important;
+    }
+    [data-theme="notipo-light"] .input, [data-theme="notipo-light"] .select {
+      border-color: rgba(0, 0, 0, 0.15) !important;
+      background: white !important;
+    }
+    [data-theme="notipo-light"] .input:focus, [data-theme="notipo-light"] .select:focus {
       border-color: #A855F7 !important;
       box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.15) !important;
     }
 
     /* ── Login screen ───────────────────────────────────────────────── */
     .login-bg {
-      background: #0E0E0E;
       position: relative;
       overflow: hidden;
     }
+    [data-theme="notipo"] .login-bg { background: #0E0E0E; }
+    [data-theme="notipo-light"] .login-bg { background: #F5F5F5; }
     .login-bg::before {
       content: '';
       position: absolute;
@@ -114,8 +171,9 @@
       position: relative;
       z-index: 1;
     }
+    [data-theme="notipo"] .login-card-inner { background: #1A1A1A; }
+    [data-theme="notipo-light"] .login-card-inner { background: #FFFFFF; }
     .login-card-inner {
-      background: #1A1A1A;
       border-radius: 1.25rem;
       padding: 2rem;
     }
@@ -127,34 +185,60 @@
     }
 
     /* ── Navbar ──────────────────────────────────────────────────────── */
-    .navbar-custom {
+    [data-theme="notipo"] .navbar-custom {
       background: rgba(14, 14, 14, 0.8) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    [data-theme="notipo-light"] .navbar-custom {
+      background: rgba(255, 255, 255, 0.8) !important;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    .navbar-custom {
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     }
 
     /* ── Sidebar ────────────────────────────────────────────────────── */
-    .sidebar {
+    [data-theme="notipo"] .sidebar {
       border-right: 1px solid rgba(255, 255, 255, 0.06);
     }
-    .sidebar .btn-ghost {
+    [data-theme="notipo"] .sidebar .btn-ghost {
       color: #A1A1AA;
-      transition: all 0.15s ease;
     }
-    .sidebar .btn-ghost:hover {
+    [data-theme="notipo"] .sidebar .btn-ghost:hover {
       color: #F5F5F5;
       background: rgba(255, 255, 255, 0.05);
     }
-    .sidebar .btn-active {
+    [data-theme="notipo"] .sidebar .btn-active {
       color: #F5F5F5 !important;
       background: rgba(168, 85, 247, 0.1) !important;
       border-left: 2px solid #A855F7;
     }
+    [data-theme="notipo-light"] .sidebar {
+      border-right: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    [data-theme="notipo-light"] .sidebar .btn-ghost {
+      color: #52525B;
+    }
+    [data-theme="notipo-light"] .sidebar .btn-ghost:hover {
+      color: #18181B;
+      background: rgba(0, 0, 0, 0.05);
+    }
+    [data-theme="notipo-light"] .sidebar .btn-active {
+      color: #18181B !important;
+      background: rgba(168, 85, 247, 0.08) !important;
+      border-left: 2px solid #A855F7;
+    }
+    .sidebar .btn-ghost {
+      transition: all 0.15s ease;
+    }
 
     /* ── Stat cards ─────────────────────────────────────────────────── */
-    .stat {
+    [data-theme="notipo"] .stat {
       border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    [data-theme="notipo-light"] .stat {
+      border: 1px solid rgba(0, 0, 0, 0.08);
     }
 
     /* ── Onboarding card glow ───────────────────────────────────────── */
@@ -164,9 +248,13 @@
     }
 
     /* ── Modal ──────────────────────────────────────────────────────── */
-    .modal-box {
+    [data-theme="notipo"] .modal-box {
       background: #1A1A1A !important;
       border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    [data-theme="notipo-light"] .modal-box {
+      background: #FFFFFF !important;
+      border: 1px solid rgba(0, 0, 0, 0.1);
     }
     .modal-backdrop {
       background: rgba(0, 0, 0, 0.6) !important;
@@ -174,20 +262,31 @@
     }
 
     /* ── Alert styling ──────────────────────────────────────────────── */
-    .alert {
+    [data-theme="notipo"] .alert {
       border: 1px solid rgba(255, 255, 255, 0.06);
     }
+    [data-theme="notipo-light"] .alert {
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
 
-    /* ── Badge ghost override for dark bg ────────────────────────────── */
-    .badge-ghost {
+    /* ── Badge ghost override ────────────────────────────────────────── */
+    [data-theme="notipo"] .badge-ghost {
       background: rgba(255, 255, 255, 0.06) !important;
       color: #A1A1AA !important;
     }
+    [data-theme="notipo-light"] .badge-ghost {
+      background: rgba(0, 0, 0, 0.06) !important;
+      color: #52525B !important;
+    }
 
-    /* ── Tooltip on dark ────────────────────────────────────────────── */
-    .tooltip::before {
+    /* ── Tooltip ────────────────────────────────────────────────────── */
+    [data-theme="notipo"] .tooltip::before {
       background: #242323 !important;
       border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    [data-theme="notipo-light"] .tooltip::before {
+      background: #FFFFFF !important;
+      border: 1px solid rgba(0, 0, 0, 0.1);
     }
   </style>
 </head>
@@ -195,6 +294,10 @@
 
 <!-- ── Login Screen ─────────────────────────────────────────────────────── -->
 <div x-show="!auth.apiKey" class="min-h-screen flex items-center justify-center login-bg">
+  <button class="absolute top-4 right-4 btn btn-ghost btn-sm btn-square z-10" @click="toggleTheme()">
+    <svg x-show="darkMode" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    <svg x-show="!darkMode" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+  </button>
   <div class="login-card-wrapper w-full max-w-sm mx-4">
     <div class="login-card-inner">
       <div class="flex items-center justify-center gap-2.5 mb-2">
@@ -260,6 +363,10 @@
     </div>
     <div class="flex-none gap-2">
       <span class="text-base-content/50 text-xs hidden sm:block" x-text="auth.userEmail || ('API: ' + auth.apiKey.slice(0,8) + '…')"></span>
+      <button class="btn btn-ghost btn-sm btn-square" @click="toggleTheme()" :title="darkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+        <svg x-show="darkMode" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <svg x-show="!darkMode" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+      </button>
       <button class="btn btn-ghost btn-sm" @click="logout()">Logout</button>
     </div>
   </div>
@@ -764,6 +871,7 @@
 <script>
 function app() {
   return {
+    darkMode: localStorage.getItem('theme') !== 'light',
     page: 'dashboard',
     loading: false,
     error: null,
@@ -803,7 +911,21 @@ function app() {
 
     oauthMessage: null,
 
+    toggleTheme() {
+      this.darkMode = !this.darkMode;
+      const theme = this.darkMode ? 'notipo' : 'notipo-light';
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', this.darkMode ? 'dark' : 'light');
+    },
+
     async init() {
+      // Apply saved theme
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'notipo-light');
+        this.darkMode = false;
+      }
+
       // Fetch available auth providers (for login screen)
       try {
         const res = await fetch('/api/auth/providers');
