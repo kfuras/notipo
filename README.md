@@ -319,12 +319,16 @@ The admin UI is a single-page app served at `/admin`. Sign up with email and pas
 
 New tenants see an onboarding stepper that guides them through connecting Notion (with a link to the Notion database template) and WordPress. The stepper disappears once both services are configured.
 
+A light/dark theme toggle is available in the navbar (sun/moon icon) and on the login screen. Theme preference is stored in `localStorage`.
+
+The UI is fully responsive — on mobile, the sidebar is replaced by a bottom tab navigation bar, filter buttons scroll horizontally, and padding is reduced for smaller screens.
+
 Pages available:
 
 - **Dashboard** — post status counts, recent jobs with live step progress, config health check. Updates in real-time via Server-Sent Events.
 - **Posts** — full post list with status badges, WordPress links, expandable detail rows
 - **Categories & Tags** — auto-imported from WordPress, synced every 5 minutes. Manual sync available via button.
 - **Jobs** — background job activity log with error display, status filtering, and clickable WP links
-- **Settings** — Notion connection (OAuth or manual token, with disconnect button), WordPress credentials (with disconnect button), trigger statuses, code highlighter
+- **Settings** — Notion connection (OAuth or manual token, with disconnect button), WordPress credentials (with disconnect button), trigger statuses, code highlighter (radio buttons)
 - **Tenants** — admin-only page for creating and managing tenants (API key shown once on creation)
 
