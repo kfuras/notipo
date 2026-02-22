@@ -47,6 +47,7 @@
 
     [x-cloak] { display: none !important; }
     .status-badge { @apply badge badge-sm font-mono; }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
 
     /* ── Card & surface styling ─────────────────────────────────────── */
     .card {
@@ -194,7 +195,7 @@
 
 <!-- ── Login Screen ─────────────────────────────────────────────────────── -->
 <div x-show="!auth.apiKey" class="min-h-screen flex items-center justify-center login-bg">
-  <div class="login-card-wrapper w-96">
+  <div class="login-card-wrapper w-full max-w-sm mx-4">
     <div class="login-card-inner">
       <div class="flex items-center justify-center gap-2.5 mb-2">
         <svg viewBox="0 0 32 32" fill="none" class="w-8 h-8" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="8" fill="url(#lg)"/><path d="M9 8h4v10.4L19 8h4v16h-4V13.6L13 24H9V8z" fill="white"/><defs><linearGradient id="lg" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#A855F7"/><stop offset="1" stop-color="#FF4CE2"/></linearGradient></defs></svg>
@@ -265,8 +266,8 @@
 
   <div class="flex flex-1 overflow-hidden">
 
-    <!-- Sidebar -->
-    <aside class="sidebar w-52 bg-base-200 flex-shrink-0 p-3 flex flex-col gap-1">
+    <!-- Sidebar (desktop only) -->
+    <aside class="sidebar w-52 bg-base-200 flex-shrink-0 p-3 hidden md:flex flex-col gap-1">
       <template x-for="item in navItems()" :key="item.id">
         <button
           class="btn btn-ghost justify-start gap-2 w-full"
@@ -280,7 +281,7 @@
     </aside>
 
     <!-- Main content -->
-    <main class="flex-1 overflow-y-auto p-6">
+    <main class="flex-1 overflow-y-auto p-3 md:p-6 pb-20 md:pb-6">
 
       <!-- Loading -->
       <div x-show="loading" class="flex justify-center items-center h-40">
@@ -295,7 +296,7 @@
 
       <!-- ── Dashboard ───────────────────────────────────────────────── -->
       <div x-show="page === 'dashboard' && !loading && !error">
-        <h1 class="text-2xl font-bold mb-6">Dashboard</h1>
+        <h1 class="text-xl md:text-2xl font-bold mb-6">Dashboard</h1>
 
         <!-- Stats -->
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
@@ -360,12 +361,12 @@
 
       <!-- ── Posts ───────────────────────────────────────────────────── -->
       <div x-show="page === 'posts' && !loading && !error">
-        <div class="flex items-center justify-between mb-6">
-          <h1 class="text-2xl font-bold">Posts</h1>
-          <div class="flex gap-1">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+          <h1 class="text-xl md:text-2xl font-bold">Posts</h1>
+          <div class="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1">
             <template x-for="f in ['ALL','PUBLISHED','FAILED','IMAGES_PROCESSING','UPDATE_PENDING','SYNCED']" :key="f">
               <button
-                class="btn btn-xs"
+                class="btn btn-xs shrink-0"
                 :class="posts.filter === f ? 'btn-primary' : 'btn-ghost'"
                 @click="posts.filter = f"
                 x-text="f === 'ALL' ? 'All' : f.replace(/_/g,' ')"
@@ -411,7 +412,7 @@
       <!-- ── Categories & Tags ───────────────────────────────────────── -->
       <div x-show="page === 'categories' && !loading && !error">
         <div class="flex items-center justify-between mb-6">
-          <h1 class="text-2xl font-bold">Categories & Tags</h1>
+          <h1 class="text-xl md:text-2xl font-bold">Categories & Tags</h1>
           <button class="btn btn-ghost btn-sm" :class="categories.syncing && 'loading'"
             @click="syncCategories()" :disabled="categories.syncing">Sync from WordPress</button>
         </div>
@@ -459,18 +460,18 @@
 
       <!-- ── Jobs ───────────────────────────────────────────────────── -->
       <div x-show="page === 'jobs' && !loading && !error">
-        <div class="flex items-center justify-between mb-6">
-          <h1 class="text-2xl font-bold">Jobs</h1>
-          <div class="flex gap-1">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+          <h1 class="text-xl md:text-2xl font-bold">Jobs</h1>
+          <div class="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1">
             <template x-for="f in ['ALL','RUNNING','COMPLETED','FAILED','PENDING','CANCELLED']" :key="f">
               <button
-                class="btn btn-xs"
+                class="btn btn-xs shrink-0"
                 :class="jobs.filter === f ? 'btn-primary' : 'btn-ghost'"
                 @click="jobs.filter = f; loadJobs()"
                 x-text="f === 'ALL' ? 'All' : f"
               ></button>
             </template>
-            <button class="btn btn-xs btn-ghost ml-2" @click="loadJobs()">↻ Refresh</button>
+            <button class="btn btn-xs btn-ghost shrink-0 ml-1" @click="loadJobs()">↻</button>
           </div>
         </div>
         <div class="overflow-x-auto">
@@ -512,7 +513,7 @@
 
       <!-- ── Settings ───────────────────────────────────────────────── -->
       <div x-show="page === 'settings' && !loading && !error">
-        <h1 class="text-2xl font-bold mb-6">Settings</h1>
+        <h1 class="text-xl md:text-2xl font-bold mb-6">Settings</h1>
 
         <!-- OAuth toast -->
         <div x-show="oauthMessage" x-transition class="mb-4">
@@ -649,7 +650,7 @@
         <div class="card bg-base-200">
           <div class="card-body">
             <h2 class="card-title text-base">General</h2>
-            <label class="form-control w-64">
+            <label class="form-control w-full md:w-64">
               <div class="label"><span class="label-text text-xs">Code highlighter</span></div>
               <select class="select select-bordered select-sm" x-model="forms.general.codeHighlighter">
                 <option value="PRISMATIC">Prismatic (requires Prismatic plugin)</option>
@@ -669,7 +670,7 @@
       <!-- ── Tenants (admin only) ───────────────────────────────────── -->
       <div x-show="page === 'tenants' && !loading && !error">
         <div class="flex items-center justify-between mb-6">
-          <h1 class="text-2xl font-bold">Tenants</h1>
+          <h1 class="text-xl md:text-2xl font-bold">Tenants</h1>
           <button class="btn btn-primary btn-sm" @click="tenants.showCreate = true">+ New Tenant</button>
         </div>
         <div class="overflow-x-auto">
@@ -732,6 +733,20 @@
 
     </main>
   </div>
+
+  <!-- Bottom nav (mobile only) -->
+  <nav class="fixed bottom-0 left-0 right-0 z-50 bg-base-200 border-t border-base-300 flex md:hidden safe-bottom">
+    <template x-for="item in navItems()" :key="item.id">
+      <button
+        class="flex-1 flex flex-col items-center gap-0.5 py-2 text-base-content/50 transition-colors"
+        :class="page === item.id && 'text-primary!'"
+        @click="navigate(item.id)"
+      >
+        <span class="text-base" x-text="item.icon"></span>
+        <span class="text-[10px]" x-text="item.label"></span>
+      </button>
+    </template>
+  </nav>
 </div>
 
 <script>
