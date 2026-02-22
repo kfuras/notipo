@@ -10,7 +10,7 @@ services:
       - .env
     environment:
       # Override host-based URLs to use Docker service names
-      DATABASE_URL: postgresql://pressflow:localdev@postgres:5432/pressflow
+      DATABASE_URL: postgresql://notipo:localdev@postgres:5432/notipo
     ports:
       - "3000:3000"
     depends_on:

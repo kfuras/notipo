@@ -1,4 +1,4 @@
-# Pressflow
+# Notipo
 
 A self-hosted backend that publishes blog posts from Notion to WordPress automatically. It watches a Notion database for status changes, converts the content to Gutenberg blocks, generates featured images, handles inline image uploads, and applies Rank Math SEO metadata — all without touching WordPress manually.
 
@@ -78,7 +78,7 @@ cp .env.example .env
 |----------|---------|-------------|
 | `SEED_TENANT_NAME` | `Dev Tenant` | Display name for your blog |
 | `SEED_TENANT_SLUG` | `dev` | URL-safe identifier |
-| `SEED_OWNER_EMAIL` | `dev@pressflow.local` | Your login email |
+| `SEED_OWNER_EMAIL` | `dev@notipo.local` | Your login email |
 | `SEED_API_KEY` | falls back to `API_KEY` | Tenant API key for calling the API |
 | `SEED_NOTION_TRIGGER_STATUS` | `Ready to Publish` | Notion status that triggers sync |
 
@@ -196,7 +196,7 @@ Uses `docker-compose.prod.yml` with Traefik as a reverse proxy. TLS certificates
 
 ```bash
 git clone <repo-url>
-cd pressflow
+cd notipo
 ```
 
 **2. Create and configure `.env`:**
@@ -229,7 +229,7 @@ docker compose -f docker-compose.prod.yml up -d
 On first start, the app container runs `prisma migrate deploy` and `prisma db seed` before the server starts. Check the logs if the health check fails:
 
 ```bash
-docker logs pressflow-app
+docker logs notipo-app
 ```
 
 The app is available at `https://api.yourdomain.com`.
@@ -289,13 +289,13 @@ Open the admin UI (`/admin`) and either sign up with email and password (creates
 - Username
 - Application password (WP Admin → Users → Application Passwords)
 
-When you save WordPress credentials, all your WP categories and tags are automatically imported into Pressflow and pushed to your Notion database as `Category` select and `Tags` multi-select options. They stay in sync — new categories or tags you create in WordPress are picked up every 5 minutes and appear in Notion automatically. You can also trigger a manual sync from the **Categories & Tags** page.
+When you save WordPress credentials, all your WP categories and tags are automatically imported into Notipo and pushed to your Notion database as `Category` select and `Tags` multi-select options. They stay in sync — new categories or tags you create in WordPress are picked up every 5 minutes and appear in Notion automatically. You can also trigger a manual sync from the **Categories & Tags** page.
 
 ---
 
 ## Notion database setup
 
-Start by duplicating the [Pressflow Blog Template](https://free-dentist-6b2.notion.site/30d842af972f8091a104eb8773fbf390?v=30d842af972f8091a104eb8773fbf390) — it has all required properties pre-configured.
+Start by duplicating the [Notipo Blog Template](https://free-dentist-6b2.notion.site/30d842af972f8091a104eb8773fbf390?v=30d842af972f8091a104eb8773fbf390) — it has all required properties pre-configured.
 
 Your Notion database needs these properties:
 

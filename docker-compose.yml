@@ -1,20 +1,20 @@
-name: pressflow-dev
+name: notipo-dev
 
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: pressflow-dev-postgres
+    container_name: notipo-dev-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: pressflow
+      POSTGRES_USER: notipo
       POSTGRES_PASSWORD: localdev
-      POSTGRES_DB: pressflow
+      POSTGRES_DB: notipo
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pressflow"]
+      test: ["CMD-SHELL", "pg_isready -U notipo"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -24,12 +24,12 @@ services:
     build:
       context: .
       target: production
-    container_name: pressflow-dev-app
+    container_name: notipo-dev-app
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgresql://pressflow:localdev@postgres:5432/pressflow
+      DATABASE_URL: postgresql://notipo:localdev@postgres:5432/notipo
     env_file: .env
     depends_on:
       postgres:

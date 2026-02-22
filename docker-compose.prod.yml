@@ -3,11 +3,11 @@
 #   1. Copy .env.example to .env and fill in all values
 #   2. docker compose -f docker-compose.prod.yml up -d
 
-name: pressflow
+name: notipo
 
 services:
   traefik:
-    container_name: pressflow-traefik
+    container_name: notipo-traefik
     image: traefik:v3.6.2
     restart: unless-stopped
     command:
@@ -31,7 +31,7 @@ services:
       - letsencrypt:/letsencrypt
 
   app:
-    container_name: pressflow-app
+    container_name: notipo-app
     build:
       context: .
       target: production
@@ -39,7 +39,7 @@ services:
     environment:
       NODE_ENV: production
       # Override DATABASE_URL to use the postgres container hostname
-      DATABASE_URL: postgresql://pressflow:${DB_PASSWORD}@postgres:5432/pressflow
+      DATABASE_URL: postgresql://notipo:${DB_PASSWORD}@postgres:5432/notipo
     env_file: .env
     depends_on:
       postgres:
@@ -54,9 +54,9 @@ services:
       - traefik.http.services.app.loadbalancer.server.port=3000
 
   landing:
-    container_name: pressflow-landing
+    container_name: notipo-landing
     build:
-      context: ../pressflow-landing
+      context: ../notipo-landing
     restart: unless-stopped
     labels:
       - traefik.enable=true
@@ -68,18 +68,18 @@ services:
       - traefik.http.services.landing.loadbalancer.server.port=80
 
   postgres:
-    container_name: pressflow-postgres
+    container_name: notipo-postgres
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: pressflow
+      POSTGRES_USER: notipo
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: pressflow
+      POSTGRES_DB: notipo
     volumes:
       - pgdata:/var/lib/postgresql/data
     # Not exposed externally — only reachable by the app container
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pressflow"]
+      test: ["CMD-SHELL", "pg_isready -U notipo"]
       interval: 5s
       timeout: 5s
       retries: 10
