@@ -647,24 +647,18 @@
         </div>
 
         <!-- General -->
-        <div class="card bg-base-200 overflow-visible">
-          <div class="card-body overflow-visible">
+        <div class="card bg-base-200">
+          <div class="card-body">
             <h2 class="card-title text-base">General</h2>
-            <div class="form-control w-full md:w-64" x-data="{ open: false }">
+            <label class="form-control w-full md:w-64">
               <div class="label"><span class="label-text text-xs">Code highlighter</span></div>
-              <div class="dropdown" :class="open && 'dropdown-open'">
-                <button type="button" class="btn btn-sm btn-outline w-full justify-between font-normal" @click="open = !open">
-                  <span x-text="({'PRISMATIC':'Prismatic','WP_CODE':'WP Code','HIGHLIGHT_JS':'Highlight.js','PRISM_JS':'Prism.js'})[forms.general.codeHighlighter] || 'Select…'"></span>
-                  <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                </button>
-                <ul class="dropdown-content menu bg-base-300 rounded-box z-50 w-full p-2 shadow-lg border border-base-content/10" @click.outside="open = false">
-                  <li><a @click="forms.general.codeHighlighter = 'PRISMATIC'; open = false" :class="forms.general.codeHighlighter === 'PRISMATIC' && 'active'">Prismatic <span class="text-xs opacity-50">requires plugin</span></a></li>
-                  <li><a @click="forms.general.codeHighlighter = 'WP_CODE'; open = false" :class="forms.general.codeHighlighter === 'WP_CODE' && 'active'">WP Code <span class="text-xs opacity-50">no plugin needed</span></a></li>
-                  <li><a @click="forms.general.codeHighlighter = 'HIGHLIGHT_JS'; open = false" :class="forms.general.codeHighlighter === 'HIGHLIGHT_JS' && 'active'">Highlight.js <span class="text-xs opacity-50">requires PHP in theme</span></a></li>
-                  <li><a @click="forms.general.codeHighlighter = 'PRISM_JS'; open = false" :class="forms.general.codeHighlighter === 'PRISM_JS' && 'active'">Prism.js <span class="text-xs opacity-50">requires PHP in theme</span></a></li>
-                </ul>
-              </div>
-            </div>
+              <select class="select select-bordered select-sm" x-model="forms.general.codeHighlighter">
+                <option value="PRISMATIC">Prismatic (requires Prismatic plugin)</option>
+                <option value="WP_CODE">WP Code (no plugin needed)</option>
+                <option value="HIGHLIGHT_JS">Highlight.js (requires PHP code in theme)</option>
+                <option value="PRISM_JS">Prism.js (requires PHP code in theme)</option>
+              </select>
+            </label>
             <div class="card-actions justify-end mt-2">
               <span x-show="forms.generalSaved" class="text-success text-sm">Saved ✓</span>
               <button class="btn btn-primary btn-sm" :class="forms.generalLoading && 'loading'" @click="saveGeneral()">Save</button>
