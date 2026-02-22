@@ -67,6 +67,7 @@ export class SyncService {
     });
     const isUpdate = existing?.wpPostId != null;
     const finalStatus = isUpdate ? "UPDATE_PENDING" : "SYNCED";
+    logger.info({ isUpdate, wpPostId: existing?.wpPostId, finalStatus }, "Sync mode determined");
 
     // 4. Process images if any
     let postId: string;

@@ -43,6 +43,7 @@ export class WordPressService {
   /** Edit an existing post's content. */
   async editPost(wpPostId: number, payload: Partial<WPPostPayload>) {
     const { data } = await this.client.post(`/posts/${wpPostId}`, payload);
+    logger.info({ wpPostId, wpPostStatus: data?.status, wpLink: data?.link }, "WP editPost response");
     return data;
   }
 
