@@ -333,7 +333,7 @@ Pages available:
 
 - **Dashboard** — post status counts, recent jobs with live step progress, config health check. Updates in real-time via Server-Sent Events.
 - **Posts** — full post list with status badges, WordPress links, category display
-- **Categories & Tags** — auto-imported from WordPress, synced every 5 minutes. Manual sync available via button.
+- **Categories & Tags** — auto-imported from WordPress, synced every 5 minutes. Manual sync available via button. Upload custom background images per category for featured image generation (supports PNG, JPEG, WebP up to 5 MB). Click a thumbnail to preview, replace, or remove the image.
 - **Jobs** — background job activity log with error display, status filtering, and clickable WP links
 - **Settings** — Notion connection (OAuth or manual token, with disconnect button), WordPress credentials (with disconnect button), trigger statuses, code highlighter (radio buttons)
 - **Tenants** — admin-only page for creating and managing tenants (API key shown once on creation)
