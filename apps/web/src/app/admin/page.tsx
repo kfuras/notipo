@@ -74,7 +74,7 @@ export default function DashboardPage() {
                 number={3}
                 title="Set up your Notion database"
                 done={!!notion?.databaseId}
-                href="https://www.notion.so/templates"
+                href="https://free-dentist-6b2.notion.site/30d842af972f8091a104eb8773fbf390?v=30d842af972f803dab87000cdbd5d9b6"
                 external
               />
             </ol>
