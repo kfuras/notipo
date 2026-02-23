@@ -1,6 +1,10 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
+import multipart from "@fastify/multipart";
+import fastifyStatic from "@fastify/static";
+import path from "node:path";
+import fs from "node:fs/promises";
 import { ZodError } from "zod";
 import { config } from "./config.js";
 import { prismaPlugin } from "./plugins/prisma.js";
@@ -45,6 +49,17 @@ export async function buildApp() {
   // Plugins
   await app.register(cors);
   await app.register(sensible);
+  await app.register(multipart, {
+    limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  });
+  const uploadsRoot = path.join(process.cwd(), "uploads", "category-images");
+  await fs.mkdir(uploadsRoot, { recursive: true });
+  await app.register(fastifyStatic, {
+    root: uploadsRoot,
+    prefix: "/api/uploads/category-images/",
+    decorateReply: false,
+    wildcard: true,
+  });
   await app.register(prismaPlugin);
   await app.register(pgBossPlugin);
   await app.register(authPlugin);

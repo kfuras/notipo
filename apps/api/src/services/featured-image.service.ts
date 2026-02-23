@@ -52,7 +52,7 @@ function wrapText(
 export class FeaturedImageService {
   /** Generate a featured image and return PNG bytes. */
   async generate(params: FeaturedImageRequest): Promise<Buffer> {
-    // Load background — full URL fetched via HTTP, plain filename read from bundled assets
+    // Load background — URL fetched via HTTP, upload: prefix from uploads dir, plain filename from bundled assets
     let bgBuffer: Buffer;
     const bg = params.backgroundImageUrl;
     if (bg.startsWith("http://") || bg.startsWith("https://")) {
@@ -61,6 +61,10 @@ export class FeaturedImageService {
         timeout: 30_000,
       });
       bgBuffer = Buffer.from(res.data);
+    } else if (bg.startsWith("upload:")) {
+      const relPath = bg.slice("upload:".length);
+      const uploadPath = path.join(process.cwd(), "uploads", "category-images", relPath);
+      bgBuffer = await fs.readFile(uploadPath);
     } else {
       const localPath = path.join(
         process.cwd(),

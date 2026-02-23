@@ -24,5 +24,8 @@ out/
 .vscode/
 .idea/
 
+# Uploads (persisted via Docker volume in production)
+apps/api/uploads/
+
 # Claude Code
 .claude/

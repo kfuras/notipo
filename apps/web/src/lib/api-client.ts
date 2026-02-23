@@ -38,3 +38,28 @@ export async function api<T>(
   if (res.status === 204) return undefined as T;
   return res.json();
 }
+
+export async function apiUpload<T>(
+  path: string,
+  file: File,
+  options: { apiKey?: string } = {},
+): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (options.apiKey) headers["x-api-key"] = options.apiKey;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ message: res.statusText }));
+    throw new ApiError(res.status, data.message || res.statusText);
+  }
+
+  return res.json();
+}

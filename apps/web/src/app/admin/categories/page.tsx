@@ -1,8 +1,9 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { useApi } from "@/hooks/use-api";
 import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api-client";
+import { api, apiUpload } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -13,8 +14,153 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ImageIcon, Upload, Trash2 } from "lucide-react";
 import type { ApiCategory, ApiTag, ApiListResponse } from "@notipo/shared";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
+function getPreviewUrl(backgroundImage: string | null): string | null {
+  if (!backgroundImage) return null;
+  if (backgroundImage.startsWith("http://") || backgroundImage.startsWith("https://")) {
+    return backgroundImage;
+  }
+  if (backgroundImage.startsWith("upload:")) {
+    const relPath = backgroundImage.slice("upload:".length);
+    return `${API_BASE}/api/uploads/category-images/${relPath}`;
+  }
+  return null;
+}
+
+function CategoryImageCell({
+  category,
+  apiKey,
+  onUpdate,
+}: {
+  category: ApiCategory;
+  apiKey: string;
+  onUpdate: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const previewUrl = getPreviewUrl(category.backgroundImage);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await apiUpload(`/api/categories/${category.id}/background-image`, file, { apiKey });
+      onUpdate();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleRemove() {
+    try {
+      await api(`/api/categories/${category.id}/background-image`, {
+        method: "DELETE",
+        apiKey,
+      });
+      onUpdate();
+      setOpen(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Remove failed");
+    }
+  }
+
+  return (
+    <>
+      {previewUrl ? (
+        <button onClick={() => setOpen(true)} className="block">
+          <img
+            src={previewUrl}
+            alt={`${category.name} background`}
+            className="h-8 w-16 rounded object-cover hover:ring-2 hover:ring-primary"
+          />
+        </button>
+      ) : category.backgroundImage ? (
+        <Badge
+          variant="secondary"
+          className="cursor-pointer"
+          onClick={() => setOpen(true)}
+        >
+          {category.backgroundImage}
+        </Badge>
+      ) : (
+        <Button variant="ghost" size="xs" onClick={() => setOpen(true)}>
+          <Upload className="size-3" />
+          Upload
+        </Button>
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={handleUpload}
+      />
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{category.name}</DialogTitle>
+            <DialogDescription>Background image for featured image generation</DialogDescription>
+          </DialogHeader>
+
+          {previewUrl ? (
+            <img
+              src={previewUrl}
+              alt={`${category.name} background`}
+              className="w-full rounded aspect-[1200/628] object-cover"
+            />
+          ) : category.backgroundImage ? (
+            <div className="flex items-center gap-2 rounded-md border p-4 text-sm text-muted-foreground">
+              <ImageIcon className="size-4" />
+              Default: {category.backgroundImage}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center rounded-md border border-dashed p-8 text-sm text-muted-foreground">
+              No image set
+            </div>
+          )}
+
+          <DialogFooter>
+            {category.backgroundImage && (
+              <Button variant="destructive" size="sm" onClick={handleRemove}>
+                <Trash2 className="size-3" />
+                Remove
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="size-3" />
+              {uploading ? "Uploading..." : category.backgroundImage ? "Replace" : "Upload"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
 
 export default function CategoriesPage() {
   const { apiKey } = useAuth();
@@ -48,7 +194,7 @@ export default function CategoriesPage() {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Imported automatically from WordPress. New entries are picked up every 5 minutes.
+        Imported automatically from WordPress. Upload background images for featured image generation.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -84,11 +230,11 @@ export default function CategoriesPage() {
                         {cat.wpCategoryId ?? "—"}
                       </TableCell>
                       <TableCell>
-                        {cat.backgroundImage ? (
-                          <Badge variant="secondary">Set</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
+                        <CategoryImageCell
+                          category={cat}
+                          apiKey={apiKey!}
+                          onUpdate={refetch}
+                        />
                       </TableCell>
                     </TableRow>
                   ))

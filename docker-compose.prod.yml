@@ -40,6 +40,8 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://notipo:${DB_PASSWORD}@postgres:5432/notipo
     env_file: .env
+    volumes:
+      - uploads:/app/apps/api/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,3 +88,4 @@ services:
 volumes:
   letsencrypt:
   pgdata:
+  uploads:

@@ -1,9 +1,28 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import path from "node:path";
+import fs from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import { pipeline } from "node:stream/promises";
 import { CredentialService } from "../services/credential.service.js";
 import { WordPressService } from "../services/wordpress.service.js";
 import { NotionService } from "../services/notion.service.js";
 import { syncWpCategories } from "../lib/sync-wp-categories.js";
+
+const UPLOADS_DIR = path.join(process.cwd(), "uploads", "category-images");
+
+const ALLOWED_MIME_TYPES: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+};
+
+/** Delete an uploaded file if the backgroundImage value uses the upload: prefix. */
+async function deleteUploadedFile(backgroundImage: string | null) {
+  if (!backgroundImage?.startsWith("upload:")) return;
+  const relPath = backgroundImage.slice("upload:".length);
+  await fs.unlink(path.join(UPLOADS_DIR, relPath)).catch(() => {});
+}
 
 const updateCategorySchema = z.object({
   backgroundImage: z.string().min(1).nullable(),
@@ -45,7 +64,7 @@ export async function categoryRoutes(app: FastifyInstance) {
     return { data: { categories, tags }, synced };
   });
 
-  /** Update a category's background image. */
+  /** Update a category's background image (JSON — accepts a URL or filename string). */
   app.patch<{ Params: { id: string } }>("/api/categories/:id", async (request, reply) => {
     const body = updateCategorySchema.parse(request.body);
 
@@ -59,7 +78,74 @@ export async function categoryRoutes(app: FastifyInstance) {
     return { data: await app.prisma.category.findFirst({ where: { id: request.params.id, tenantId: request.tenant.id } }) };
   });
 
+  /** Upload a background image for a category (multipart form-data). */
+  app.post<{ Params: { id: string } }>("/api/categories/:id/background-image", async (request, reply) => {
+    const tenantId = request.tenant.id;
+    const categoryId = request.params.id;
+
+    const category = await app.prisma.category.findFirst({
+      where: { id: categoryId, tenantId },
+    });
+    if (!category) return reply.notFound("Category not found");
+
+    const file = await request.file();
+    if (!file) return reply.badRequest("No file uploaded");
+
+    const ext = ALLOWED_MIME_TYPES[file.mimetype];
+    if (!ext) {
+      return reply.badRequest(`Invalid file type: ${file.mimetype}. Allowed: ${Object.keys(ALLOWED_MIME_TYPES).join(", ")}`);
+    }
+
+    const filename = `${categoryId}-${Date.now()}.${ext}`;
+    const relPath = `${tenantId}/${filename}`;
+    const dir = path.join(UPLOADS_DIR, tenantId);
+    await fs.mkdir(dir, { recursive: true });
+
+    const filePath = path.join(dir, filename);
+    await pipeline(file.file, createWriteStream(filePath));
+
+    if (file.file.truncated) {
+      await fs.unlink(filePath).catch(() => {});
+      return reply.badRequest("File too large. Maximum size is 5 MB.");
+    }
+
+    // Delete old uploaded file if replacing
+    await deleteUploadedFile(category.backgroundImage);
+
+    const updated = await app.prisma.category.update({
+      where: { id: categoryId },
+      data: { backgroundImage: `upload:${relPath}` },
+    });
+
+    return { data: updated };
+  });
+
+  /** Remove the background image for a category. */
+  app.delete<{ Params: { id: string } }>("/api/categories/:id/background-image", async (request, reply) => {
+    const tenantId = request.tenant.id;
+    const categoryId = request.params.id;
+
+    const category = await app.prisma.category.findFirst({
+      where: { id: categoryId, tenantId },
+    });
+    if (!category) return reply.notFound("Category not found");
+
+    await deleteUploadedFile(category.backgroundImage);
+
+    const updated = await app.prisma.category.update({
+      where: { id: categoryId },
+      data: { backgroundImage: null },
+    });
+
+    return { data: updated };
+  });
+
   app.delete<{ Params: { id: string } }>("/api/categories/:id", async (request, reply) => {
+    const category = await app.prisma.category.findFirst({
+      where: { id: request.params.id, tenantId: request.tenant.id },
+    });
+    if (!category) return reply.notFound("Category not found");
+
     const postCount = await app.prisma.post.count({
       where: { categoryId: request.params.id, tenantId: request.tenant.id },
     });
@@ -67,10 +153,10 @@ export async function categoryRoutes(app: FastifyInstance) {
       return reply.badRequest(`Cannot delete category: ${postCount} post(s) still assigned to it`);
     }
 
-    const result = await app.prisma.category.deleteMany({
-      where: { id: request.params.id, tenantId: request.tenant.id },
-    });
-    if (result.count === 0) return reply.notFound("Category not found");
+    // Clean up uploaded file before deleting
+    await deleteUploadedFile(category.backgroundImage);
+
+    await app.prisma.category.delete({ where: { id: request.params.id } });
     return reply.code(204).send();
   });
 }
