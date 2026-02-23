@@ -88,7 +88,7 @@ The seed runs automatically on startup and is idempotent — safe to re-run. Cat
 
 ## Development — native Node
 
-The fastest dev loop. Postgres runs in Docker; the app runs locally with hot reload.
+The fastest dev loop. Postgres runs in Docker; the app and web frontend run locally with hot reload.
 
 **1. Start Postgres:**
 
@@ -96,35 +96,41 @@ The fastest dev loop. Postgres runs in Docker; the app runs locally with hot rel
 docker compose up -d
 ```
 
-**2. Install dependencies and generate Prisma client:**
+**2. Install dependencies (from monorepo root):**
 
 ```bash
 npm install
-npx prisma generate
 ```
 
 **3. Copy and edit env:**
 
 ```bash
-cp .env.example .env
+cp apps/api/.env.example apps/api/.env
 # DATABASE_URL defaults to localhost:5432 — correct for this mode
 ```
 
 **4. Run migrations and seed:**
 
 ```bash
-npx prisma migrate dev
-npx prisma db seed
+npm run migrate -w @notipo/api
+npm run seed -w @notipo/api
 ```
 
-**5. Start the app:**
+**5. Start all apps:**
 
 ```bash
-npm run dev
+turbo dev
+```
+
+Or start individually:
+
+```bash
+npm run dev -w @notipo/api    # API at http://localhost:3000
+npm run dev -w @notipo/web    # Web at http://localhost:3001
 ```
 
 The API is available at `http://localhost:3000`.
-The admin UI is at `http://localhost:3000/admin`.
+The admin UI is at `http://localhost:3001/admin`.
 
 ---
 
@@ -137,36 +143,36 @@ The dev container runs the app and Postgres together inside Docker. No local Nod
 **1. Copy env file:**
 
 ```bash
-cp .env.example .env
+cp apps/api/.env.example apps/api/.env
 ```
 
 **2. Open in container:**
 
 Press `F1` and run `Dev Containers: Reopen in Container`, or click the popup that appears when you open the workspace.
 
-VS Code will build the container, run `npm install && npx prisma generate`, and then on each start run `npx prisma migrate dev`.
+VS Code will build the container, run `npm install`, and then on each start run migrations.
 
-**3. Start the app (inside the container terminal):**
+**3. Start the apps (inside the container terminal):**
 
 ```bash
-npm run dev
+turbo dev
 ```
 
-Ports 3000 and 5432 are forwarded to your host automatically.
+Ports 3000 (API), 3001 (web), and 5432 (Postgres) are forwarded to your host automatically.
 
 The API is at `http://localhost:3000`.
-The admin UI is at `http://localhost:3000/admin`.
+The admin UI is at `http://localhost:3001/admin`.
 
 ---
 
 ## Development — local Docker (no Node required)
 
-Runs the full production image locally. No Node, npm, or Prisma CLI needed on your machine.
+Runs the full production images locally. No Node, npm, or Prisma CLI needed on your machine.
 
 **1. Copy and edit env:**
 
 ```bash
-cp .env.example .env
+cp apps/api/.env.example apps/api/.env
 # Fill in ENCRYPTION_KEY and API_KEY at minimum
 ```
 
@@ -176,10 +182,10 @@ cp .env.example .env
 docker compose --profile full up --build
 ```
 
-The app runs at `http://localhost:3000`.
-The admin UI is at `http://localhost:3000/admin`.
+The API runs at `http://localhost:3000`.
+The admin UI is at `http://localhost:80/admin` (served by nginx).
 
-On first start the container runs migrations and seed automatically.
+On first start the API container runs migrations and seed automatically.
 
 ---
 
@@ -211,7 +217,7 @@ Set at minimum:
 ENCRYPTION_KEY=<openssl rand -hex 32>
 API_KEY=<openssl rand -hex 16>
 DB_PASSWORD=<openssl rand -hex 16>
-DOMAIN=api.yourdomain.com
+DOMAIN=yourdomain.com
 ACME_EMAIL=you@example.com
 
 SEED_TENANT_NAME=My Blog
@@ -232,8 +238,8 @@ On first start, the app container runs `prisma migrate deploy` and `prisma db se
 docker logs notipo-app
 ```
 
-The app is available at `https://api.yourdomain.com`.
-The admin UI is at `https://api.yourdomain.com/admin`.
+The API is available at `https://yourdomain.com/api`.
+The admin UI is at `https://yourdomain.com/admin`.
 
 **Updating to a new version:**
 
@@ -278,7 +284,7 @@ The start command in `railway.toml` runs `prisma migrate deploy` before the app 
 
 After the app starts for the first time, the seed has created your tenant and owner user. You now need to connect Notion and WordPress credentials.
 
-Open the admin UI (`/admin`) and either sign up with email and password (creates a new tenant) or enter your API key (the value of `SEED_API_KEY` or `API_KEY`). An onboarding stepper guides you through the remaining setup. Go to **Settings** and connect:
+Open the admin UI at `/admin` and either sign up with email and password (creates a new tenant) or enter your API key (the value of `SEED_API_KEY` or `API_KEY`). An onboarding stepper guides you through the remaining setup. Go to **Settings** and connect:
 
 **Notion** (choose one):
 - **OAuth** (recommended): Click "Connect to Notion" → authorize in Notion's consent screen → select which database to share. Credentials and database ID are configured automatically. Requires OAuth env vars to be set.
@@ -315,18 +321,18 @@ The `Status` options are configurable per tenant — the names above are default
 
 ## Admin UI
 
-The admin UI is a single-page app served at `/admin`. Sign up with email and password, or enter an existing API key on first visit. The key is stored in `localStorage` and auto-detected as admin or tenant-level by probing the tenants endpoint. The current page persists across browser refreshes via URL hash.
+The admin UI is a Next.js app (shadcn/ui + Tailwind) served at `/admin`. Sign up with email and password, or enter an existing API key on first visit. The key is stored in `localStorage` and auto-detected as admin or tenant-level by probing the tenants endpoint.
 
 New tenants see an onboarding stepper that guides them through connecting Notion (with a link to the Notion database template) and WordPress. The stepper disappears once both services are configured.
 
-A light/dark theme toggle is available in the navbar (sun/moon icon) and on the login screen. Theme preference is stored in `localStorage`.
+The admin uses a dark theme. The landing page has a light/dark theme toggle (sun/moon icon) — preference is stored in `localStorage`.
 
-The UI is fully responsive — on mobile, the sidebar is replaced by a bottom tab navigation bar, filter buttons scroll horizontally, and padding is reduced for smaller screens.
+The UI is mobile-optimized — on phones, the sidebar is replaced by a fixed bottom navigation bar, tables switch to stacked card layouts, and padding is adjusted for smaller screens.
 
 Pages available:
 
 - **Dashboard** — post status counts, recent jobs with live step progress, config health check. Updates in real-time via Server-Sent Events.
-- **Posts** — full post list with status badges, WordPress links, expandable detail rows
+- **Posts** — full post list with status badges, WordPress links, category display
 - **Categories & Tags** — auto-imported from WordPress, synced every 5 minutes. Manual sync available via button.
 - **Jobs** — background job activity log with error display, status filtering, and clickable WP links
 - **Settings** — Notion connection (OAuth or manual token, with disconnect button), WordPress credentials (with disconnect button), trigger statuses, code highlighter (radio buttons)
