@@ -1,22 +1,39 @@
 "use client";
 
+import { useCallback } from "react";
 import { useApi } from "@/hooks/use-api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEventSource } from "@/hooks/use-event-source";
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { ApiPost, ApiJob, ApiListResponse } from "@notipo/shared";
 
+interface SettingsData {
+  data: {
+    notion: { configured: boolean; databaseId: string | null };
+    wordpress: { configured: boolean };
+  };
+}
+
 export default function DashboardPage() {
-  const { data: postsData } = useApi<ApiListResponse<ApiPost>>("/api/posts");
-  const { data: jobsData } = useApi<{ data: ApiJob[]; total: number }>(
+  const { data: postsData, refetch: refetchPosts } = useApi<ApiListResponse<ApiPost>>("/api/posts");
+  const { data: jobsData, refetch: refetchJobs } = useApi<{ data: ApiJob[]; total: number }>(
     "/api/jobs?limit=5",
   );
-  const { data: settings } = useApi<{ data: Record<string, unknown> }>(
-    "/api/settings",
-  );
+  const { data: settings } = useApi<SettingsData>("/api/settings");
+
+  const onEvent = useCallback(() => {
+    refetchJobs();
+    refetchPosts();
+  }, [refetchJobs, refetchPosts]);
+
+  useEventSource(onEvent);
 
   const posts = postsData?.data ?? [];
   const jobs = jobsData?.data ?? [];
-  const cfg = (settings?.data ?? {}) as Record<string, unknown>;
+  const notion = settings?.data?.notion;
+  const wordpress = settings?.data?.wordpress;
 
   const stats = {
     total: posts.length,
@@ -25,9 +42,45 @@ export default function DashboardPage() {
     failed: posts.filter((p) => p.status === "FAILED").length,
   };
 
+  const needsSetup = settings && (!notion?.configured || !wordpress?.configured);
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Dashboard</h1>
+
+      {needsSetup && (
+        <Card className="border-dashed">
+          <CardHeader>
+            <CardTitle className="text-base">Get Started</CardTitle>
+            <CardDescription>
+              Connect your services to start publishing from Notion to WordPress.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ol className="space-y-3">
+              <SetupStep
+                number={1}
+                title="Connect Notion"
+                done={!!notion?.configured}
+                href="/admin/settings"
+              />
+              <SetupStep
+                number={2}
+                title="Connect WordPress"
+                done={!!wordpress?.configured}
+                href="/admin/settings"
+              />
+              <SetupStep
+                number={3}
+                title="Set up your Notion database"
+                done={!!notion?.databaseId}
+                href="https://www.notion.so/templates"
+                external
+              />
+            </ol>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard title="Total Posts" value={stats.total} />
@@ -44,14 +97,14 @@ export default function DashboardPage() {
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Notion</span>
-              <Badge variant={cfg.notionConnected ? "default" : "secondary"}>
-                {cfg.notionConnected ? "Connected" : "Not connected"}
+              <Badge variant={notion?.configured ? "default" : "secondary"}>
+                {notion?.configured ? "Connected" : "Not connected"}
               </Badge>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">WordPress</span>
-              <Badge variant={cfg.wordpressConnected ? "default" : "secondary"}>
-                {cfg.wordpressConnected ? "Connected" : "Not connected"}
+              <Badge variant={wordpress?.configured ? "default" : "secondary"}>
+                {wordpress?.configured ? "Connected" : "Not connected"}
               </Badge>
             </div>
           </CardContent>
@@ -102,5 +155,45 @@ function StatCard({ title, value }: { title: string; value: number }) {
         <p className="text-2xl font-bold">{value}</p>
       </CardContent>
     </Card>
+  );
+}
+
+function SetupStep({
+  number,
+  title,
+  done,
+  href,
+  external,
+}: {
+  number: number;
+  title: string;
+  done: boolean;
+  href: string;
+  external?: boolean;
+}) {
+  return (
+    <li className="flex items-center gap-3">
+      <span
+        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
+          done
+            ? "bg-primary text-primary-foreground"
+            : "border border-muted-foreground text-muted-foreground"
+        }`}
+      >
+        {done ? "\u2713" : number}
+      </span>
+      <span className={`text-sm ${done ? "line-through text-muted-foreground" : ""}`}>
+        {title}
+      </span>
+      {!done && (
+        <Button variant="outline" size="sm" className="ml-auto" asChild>
+          {external ? (
+            <a href={href} target="_blank" rel="noopener noreferrer">Set up</a>
+          ) : (
+            <Link href={href}>Set up</Link>
+          )}
+        </Button>
+      )}
+    </li>
   );
 }

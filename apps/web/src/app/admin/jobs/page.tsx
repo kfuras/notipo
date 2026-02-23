@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useApi } from "@/hooks/use-api";
+import { useEventSource } from "@/hooks/use-event-source";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,9 +49,11 @@ export default function JobsPage() {
   const limit = 20;
 
   const queryFilter = filter === "ALL" ? "" : `&status=${filter}`;
-  const { data, loading } = useApi<{ data: JobRow[]; total: number }>(
+  const { data, loading, refetch } = useApi<{ data: JobRow[]; total: number }>(
     `/api/jobs?limit=${limit}&offset=${offset}${queryFilter}`,
   );
+
+  useEventSource(useCallback(() => { refetch(); }, [refetch]));
 
   const jobs = data?.data ?? [];
   const total = data?.total ?? 0;
