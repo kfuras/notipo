@@ -179,4 +179,7 @@ html.light {
   body {
     @apply bg-background text-foreground;
   }
+  button, [role="button"], a, [type="submit"], [type="reset"], label[for], select, summary {
+    cursor: pointer;
+  }
 }
