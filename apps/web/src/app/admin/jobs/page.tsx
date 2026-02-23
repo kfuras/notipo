@@ -87,7 +87,37 @@ export default function JobsPage() {
         ))}
       </div>
 
-      <div className="rounded-md border">
+      {/* Mobile card list */}
+      <div className="md:hidden space-y-2">
+        {loading ? (
+          <p className="text-center text-muted-foreground py-4">Loading...</p>
+        ) : jobs.length === 0 ? (
+          <p className="text-center text-muted-foreground py-4">No jobs</p>
+        ) : (
+          jobs.map((job) => (
+            <div key={job.id} className="rounded-md border p-3 space-y-1">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-xs font-mono">{job.type}</span>
+                <Badge variant={statusVariant[job.status] ?? "secondary"} className="shrink-0">
+                  {job.status}
+                </Badge>
+              </div>
+              {job.post && (
+                <p className="text-sm truncate">{job.post.title}</p>
+              )}
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{fmtTime(job.createdAt)}</span>
+              </div>
+              {job.error && (
+                <p className="text-xs text-destructive">{job.error}</p>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>

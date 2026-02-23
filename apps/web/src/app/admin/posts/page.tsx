@@ -55,7 +55,36 @@ export default function PostsPage() {
         ))}
       </div>
 
-      <div className="rounded-md border">
+      {/* Mobile card list */}
+      <div className="md:hidden space-y-2">
+        {loading ? (
+          <p className="text-center text-muted-foreground py-4">Loading...</p>
+        ) : posts.length === 0 ? (
+          <p className="text-center text-muted-foreground py-4">No posts</p>
+        ) : (
+          posts.map((post) => (
+            <div key={post.id} className="rounded-md border p-3 space-y-1">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-medium text-sm leading-snug">{post.title}</p>
+                <Badge variant={statusVariant[post.status] ?? "secondary"} className="shrink-0">
+                  {post.status}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{post.category?.name ?? "No category"}</span>
+                {post.wpUrl && (
+                  <a href={post.wpUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    View on WP
+                  </a>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>

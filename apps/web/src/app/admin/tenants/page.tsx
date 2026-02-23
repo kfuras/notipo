@@ -82,7 +82,43 @@ export default function TenantsPage() {
         </Dialog>
       </div>
 
-      <div className="rounded-md border">
+      {/* Mobile card list */}
+      <div className="md:hidden space-y-2">
+        {tenants.length === 0 ? (
+          <p className="text-center text-muted-foreground py-4">No tenants</p>
+        ) : (
+          tenants.map((t) => (
+            <div key={t.id} className="rounded-md border p-3 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-medium text-sm">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">{t.slug}</p>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => deleteTenant(t.id, t.name)}
+                >
+                  Delete
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-muted-foreground">{t._count.posts} posts</span>
+                <span className="text-muted-foreground">{t._count.users} users</span>
+                <Badge variant={t.wpSiteUrl ? "default" : "secondary"}>
+                  WP: {t.wpSiteUrl ? "Yes" : "No"}
+                </Badge>
+                <Badge variant={t.notionDatabaseId ? "default" : "secondary"}>
+                  Notion: {t.notionDatabaseId ? "Yes" : "No"}
+                </Badge>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
