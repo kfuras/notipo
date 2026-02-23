@@ -60,6 +60,12 @@ export async function buildApp() {
     decorateReply: false,
     wildcard: true,
   });
+  await app.register(fastifyStatic, {
+    root: path.join(process.cwd(), "public", "category-images"),
+    prefix: "/api/default-category-images/",
+    decorateReply: false,
+    wildcard: true,
+  });
   await app.register(prismaPlugin);
   await app.register(pgBossPlugin);
   await app.register(authPlugin);

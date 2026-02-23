@@ -13,7 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ImageIcon, Upload, Trash2 } from "lucide-react";
+import { Upload, Trash2 } from "lucide-react";
 import type { ApiCategory, ApiTag, ApiListResponse } from "@notipo/shared";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
@@ -36,7 +35,8 @@ function getPreviewUrl(backgroundImage: string | null): string | null {
     const relPath = backgroundImage.slice("upload:".length);
     return `${API_BASE}/api/uploads/category-images/${relPath}`;
   }
-  return null;
+  // Default bundled image (bare filename like "automation.png")
+  return `${API_BASE}/api/default-category-images/${backgroundImage}`;
 }
 
 function CategoryImageCell({
@@ -92,14 +92,6 @@ function CategoryImageCell({
             className="h-8 w-16 rounded object-cover hover:ring-2 hover:ring-primary"
           />
         </button>
-      ) : category.backgroundImage ? (
-        <Badge
-          variant="secondary"
-          className="cursor-pointer"
-          onClick={() => setOpen(true)}
-        >
-          {category.backgroundImage}
-        </Badge>
       ) : (
         <Button variant="ghost" size="xs" onClick={() => setOpen(true)}>
           <Upload className="size-3" />
@@ -128,11 +120,6 @@ function CategoryImageCell({
               alt={`${category.name} background`}
               className="w-full rounded aspect-[1200/628] object-cover"
             />
-          ) : category.backgroundImage ? (
-            <div className="flex items-center gap-2 rounded-md border p-4 text-sm text-muted-foreground">
-              <ImageIcon className="size-4" />
-              Default: {category.backgroundImage}
-            </div>
           ) : (
             <div className="flex items-center justify-center rounded-md border border-dashed p-8 text-sm text-muted-foreground">
               No image set
