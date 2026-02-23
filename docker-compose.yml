@@ -23,7 +23,7 @@ services:
     profiles: ["full"]
     build:
       context: .
-      target: production
+      dockerfile: apps/api/Dockerfile
     container_name: notipo-dev-app
     restart: unless-stopped
     ports:

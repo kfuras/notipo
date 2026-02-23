@@ -1,17 +1,21 @@
 node_modules/
 dist/
 .env
+.env.*
+!.env.example
 *.log
 .DS_Store
 coverage/
 
 # Prisma
-prisma/migrations/**/migration_lock.toml
+**/prisma/migrations/**/migration_lock.toml
 
-# Python
-__pycache__/
-*.pyc
-.venv/
+# Next.js
+.next/
+out/
+
+# Turbo
+.turbo/
 
 # Docker
 .docker/

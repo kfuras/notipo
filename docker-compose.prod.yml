@@ -1,6 +1,6 @@
 # Production deployment with Traefik reverse proxy + Let's Encrypt TLS.
 # Usage:
-#   1. Copy .env.example to .env and fill in all values
+#   1. Copy apps/api/.env.example to .env and fill in all values
 #   2. docker compose -f docker-compose.prod.yml up -d
 
 name: notipo
@@ -34,11 +34,10 @@ services:
     container_name: notipo-app
     build:
       context: .
-      target: production
+      dockerfile: apps/api/Dockerfile
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      # Override DATABASE_URL to use the postgres container hostname
       DATABASE_URL: postgresql://notipo:${DB_PASSWORD}@postgres:5432/notipo
     env_file: .env
     depends_on:
@@ -46,26 +45,27 @@ services:
         condition: service_healthy
     labels:
       - traefik.enable=true
-      - traefik.http.routers.app.rule=Host(`${DOMAIN}`) && (PathPrefix(`/api`) || PathPrefix(`/admin`) || Path(`/health`))
+      - traefik.http.routers.app.rule=Host(`${DOMAIN}`) && (PathPrefix(`/api`) || Path(`/health`))
       - traefik.http.routers.app.entrypoints=websecure
       - traefik.http.routers.app.tls=true
       - traefik.http.routers.app.tls.certresolver=letsencrypt
       - traefik.http.routers.app.priority=20
       - traefik.http.services.app.loadbalancer.server.port=3000
 
-  landing:
-    container_name: notipo-landing
+  web:
+    container_name: notipo-web
     build:
-      context: ../notipo-landing
+      context: .
+      dockerfile: apps/web/Dockerfile
     restart: unless-stopped
     labels:
       - traefik.enable=true
-      - traefik.http.routers.landing.rule=Host(`${DOMAIN}`)
-      - traefik.http.routers.landing.entrypoints=websecure
-      - traefik.http.routers.landing.tls=true
-      - traefik.http.routers.landing.tls.certresolver=letsencrypt
-      - traefik.http.routers.landing.priority=10
-      - traefik.http.services.landing.loadbalancer.server.port=80
+      - traefik.http.routers.web.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.web.entrypoints=websecure
+      - traefik.http.routers.web.tls=true
+      - traefik.http.routers.web.tls.certresolver=letsencrypt
+      - traefik.http.routers.web.priority=10
+      - traefik.http.services.web.loadbalancer.server.port=80
 
   postgres:
     container_name: notipo-postgres
@@ -77,7 +77,6 @@ services:
       POSTGRES_DB: notipo
     volumes:
       - pgdata:/var/lib/postgresql/data
-    # Not exposed externally — only reachable by the app container
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U notipo"]
       interval: 5s
