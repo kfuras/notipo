@@ -85,12 +85,15 @@ function CategoryImageCell({
   return (
     <>
       {previewUrl ? (
-        <button onClick={() => setOpen(true)} className="block">
+        <button onClick={() => setOpen(true)} className="group relative block">
           <img
             src={previewUrl}
             alt={`${category.name} background`}
-            className="h-8 w-16 rounded object-cover hover:ring-2 hover:ring-primary"
+            className="h-8 w-16 rounded object-cover"
           />
+          <span className="absolute inset-0 flex items-center justify-center rounded bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
+            <Upload className="size-3 text-white" />
+          </span>
         </button>
       ) : (
         <Button variant="ghost" size="xs" onClick={() => setOpen(true)}>
