@@ -2,6 +2,7 @@
 
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { AppSidebar } from "@/components/admin/app-sidebar";
+import { BottomNav } from "@/components/admin/bottom-nav";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { LoginForm } from "@/components/admin/login-form";
 
@@ -24,11 +25,12 @@ function AdminShell({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-12 items-center border-b px-4">
+        <header className="hidden md:flex h-12 items-center border-b px-4">
           <SidebarTrigger />
         </header>
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main className="flex-1 p-4 md:p-6 pb-20 md:pb-6">{children}</main>
       </SidebarInset>
+      <BottomNav />
     </SidebarProvider>
   );
 }
