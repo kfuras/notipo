@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { AppSidebar } from "@/components/admin/app-sidebar";
 import { BottomNav } from "@/components/admin/bottom-nav";
@@ -35,13 +36,38 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Sets html/body background + theme-color so phone safe areas match the dark theme */
+function SetDarkMeta() {
+  useEffect(() => {
+    const bg = "#0a0a0a"; // oklch(0.145 0 0) ≈ dark --background
+    document.documentElement.style.backgroundColor = bg;
+    document.body.style.backgroundColor = bg;
+
+    let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "theme-color";
+      document.head.appendChild(meta);
+    }
+    meta.content = bg;
+
+    return () => {
+      document.documentElement.style.backgroundColor = "";
+      document.body.style.backgroundColor = "";
+      if (meta) meta.content = "";
+    };
+  }, []);
+  return null;
+}
+
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="dark bg-background text-foreground">
+    <div className="dark bg-background text-foreground min-h-screen">
+      <SetDarkMeta />
       <AuthProvider>
         <AdminShell>{children}</AdminShell>
       </AuthProvider>
