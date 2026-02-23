@@ -40,6 +40,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
 function SetDarkMeta() {
   useEffect(() => {
     const bg = "#0a0a0a"; // oklch(0.145 0 0) ≈ dark --background
+    document.documentElement.classList.add("dark");
     document.documentElement.style.backgroundColor = bg;
     document.body.style.backgroundColor = bg;
 
@@ -52,6 +53,7 @@ function SetDarkMeta() {
     meta.content = bg;
 
     return () => {
+      document.documentElement.classList.remove("dark");
       document.documentElement.style.backgroundColor = "";
       document.body.style.backgroundColor = "";
       if (meta) meta.content = "";
