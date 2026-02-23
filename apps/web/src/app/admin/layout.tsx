@@ -39,7 +39,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="dark">
+    <div className="dark bg-background text-foreground">
       <AuthProvider>
         <AdminShell>{children}</AdminShell>
       </AuthProvider>
