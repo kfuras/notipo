@@ -16,8 +16,8 @@ import { logger } from "../lib/logger.js";
 export class SyncService {
   constructor(private prisma: PrismaClient) {}
 
-  /** Sync a single Notion page to the database. Returns the post ID and WP status. */
-  async syncPost(tenantId: string, notionPageId: string, onStep?: (step: string) => void): Promise<{ postId: string; wpStatus: string | null }> {
+  /** Sync a single Notion page to the database. Returns the post ID, WP status, and whether the post was previously published. */
+  async syncPost(tenantId: string, notionPageId: string, onStep?: (step: string) => void): Promise<{ postId: string; wpStatus: string | null; wasPublished: boolean }> {
     const credService = new CredentialService(this.prisma);
 
     // Get tenant credentials
@@ -63,11 +63,12 @@ export class SyncService {
     // Determine final status: re-syncing a published post → UPDATE_PENDING
     const existing = await this.prisma.post.findUnique({
       where: { tenantId_notionPageId: { tenantId, notionPageId } },
-      select: { wpPostId: true },
+      select: { wpPostId: true, status: true },
     });
     const isUpdate = existing?.wpPostId != null;
+    const wasPublished = existing?.status === "PUBLISHED";
     const finalStatus = isUpdate ? "UPDATE_PENDING" : "SYNCED";
-    logger.info({ isUpdate, wpPostId: existing?.wpPostId, finalStatus }, "Sync mode determined");
+    logger.info({ isUpdate, wpPostId: existing?.wpPostId, wasPublished, finalStatus }, "Sync mode determined");
 
     // 4. Process images if any
     let postId: string;
@@ -139,11 +140,12 @@ export class SyncService {
       const wpContent = convertMarkdownToGutenberg(finalMarkdown, { highlighter });
       let wpPostGone = false;
       try {
-        // Fetch current WP status before editing — some WP configs revert to draft
-        // if the status isn't explicitly preserved in the update payload.
+        // Fetch current WP status before editing. Use our DB as source of truth:
+        // if the post was previously published in our system, always preserve "publish"
+        // status — a prior sync may have accidentally reverted WP to draft.
         const currentPost = await wp.getPost(existing!.wpPostId!);
-        const preserveStatus = currentPost?.status === "publish" ? "publish" : undefined;
-        logger.info({ wpPostId: existing!.wpPostId, currentWpStatus: currentPost?.status }, "WP post status before edit");
+        const preserveStatus = (wasPublished || currentPost?.status === "publish") ? "publish" : undefined;
+        logger.info({ wpPostId: existing!.wpPostId, currentWpStatus: currentPost?.status, wasPublished, preserveStatus }, "WP post status before edit");
 
         const updated = await wp.editPost(existing!.wpPostId!, {
           title: result.metadata.title,
@@ -253,14 +255,15 @@ export class SyncService {
 
     // 6. Update Notion status.
     // For updates to live WP posts, skip — the publish job will set "Published" + live URL.
-    // Only set "Ready to Review" for new drafts or updates to non-live posts.
-    if (!(isUpdate && wpStatus === "publish")) {
+    // Use both WP API status AND our DB status (wasPublished) as fallback in case
+    // a prior sync accidentally reverted the WP post to draft.
+    if (!(isUpdate && (wpStatus === "publish" || wasPublished))) {
       onStep?.("Updating Notion status…");
       await notion.updatePageStatus(notionPageId, "Ready to Review", wpUrl);
     }
 
     logger.info({ tenantId, notionPageId, postId }, "Post synced successfully");
-    return { postId, wpStatus };
+    return { postId, wpStatus, wasPublished };
   }
 
   private async upsertPost(
