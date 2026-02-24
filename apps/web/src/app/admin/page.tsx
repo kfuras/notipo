@@ -163,6 +163,25 @@ export default function DashboardPage() {
         <StatCard title="Failed" value={stats.failed} />
       </div>
 
+      {/* Recent Posts — Notion-like property cards */}
+      {posts.length > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-medium">Recent Posts</CardTitle>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/admin/posts">View all</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {posts.slice(0, 5).map((post) => (
+                <PostPropertyCard key={post.id} post={post} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -185,7 +204,7 @@ export default function DashboardPage() {
               <div className="pt-2">
                 <Button
                   size="sm"
-                  className="w-full"
+                  className="w-full bg-violet-600 hover:bg-violet-700 text-white"
                   disabled={syncing}
                   onClick={handleSyncNow}
                 >
@@ -210,17 +229,17 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between mb-2.5">
                   <div className="flex items-center gap-2">
                     <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-500 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500" />
                     </span>
                     <span className="text-sm font-medium">{jobTypeLabel(lj.type)} Job</span>
                   </div>
-                  <Badge variant="outline" className="text-xs text-primary border-primary/30">Running</Badge>
+                  <Badge variant="outline" className="text-xs text-violet-400 border-violet-500/30">Running</Badge>
                 </div>
                 <div className="space-y-1.5 ml-4">
                   {lj.steps.map((step) => (
                     <div key={step} className="flex items-center gap-2">
-                      <svg className="w-3.5 h-3.5 text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="w-3.5 h-3.5 text-violet-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12"/>
                       </svg>
                       <span className="text-xs text-muted-foreground">{step}</span>
@@ -239,8 +258,8 @@ export default function DashboardPage() {
                   <div key={job.id} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2 truncate mr-2">
                       {job.status === "COMPLETED" && (
-                        <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                          <svg className="w-2.5 h-2.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <div className="w-4 h-4 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                          <svg className="w-2.5 h-2.5 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="20 6 9 17 4 12"/>
                           </svg>
                         </div>
@@ -277,6 +296,58 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+      </div>
+    </div>
+  );
+}
+
+const postStatusStyle: Record<string, string> = {
+  PUBLISHED: "bg-green-500/15 text-green-500",
+  SYNCED: "bg-blue-500/15 text-blue-400",
+  FAILED: "bg-red-500/15 text-red-400",
+  IMAGES_PROCESSING: "bg-yellow-500/15 text-yellow-400",
+  PUBLISHING: "bg-violet-500/15 text-violet-400",
+  UPDATE_PENDING: "bg-orange-500/15 text-orange-400",
+};
+
+function PostPropertyCard({ post }: { post: ApiPost }) {
+  return (
+    <div className="rounded-lg border p-4 space-y-2.5">
+      {/* Title header */}
+      <div className="flex items-center gap-2 pb-2 border-b border-border">
+        <div className="w-5 h-5 rounded bg-violet-500/15 flex items-center justify-center shrink-0">
+          <svg className="w-3 h-3 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
+        </div>
+        <span className="text-sm font-medium truncate">{post.title}</span>
+      </div>
+
+      {/* Property rows */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Status</span>
+          <span className={`text-xs font-medium rounded-md px-2.5 py-0.5 ${postStatusStyle[post.status] ?? "bg-muted text-muted-foreground"}`}>
+            {post.status}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Category</span>
+          <span className="text-xs text-foreground/80 bg-muted px-2.5 py-0.5 rounded-md">
+            {post.category?.name ?? "Uncategorized"}
+          </span>
+        </div>
+        {post.wpUrl && (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">WordPress</span>
+            <a
+              href={post.wpUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-violet-400 hover:underline truncate max-w-[200px]"
+            >
+              {post.wpUrl.replace(/^https?:\/\//, "")}
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -158,13 +158,13 @@ export default function JobsPage() {
                   <div className="flex items-center gap-2">
                     {job.status === "RUNNING" && (
                       <span className="relative flex h-2 w-2 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-500 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500" />
                       </span>
                     )}
                     <span className="text-xs font-medium">{jobTypeLabel(job.type)}</span>
                   </div>
-                  <Badge variant={statusVariant[job.status] ?? "secondary"} className={`shrink-0 ${job.status === "RUNNING" ? "text-primary border-primary/30" : ""}`}>
+                  <Badge variant={statusVariant[job.status] ?? "secondary"} className={`shrink-0 ${job.status === "RUNNING" ? "text-violet-400 border-violet-500/30" : ""}`}>
                     {job.status}
                   </Badge>
                 </div>
@@ -176,7 +176,7 @@ export default function JobsPage() {
                   <div className="space-y-1 pt-1">
                     {live.steps.map((s) => (
                       <div key={s} className="flex items-center gap-1.5">
-                        <svg className="w-3 h-3 text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg className="w-3 h-3 text-violet-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12"/>
                         </svg>
                         <span className="text-xs text-muted-foreground">{s}</span>
@@ -186,7 +186,7 @@ export default function JobsPage() {
                 )}
                 {/* Fallback: single step from API */}
                 {job.status === "RUNNING" && !live && step && (
-                  <p className="text-xs text-primary">{step}</p>
+                  <p className="text-xs text-violet-400">{step}</p>
                 )}
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>{fmtTime(job.createdAt)}</span>
@@ -235,8 +235,8 @@ export default function JobsPage() {
                       <div className="flex items-center gap-2">
                         {job.status === "RUNNING" && (
                           <span className="relative flex h-2 w-2 shrink-0">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-500 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500" />
                           </span>
                         )}
                         <span className="text-xs font-medium">{jobTypeLabel(job.type)}</span>
@@ -246,7 +246,7 @@ export default function JobsPage() {
                       {job.post?.title ?? "\u2014"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusVariant[job.status] ?? "secondary"} className={job.status === "RUNNING" ? "text-primary border-primary/30" : ""}>
+                      <Badge variant={statusVariant[job.status] ?? "secondary"} className={job.status === "RUNNING" ? "text-violet-400 border-violet-500/30" : ""}>
                         {job.status}
                       </Badge>
                     </TableCell>

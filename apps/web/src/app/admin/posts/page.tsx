@@ -73,7 +73,7 @@ export default function PostsPage() {
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>{post.category?.name ?? "No category"}</span>
                 {post.wpUrl && (
-                  <a href={post.wpUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                  <a href={post.wpUrl} target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:underline">
                     View on WP
                   </a>
                 )}
@@ -125,7 +125,7 @@ export default function PostsPage() {
                         href={post.wpUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline"
+                        className="text-sm text-violet-400 hover:underline"
                       >
                         View
                       </a>
