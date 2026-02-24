@@ -13,6 +13,7 @@ const envSchema = z.object({
   NOTION_OAUTH_CLIENT_SECRET: z.string().optional(),
   NOTION_OAUTH_REDIRECT_URI: z.string().url().optional(),
   ALLOW_SIGNUP: z.string().default("true").transform((v) => v === "true"),
+  POLL_INTERVAL_SECONDS: z.coerce.number().default(300),
 });
 
 export type Config = z.infer<typeof envSchema>;

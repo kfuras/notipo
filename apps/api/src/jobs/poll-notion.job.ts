@@ -1,6 +1,7 @@
 import type PgBoss from "pg-boss";
 import type { PrismaClient } from "@prisma/client";
 import { pollTenant } from "../lib/poll-tenant.js";
+import { config } from "../config.js";
 import { logger } from "../lib/logger.js";
 
 export async function registerPollNotionJob(boss: PgBoss, prisma: PrismaClient) {
@@ -28,8 +29,8 @@ export async function registerPollNotionJob(boss: PgBoss, prisma: PrismaClient) 
     }
   });
 
-  // Poll every 60 seconds — primary trigger since Notion webhooks are slow (20-60 min)
-  const POLL_INTERVAL_MS = 60_000;
+  // Safety-net poll — primary detection is via Notion webhooks (delivered automatically for OAuth users)
+  const POLL_INTERVAL_MS = config.POLL_INTERVAL_SECONDS * 1000;
   setInterval(() => {
     boss.send("poll-notion", {}, { singletonKey: "poll-notion" }).catch((err: unknown) => {
       logger.error({ err }, "Failed to enqueue poll-notion job");

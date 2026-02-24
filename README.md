@@ -8,7 +8,7 @@ A self-hosted backend that publishes blog posts from Notion to WordPress automat
 
 You write posts in Notion. When you change the status to your configured trigger value (e.g. "Post to Wordpress"), the app syncs the post to a WordPress draft. When you set it to "Publish", it goes live. To update content after syncing or publishing, use "Update Wordpress" — it re-syncs the content and only auto-publishes if the WP post is currently live. Drafts stay as drafts.
 
-The app polls Notion every 60 seconds (the primary trigger) and also accepts Notion webhook events as a backup. WordPress categories and tags are automatically imported and pushed to your Notion database as dropdown options, so you never need to look up numeric IDs or type names manually. After syncing, the wp-admin edit URL is written back to the `WordPress Link` property on the Notion page (published posts get the live frontend URL instead). Rank Math SEO metadata (focus keyword, title, description) is applied during sync so it's ready for review in the WordPress editor. All credentials are stored encrypted in the database — never in plain environment variables. A "Sync Now" button on the dashboard lets you trigger an instant poll without waiting for the 60-second interval.
+Notion webhooks (configured on the public integration) are the primary trigger — events are delivered automatically for all OAuth users. A safety-net poll runs every 5 minutes by default (`POLL_INTERVAL_SECONDS`) to catch any missed events. WordPress categories and tags are automatically imported and pushed to your Notion database as dropdown options, so you never need to look up numeric IDs or type names manually. After syncing, the wp-admin edit URL is written back to the `WordPress Link` property on the Notion page (published posts get the live frontend URL instead). Rank Math SEO metadata (focus keyword, title, description) is applied during sync so it's ready for review in the WordPress editor. All credentials are stored encrypted in the database — never in plain environment variables. A "Sync Now" button on the dashboard lets you trigger an instant poll without waiting for the 60-second interval.
 
 New users can sign up with email and password via the admin UI, which creates a tenant and returns an API key. An onboarding stepper guides them through connecting Notion and WordPress. Self-service signup can be disabled by setting `ALLOW_SIGNUP=false`.
 
@@ -63,6 +63,8 @@ cp .env.example .env
 | `NOTION_OAUTH_CLIENT_ID` | From your Notion public integration |
 | `NOTION_OAUTH_CLIENT_SECRET` | From your Notion public integration |
 | `NOTION_OAUTH_REDIRECT_URI` | `https://yourdomain.com/api/notion/oauth/callback` |
+| `NOTION_WEBHOOK_SECRET` | HMAC secret for webhook verification (from Notion integration settings) |
+| `POLL_INTERVAL_SECONDS` | Safety-net poll interval in seconds (default: `300`) |
 
 **Required for VPS deployment only:**
 
