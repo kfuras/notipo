@@ -23,10 +23,19 @@ export class WordPressService {
     ).toString("base64");
 
     this.client = axios.create({
-      baseURL: `${credentials.siteUrl}/wp-json/wp/v2`,
+      baseURL: credentials.siteUrl,
       headers: {
         Authorization: `Basic ${auth}`,
       },
+    });
+
+    // Use ?rest_route= query-string format instead of /wp-json/ pretty URLs.
+    // This works on all WordPress installs regardless of server rewrite rules.
+    this.client.interceptors.request.use((config) => {
+      const path = config.url || "";
+      config.url = "/";
+      config.params = { ...config.params, rest_route: `/wp/v2${path}` };
+      return config;
     });
   }
 
