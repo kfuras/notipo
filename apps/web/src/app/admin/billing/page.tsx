@@ -21,6 +21,7 @@ interface BillingData {
     postsLimit: number | null;
     featuredImagesEnabled: boolean;
     webhooksEnabled: boolean;
+    hasStripeCustomer: boolean;
     stripeConfigured: boolean;
   };
 }
@@ -65,7 +66,8 @@ export default function BillingPage() {
         apiKey: apiKey!,
       });
       window.location.href = res.data.url;
-    } catch {
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Checkout failed");
       setActionLoading(false);
     }
   };
@@ -78,7 +80,8 @@ export default function BillingPage() {
         apiKey: apiKey!,
       });
       window.location.href = res.data.url;
-    } catch {
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not open billing portal");
       setActionLoading(false);
     }
   };
@@ -129,7 +132,7 @@ export default function BillingPage() {
               Upgrade to Pro — $19/mo
             </Button>
           )}
-          {b.stripeConfigured && b.plan === "PRO" && (
+          {b.stripeConfigured && b.plan === "PRO" && b.hasStripeCustomer && (
             <Button variant="outline" onClick={handlePortal} disabled={actionLoading}>
               {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Manage Subscription

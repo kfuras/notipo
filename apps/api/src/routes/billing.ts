@@ -11,7 +11,7 @@ export async function billingRoutes(app: FastifyInstance) {
   app.get("/api/billing", async (request) => {
     const tenant = await app.prisma.tenant.findUniqueOrThrow({
       where: { id: request.tenant.id },
-      select: { plan: true, trialEndsAt: true },
+      select: { plan: true, trialEndsAt: true, stripeCustomerId: true },
     });
 
     const effectivePlan = getEffectivePlan(tenant.plan, tenant.trialEndsAt);
@@ -34,6 +34,7 @@ export async function billingRoutes(app: FastifyInstance) {
         postsLimit: limits.postsPerMonth,
         featuredImagesEnabled: limits.featuredImages,
         webhooksEnabled: limits.webhooks,
+        hasStripeCustomer: !!tenant.stripeCustomerId,
         stripeConfigured: isStripeConfigured(),
       },
     };
