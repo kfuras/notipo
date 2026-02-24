@@ -22,7 +22,7 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [signupEnabled, setSignupEnabled] = useState(false);
+  const [signupEnabled, setSignupEnabled] = useState<boolean | null>(null);
   const defaultTab = searchParams.get("tab") === "register" ? "register" : "email";
 
   // Email/password login
@@ -40,7 +40,7 @@ export function LoginForm() {
   useEffect(() => {
     api<{ data: { signup: boolean } }>("/api/auth/providers")
       .then((res) => setSignupEnabled(res.data.signup))
-      .catch(() => {});
+      .catch(() => setSignupEnabled(false));
   }, []);
 
   async function handleEmailLogin(e: React.FormEvent) {
@@ -93,6 +93,11 @@ export function LoginForm() {
           <CardDescription>Sign in to your dashboard</CardDescription>
         </CardHeader>
         <CardContent>
+          {signupEnabled === null ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-pulse text-muted-foreground text-sm">Loading...</div>
+            </div>
+          ) : (
           <Tabs defaultValue={signupEnabled ? defaultTab : "email"}>
             <TabsList className="w-full">
               <TabsTrigger value="email" className="flex-1">
@@ -203,6 +208,7 @@ export function LoginForm() {
               </form>
             </TabsContent>
           </Tabs>
+          )}
         </CardContent>
       </Card>
     </div>
