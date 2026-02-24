@@ -128,8 +128,20 @@ export async function notionWebhookRoutes(app: FastifyInstance) {
 
     // ── Route to the appropriate job based on status ──
 
-    // "Post to Wordpress" → sync only (creates WP draft)
+    // "Post to Wordpress" → sync only (creates WP draft) — new posts only
     if (status === tenant.notionTriggerStatus) {
+      // Skip if the post already has a WP entry — "Post to Wordpress" is for new posts only
+      const existingPost = await app.prisma.post.findUnique({
+        where: { tenantId_notionPageId: { tenantId: tenant.id, notionPageId: pageId } },
+        select: { wpPostId: true, status: true },
+      });
+      if (existingPost?.wpPostId) {
+        log.warn({ tenantId: tenant.id, pageId, wpPostId: existingPost.wpPostId }, "Post already synced to WP — use 'Update Wordpress' instead, resetting Notion status");
+        const resetStatus = existingPost.status === "PUBLISHED" ? "Published" : "Ready to Review";
+        await notion.updatePageStatus(pageId, resetStatus);
+        return reply.code(200).send();
+      }
+
       const runningJob = await app.prisma.job.findFirst({
         where: { tenantId: tenant.id, type: "SYNC_POST", status: "RUNNING", payload: { path: ["notionPageId"], equals: pageId } },
       });
