@@ -153,7 +153,9 @@ export class SyncService {
           ...(preserveStatus && { status: preserveStatus }),
         });
         wpStatus = updated.status ?? null;
-        wpUrl = updated.link ?? undefined;
+        wpUrl = updated.status === "publish"
+          ? (updated.link ?? undefined)
+          : `${wpCreds.siteUrl}/wp-admin/post.php?post=${existing!.wpPostId!}&action=edit`;
         // WP returns 200 even for trashed posts — treat trash the same as deleted
         if (updated.status === "trash") {
           logger.warn({ wpPostId: existing!.wpPostId }, "WP post is trashed, re-creating draft");
@@ -257,13 +259,14 @@ export class SyncService {
         tags: tagIds.length ? tagIds : undefined,
         featured_media: wpFeaturedMediaId,
       });
-      wpUrl = wpPost.link ?? undefined;
-      logger.info({ wpPostId: wpPost.id, wpPostStatus: wpPost.status, wpPostLink: wpPost.link }, "WP draft created");
+      wpUrl = `${wpCreds.siteUrl}/wp-admin/post.php?post=${wpPost.id}&action=edit`;
+      logger.info({ wpPostId: wpPost.id, wpPostStatus: wpPost.status, wpUrl }, "WP draft created");
       await this.prisma.post.update({
         where: { id: postId },
         data: {
           wpPostId: wpPost.id,
           wpFeaturedMediaId: wpFeaturedMediaId ?? null,
+          wpUrl: wpUrl,
           wpContent,
         },
       });
