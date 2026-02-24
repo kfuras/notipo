@@ -36,16 +36,35 @@ export async function pollTenant(boss: PgBoss, prisma: PrismaClient, tenant: Ten
   for (const page of syncPages) {
     const pageId = (page as { id: string }).id;
 
-    // Skip if the post already has a WP entry — "Post to Wordpress" is for new posts only
+    // "Post to Wordpress" is for new posts — if already synced, check WP post still exists
     const existingPost = await prisma.post.findUnique({
       where: { tenantId_notionPageId: { tenantId: tenant.id, notionPageId: pageId } },
-      select: { wpPostId: true, status: true },
+      select: { id: true, wpPostId: true, status: true },
     });
     if (existingPost?.wpPostId) {
-      log.warn({ tenantId: tenant.id, pageId, wpPostId: existingPost.wpPostId }, "Post already synced to WP — use 'Update Wordpress' instead, resetting Notion status");
-      const resetStatus = existingPost.status === "PUBLISHED" ? "Published" : "Ready to Review";
-      await notion.updatePageStatus(pageId, resetStatus);
-      continue;
+      // Verify the WP post still exists — if deleted, clear stale data and allow re-sync
+      let wpPostAlive = true;
+      if (wpCreds) {
+        try {
+          const wp = new WordPressService(wpCreds);
+          const wpPost = await wp.getPost(existingPost.wpPostId);
+          if (wpPost?.status === "trash") wpPostAlive = false;
+        } catch {
+          wpPostAlive = false; // 404 or other error — treat as deleted
+        }
+      }
+      if (wpPostAlive) {
+        log.warn({ tenantId: tenant.id, pageId, wpPostId: existingPost.wpPostId }, "Post already synced to WP — use 'Update Wordpress' instead, resetting Notion status");
+        const resetStatus = existingPost.status === "PUBLISHED" ? "Published" : "Ready to Review";
+        await notion.updatePageStatus(pageId, resetStatus);
+        continue;
+      }
+      // WP post was deleted — clear stale data so sync creates a fresh draft
+      log.info({ tenantId: tenant.id, pageId, wpPostId: existingPost.wpPostId }, "WP post deleted, clearing stale data for re-sync");
+      await prisma.post.update({
+        where: { id: existingPost.id },
+        data: { wpPostId: null, wpFeaturedMediaId: null, wpContent: null, wpUrl: null },
+      });
     }
 
     // Skip if there's already a running sync job for this page

@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { config } from "../config.js";
 import { NotionService } from "../services/notion.service.js";
 import { CredentialService } from "../services/credential.service.js";
+import { WordPressService } from "../services/wordpress.service.js";
 import { logger } from "../lib/logger.js";
 
 const log = logger.child({ route: "notion-webhook" });
@@ -130,16 +131,34 @@ export async function notionWebhookRoutes(app: FastifyInstance) {
 
     // "Post to Wordpress" → sync only (creates WP draft) — new posts only
     if (status === tenant.notionTriggerStatus) {
-      // Skip if the post already has a WP entry — "Post to Wordpress" is for new posts only
+      // If already synced, check if WP post still exists before blocking
       const existingPost = await app.prisma.post.findUnique({
         where: { tenantId_notionPageId: { tenantId: tenant.id, notionPageId: pageId } },
-        select: { wpPostId: true, status: true },
+        select: { id: true, wpPostId: true, status: true },
       });
       if (existingPost?.wpPostId) {
-        log.warn({ tenantId: tenant.id, pageId, wpPostId: existingPost.wpPostId }, "Post already synced to WP — use 'Update Wordpress' instead, resetting Notion status");
-        const resetStatus = existingPost.status === "PUBLISHED" ? "Published" : "Ready to Review";
-        await notion.updatePageStatus(pageId, resetStatus);
-        return reply.code(200).send();
+        let wpPostAlive = true;
+        const wpCreds = await credService.getWordPressCredentials(tenant.id);
+        if (wpCreds) {
+          try {
+            const wp = new WordPressService(wpCreds);
+            const wpPost = await wp.getPost(existingPost.wpPostId);
+            if (wpPost?.status === "trash") wpPostAlive = false;
+          } catch {
+            wpPostAlive = false;
+          }
+        }
+        if (wpPostAlive) {
+          log.warn({ tenantId: tenant.id, pageId, wpPostId: existingPost.wpPostId }, "Post already synced to WP — use 'Update Wordpress' instead, resetting Notion status");
+          const resetStatus = existingPost.status === "PUBLISHED" ? "Published" : "Ready to Review";
+          await notion.updatePageStatus(pageId, resetStatus);
+          return reply.code(200).send();
+        }
+        log.info({ tenantId: tenant.id, pageId, wpPostId: existingPost.wpPostId }, "WP post deleted, clearing stale data for re-sync");
+        await app.prisma.post.update({
+          where: { id: existingPost.id },
+          data: { wpPostId: null, wpFeaturedMediaId: null, wpContent: null, wpUrl: null },
+        });
       }
 
       const runningJob = await app.prisma.job.findFirst({
