@@ -35,6 +35,36 @@
     from { opacity: 0; transform: translateY(24px); }
     to { opacity: 1; transform: translateY(0); }
   }
+
+  /* Landing page mockup animations */
+  @keyframes status-cycle-3 {
+    0%, 8%    { opacity: 1; }
+    10%, 30%  { opacity: 0; }
+    31%, 39%  { opacity: 0; }
+    40%       { opacity: 0; }
+    97%       { opacity: 0; }
+    100%      { opacity: 0; }
+  }
+
+  @keyframes step-reveal {
+    0%   { opacity: 0; transform: translateX(-8px); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes check-appear {
+    0%, 80%  { opacity: 0; transform: scale(0.5); }
+    100%     { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes link-slide-in {
+    0%   { opacity: 0; transform: translateY(4px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 1; }
+  }
 }
 
 body {
