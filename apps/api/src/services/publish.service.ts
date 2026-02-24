@@ -73,10 +73,14 @@ export class PublishService {
     }
 
     // Resolve tags: post-level tags from Notion take priority, fall back to category defaults
-    const tagIds =
-      post.tags.length > 0
+    let tagIds: number[] = [];
+    try {
+      tagIds = post.tags.length > 0
         ? await wp.resolveTagIds(post.tags)
         : (post.category?.wpTagIds ?? []);
+    } catch (err) {
+      logger.warn({ err }, "Failed to resolve tag IDs — skipping tags");
+    }
 
     if (post.wpPostId) {
       // UPDATE existing WordPress post (draft being published for the first time, or re-publish)

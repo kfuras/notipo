@@ -217,7 +217,8 @@ export default function DashboardPage() {
                       ? (() => {
                           const latest = Array.from(liveJobs.values()).pop();
                           const step = latest?.steps[latest.steps.length - 1];
-                          return step ?? "Syncing...";
+                          const fallback = latest?.type === "PUBLISH_POST" ? "Publishing..." : "Syncing...";
+                          return step ?? fallback;
                         })()
                       : "Sync Now"}
                 </Button>
