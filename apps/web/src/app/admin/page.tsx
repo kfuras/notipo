@@ -211,7 +211,15 @@ export default function DashboardPage() {
                   disabled={syncing || liveJobs.size > 0}
                   onClick={handleSyncNow}
                 >
-                  {syncing || liveJobs.size > 0 ? "Syncing..." : "Sync Now"}
+                  {syncing
+                    ? "Starting sync..."
+                    : liveJobs.size > 0
+                      ? (() => {
+                          const latest = Array.from(liveJobs.values()).pop();
+                          const step = latest?.steps[latest.steps.length - 1];
+                          return step ?? "Syncing...";
+                        })()
+                      : "Sync Now"}
                 </Button>
                 {syncError && (
                   <p className="text-xs text-destructive mt-1">{syncError}</p>
