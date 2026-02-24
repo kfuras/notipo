@@ -1,26 +1,29 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { AppSidebar } from "@/components/admin/app-sidebar";
 import { BottomNav } from "@/components/admin/bottom-nav";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { LoginForm } from "@/components/admin/login-form";
 import { Toaster } from "sonner";
 
 function AdminShell({ children }: { children: React.ReactNode }) {
   const { apiKey, isLoading } = useAuth();
+  const router = useRouter();
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!isLoading && !apiKey) {
+      router.replace("/auth/login");
+    }
+  }, [apiKey, isLoading, router]);
+
+  if (isLoading || !apiKey) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
     );
-  }
-
-  if (!apiKey) {
-    return <LoginForm />;
   }
 
   return (
