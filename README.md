@@ -66,6 +66,14 @@ cp .env.example .env
 | `NOTION_WEBHOOK_SECRET` | HMAC secret for webhook verification (from Notion integration settings) |
 | `POLL_INTERVAL_SECONDS` | Safety-net poll interval in seconds (default: `300`) |
 
+**Stripe billing** (optional — enables subscription upgrades):
+
+| Variable | Description |
+|----------|-------------|
+| `STRIPE_SECRET_KEY` | Stripe API secret key |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret (`whsec_...`) |
+| `STRIPE_PRO_PRICE_ID` | Stripe Price ID for the Pro plan (`price_...`) |
+
 **Required for VPS deployment only:**
 
 | Variable | Description |
@@ -324,9 +332,33 @@ The `Status` options are configurable per tenant — the names above are default
 
 ---
 
+## Billing & Plans
+
+New tenants start on a **7-day Pro trial** (no credit card required). After the trial expires, they drop to the Free plan. Users can upgrade to Pro at any time via Stripe Checkout.
+
+| Feature | Free | Pro ($19/mo) |
+|---------|------|--------------|
+| Posts per month | 5 | Unlimited |
+| Featured images | No | Yes |
+| Webhooks + instant sync | No | Yes |
+| Poll interval | 15 min | 5 min |
+| Code highlighting + SEO | Yes | Yes |
+
+Billing requires three Stripe env vars: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PRO_PRICE_ID`. Without them, the billing page shows "Billing is not configured" and all features remain unlocked.
+
+**Stripe webhook setup:** Create a webhook endpoint in the Stripe dashboard pointing to `https://yourdomain.com/api/billing/webhook`. Subscribe to these events:
+- `checkout.session.completed`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+- `invoice.payment_failed`
+
+**Customer Portal:** Enable "Cancel subscriptions" in Stripe Dashboard → Settings → Billing → Customer portal so users can manage their subscription.
+
+---
+
 ## Admin UI
 
-The admin UI is a Next.js app (shadcn/ui + Tailwind) served at `/admin`. Sign up with email and password, or enter an existing API key on first visit. The key is stored in `localStorage` and auto-detected as admin or tenant-level by probing the tenants endpoint.
+The admin UI is a Next.js app (shadcn/ui + Tailwind) served at `/admin`. The login page has three tabs: **Sign in** (email + password), **Register** (creates a new tenant with a 7-day Pro trial — only shown when `ALLOW_SIGNUP=true`), and **API Key** (direct key entry). The key is stored in `localStorage` and auto-detected as admin or tenant-level by probing the tenants endpoint.
 
 New tenants see an inline onboarding stepper on the dashboard that guides them through three steps: duplicating the Notion template, connecting Notion (OAuth or manual token), and connecting WordPress. Each step expands inline with its own form — no bouncing to the settings page. The stepper shows a progress bar and disappears once all steps are complete. OAuth redirects return to the dashboard with a toast notification.
 
@@ -341,5 +373,6 @@ Pages available:
 - **Categories & Tags** — auto-imported from WordPress, synced every 60 seconds. Manual sync available via button. Upload custom background images per category for featured image generation (supports PNG, JPEG, WebP up to 5 MB). Click a thumbnail to preview, replace, or remove the image.
 - **Jobs** — background job activity log with error display, status filtering, and clickable WP links
 - **Settings** — Notion connection (OAuth or manual token, with disconnect button), WordPress credentials (with disconnect button), trigger statuses, code highlighter (radio buttons)
+- **Billing** — current plan badge (Free/Pro/Trial with days remaining), upgrade button (→ Stripe Checkout), manage subscription button (→ Stripe Customer Portal), usage stats (posts, featured images, webhooks)
 - **Tenants** — admin-only page for creating and managing tenants (API key shown once on creation)
 
