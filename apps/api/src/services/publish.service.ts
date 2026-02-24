@@ -1,6 +1,10 @@
 /**
  * Publish orchestrator: Database → WordPress.
  * Replaces the "Publish to Wordpress" n8n workflow.
+ *
+ * The sync service already creates the WP draft with correct content,
+ * categories, tags, featured image, and SEO metadata. This service
+ * just flips the draft to "publish" and updates Notion.
  */
 
 import type { PrismaClient } from "@prisma/client";
@@ -40,65 +44,19 @@ export class PublishService {
 
     logger.info({ tenantId, postId }, "Publishing post to WordPress");
 
-    // 0. Update Notion status so the user sees immediate feedback
+    // Update Notion status so the user sees immediate feedback
     const notionCreds = await credService.getNotionCredentials(tenantId);
     if (notionCreds && post.notionPageId) {
       const notion = new NotionService(notionCreds.accessToken);
       await notion.updatePageStatus(post.notionPageId, "Publishing");
     }
 
-    // 1. Convert markdown to Gutenberg blocks
-    onStep?.("Converting to Gutenberg…");
-    const wpContent = convertMarkdownToGutenberg(post.markdownContent, {
-      highlighter: post.tenant.codeHighlighter,
-    });
-
-    // 2. Generate featured image if not yet uploaded for this post
-    let wpFeaturedMediaId: number | undefined = post.wpFeaturedMediaId ?? undefined;
-    if (!wpFeaturedMediaId && post.category?.backgroundImage && post.featuredImageTitle) {
-      onStep?.("Generating featured image…");
-      const imgService = new FeaturedImageService();
-      const imageBuffer = await imgService.generate({
-        title: post.featuredImageTitle,
-        category: post.category.name,
-        backgroundImageUrl: post.category.backgroundImage,
-      });
-      const slug = post.slug || post.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-      const media = await wp.uploadMedia(imageBuffer, `${slug}-featured.png`);
-      await wp.updateMediaMeta(media.id, {
-        alt_text: post.featuredImageTitle,
-        title: post.featuredImageTitle,
-      });
-      wpFeaturedMediaId = media.id;
-    }
-
-    // Resolve tags: post-level tags from Notion take priority, fall back to category defaults
-    let tagIds: number[] = [];
-    try {
-      tagIds = post.tags.length > 0
-        ? await wp.resolveTagIds(post.tags)
-        : (post.category?.wpTagIds ?? []);
-    } catch (err) {
-      logger.warn({ err }, "Failed to resolve tag IDs — skipping tags");
-    }
-
     if (post.wpPostId) {
-      // UPDATE existing WordPress post (draft being published for the first time, or re-publish)
-      onStep?.("Updating WP post…");
-      await wp.editPost(post.wpPostId, {
-        title: post.title,
-        content: wpContent,
-        ...(wpFeaturedMediaId && { featured_media: wpFeaturedMediaId }),
-        ...(post.category?.wpCategoryId && { categories: [post.category.wpCategoryId] }),
-        ...(tagIds.length && { tags: tagIds }),
-      });
-
-      // Publish (makes live if draft, refreshes if already live)
-      // Do this before SEO so the excerpt is fully generated from the published content
+      // Normal path: WP draft already exists from sync — just publish it
       onStep?.("Publishing…");
       const published = await wp.publishPost(post.wpPostId);
 
-      // Apply Rank Math SEO meta (requires "SEO Keyword" to be set in Notion)
+      // Apply/refresh Rank Math SEO meta
       onStep?.("Setting SEO metadata…");
       let seoDescription = post.seoDescription;
       if (post.seoKeyword) {
@@ -123,16 +81,48 @@ export class PublishService {
       await this.prisma.post.update({
         where: { id: postId },
         data: {
-          wpContent,
           wpUrl: published.link ?? post.wpUrl,
-          wpFeaturedMediaId: wpFeaturedMediaId ?? undefined,
           seoDescription: seoDescription ?? undefined,
           status: "PUBLISHED",
           publishedAt: new Date(),
         },
       });
     } else {
-      // CREATE new WordPress post as draft
+      // Fallback: no WP draft yet — create one from scratch and publish
+      onStep?.("Converting to Gutenberg…");
+      const wpContent = convertMarkdownToGutenberg(post.markdownContent, {
+        highlighter: post.tenant.codeHighlighter,
+      });
+
+      // Generate featured image if needed
+      let wpFeaturedMediaId: number | undefined = post.wpFeaturedMediaId ?? undefined;
+      if (!wpFeaturedMediaId && post.category?.backgroundImage && post.featuredImageTitle) {
+        onStep?.("Generating featured image…");
+        const imgService = new FeaturedImageService();
+        const imageBuffer = await imgService.generate({
+          title: post.featuredImageTitle,
+          category: post.category.name,
+          backgroundImageUrl: post.category.backgroundImage,
+        });
+        const slug = post.slug || post.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+        const media = await wp.uploadMedia(imageBuffer, `${slug}-featured.png`);
+        await wp.updateMediaMeta(media.id, {
+          alt_text: post.featuredImageTitle,
+          title: post.featuredImageTitle,
+        });
+        wpFeaturedMediaId = media.id;
+      }
+
+      // Resolve tags
+      let tagIds: number[] = [];
+      try {
+        tagIds = post.tags.length > 0
+          ? await wp.resolveTagIds(post.tags)
+          : (post.category?.wpTagIds ?? []);
+      } catch (err) {
+        logger.warn({ err }, "Failed to resolve tag IDs — skipping tags");
+      }
+
       onStep?.("Creating WP draft…");
       const wpPost = await wp.createDraft({
         title: post.title,
@@ -144,20 +134,15 @@ export class PublishService {
         featured_media: wpFeaturedMediaId,
       });
 
-      // Publish — use the returned link as it reflects the final permalink
-      // Do this before SEO so the excerpt is fully generated from the published content
       onStep?.("Publishing…");
       const published = await wp.publishPost(wpPost.id);
 
-      // Apply Rank Math SEO meta (requires "SEO Keyword" to be set in Notion)
+      // Apply Rank Math SEO meta
       onStep?.("Setting SEO metadata…");
       let seoDescription: string | undefined;
       if (post.seoKeyword) {
         const excerpt = published.excerpt?.rendered || "";
-        const clean = excerpt
-          .replace(/<[^>]*>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
+        const clean = excerpt.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
         if (clean) {
           seoDescription = clean.length > 160 ? clean.slice(0, 159).trimEnd() + "..." : clean;
         }
@@ -171,7 +156,6 @@ export class PublishService {
         logger.warn({ postId }, "seoKeyword not set — skipping Rank Math SEO (set 'SEO Keyword' in Notion)");
       }
 
-      // Persist wpPostId, wpUrl, featured image ID, and seoDescription for future edits
       await this.prisma.post.update({
         where: { id: postId },
         data: {
