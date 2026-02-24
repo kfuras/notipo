@@ -40,6 +40,13 @@ export class PublishService {
 
     logger.info({ tenantId, postId }, "Publishing post to WordPress");
 
+    // 0. Update Notion status so the user sees immediate feedback
+    const notionCreds = await credService.getNotionCredentials(tenantId);
+    if (notionCreds && post.notionPageId) {
+      const notion = new NotionService(notionCreds.accessToken);
+      await notion.updatePageStatus(post.notionPageId, "Publishing");
+    }
+
     // 1. Convert markdown to Gutenberg blocks
     onStep?.("Converting to Gutenberg…");
     const wpContent = convertMarkdownToGutenberg(post.markdownContent, {
@@ -177,7 +184,6 @@ export class PublishService {
 
     // Update Notion status with the published WP URL
     onStep?.("Updating Notion status…");
-    const notionCreds = await credService.getNotionCredentials(tenantId);
     if (notionCreds && post.notionPageId) {
       const updatedPost = await this.prisma.post.findUnique({ where: { id: postId }, select: { wpUrl: true } });
       const notion = new NotionService(notionCreds.accessToken);

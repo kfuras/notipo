@@ -32,6 +32,9 @@ export class SyncService {
 
     logger.info({ tenantId, notionPageId }, "Syncing post from Notion");
 
+    // 0. Update Notion status so the user sees immediate feedback
+    await notion.updatePageStatus(notionPageId, "Syncing");
+
     // 1. Get page properties and blocks
     onStep?.("Fetching from Notion…");
     const page = await notion.getPageProperties(notionPageId);
