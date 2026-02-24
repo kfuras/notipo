@@ -18,6 +18,22 @@ interface SettingsData {
   };
 }
 
+interface JobUpdateEvent {
+  jobId: string;
+  type: string;
+  status: string;
+  step?: string;
+  postId?: string;
+}
+
+interface LiveJob {
+  jobId: string;
+  type: string;
+  status: string;
+  steps: string[];
+  postId?: string;
+}
+
 export default function DashboardPage() {
   const { apiKey } = useAuth();
   const { data: postsData, refetch: refetchPosts } = useApi<ApiListResponse<ApiPost>>("/api/posts");
@@ -27,10 +43,43 @@ export default function DashboardPage() {
   const { data: settings } = useApi<SettingsData>("/api/settings");
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [liveJobs, setLiveJobs] = useState<Map<string, LiveJob>>(new Map());
 
-  const onEvent = useCallback(() => {
-    refetchJobs();
-    refetchPosts();
+  const onEvent = useCallback((_event: string, data: unknown) => {
+    const payload = data as JobUpdateEvent;
+    if (!payload?.jobId) {
+      refetchJobs();
+      refetchPosts();
+      return;
+    }
+
+    if (payload.status === "RUNNING") {
+      setLiveJobs((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(payload.jobId);
+        const steps = existing?.steps ? [...existing.steps] : [];
+        if (payload.step && !steps.includes(payload.step)) {
+          steps.push(payload.step);
+        }
+        next.set(payload.jobId, {
+          jobId: payload.jobId,
+          type: payload.type,
+          status: payload.status,
+          steps,
+          postId: payload.postId,
+        });
+        return next;
+      });
+    } else {
+      // Job finished — remove from live tracking
+      setLiveJobs((prev) => {
+        const next = new Map(prev);
+        next.delete(payload.jobId);
+        return next;
+      });
+      refetchJobs();
+      refetchPosts();
+    }
   }, [refetchJobs, refetchPosts]);
 
   useEventSource(onEvent);
@@ -58,6 +107,14 @@ export default function DashboardPage() {
       setSyncError(err instanceof ApiError ? err.message : "Sync failed");
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const jobTypeLabel = (type: string) => {
+    switch (type) {
+      case "SYNC_POST": return "Sync";
+      case "PUBLISH_POST": return "Publish";
+      default: return type.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
     }
   };
 
@@ -128,7 +185,6 @@ export default function DashboardPage() {
               <div className="pt-2">
                 <Button
                   size="sm"
-                  variant="outline"
                   className="w-full"
                   disabled={syncing}
                   onClick={handleSyncNow}
@@ -148,16 +204,61 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium">Recent Jobs</CardTitle>
           </CardHeader>
           <CardContent>
-            {jobs.length === 0 ? (
+            {/* Live running jobs with step progress */}
+            {Array.from(liveJobs.values()).map((lj) => (
+              <div key={lj.jobId} className="mb-4 pb-4 border-b border-border last:border-0">
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                    </span>
+                    <span className="text-sm font-medium">{jobTypeLabel(lj.type)} Job</span>
+                  </div>
+                  <Badge variant="outline" className="text-xs text-primary border-primary/30">Running</Badge>
+                </div>
+                <div className="space-y-1.5 ml-4">
+                  {lj.steps.map((step) => (
+                    <div key={step} className="flex items-center gap-2">
+                      <svg className="w-3.5 h-3.5 text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      <span className="text-xs text-muted-foreground">{step}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {/* Completed/failed jobs from API */}
+            {jobs.length === 0 && liveJobs.size === 0 ? (
               <p className="text-sm text-muted-foreground">No recent jobs</p>
             ) : (
               <div className="space-y-2">
-                {jobs.map((job) => (
-                  <div
-                    key={job.id}
-                    className="flex justify-between text-sm"
-                  >
-                    <span className="truncate mr-2">{job.type}</span>
+                {jobs.filter((j) => !liveJobs.has(j.id)).slice(0, liveJobs.size > 0 ? 3 : 5).map((job) => (
+                  <div key={job.id} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 truncate mr-2">
+                      {job.status === "COMPLETED" && (
+                        <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                          <svg className="w-2.5 h-2.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        </div>
+                      )}
+                      {job.status === "FAILED" && (
+                        <div className="w-4 h-4 rounded-full bg-destructive/20 flex items-center justify-center shrink-0">
+                          <svg className="w-2.5 h-2.5 text-destructive" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
+                        </div>
+                      )}
+                      {job.status !== "COMPLETED" && job.status !== "FAILED" && (
+                        <div className="w-4 h-4 rounded-full bg-muted flex items-center justify-center shrink-0">
+                          <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
+                        </div>
+                      )}
+                      <span className="truncate">{jobTypeLabel(job.type)}</span>
+                    </div>
                     <Badge
                       variant={
                         job.status === "COMPLETED"
@@ -166,6 +267,7 @@ export default function DashboardPage() {
                             ? "destructive"
                             : "secondary"
                       }
+                      className="text-xs shrink-0"
                     >
                       {job.status}
                     </Badge>
