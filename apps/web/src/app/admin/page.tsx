@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { useApi } from "@/hooks/use-api";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError } from "@/lib/api-client";
@@ -101,8 +103,9 @@ export default function DashboardPage() {
     failed: posts.filter((p) => p.status === "FAILED").length,
   };
 
-  const needsSetup = settings && (!notion?.configured || !wordpress?.configured || !notion?.databaseId);
-  const allSetUp = !!notion?.configured && !!wordpress?.configured && !!notion?.databaseId;
+  const templateDone = typeof window !== "undefined" && localStorage.getItem("notipo_template_done") === "1";
+  const needsSetup = settings && (!templateDone || !notion?.configured || !wordpress?.configured);
+  const allSetUp = !!templateDone && !!notion?.configured && !!wordpress?.configured;
 
   const handleSyncNow = async () => {
     setSyncing(true);
@@ -126,6 +129,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <Suspense fallback={null}>
+        <OAuthResultHandler onSettingsUpdate={refetchSettings} />
+      </Suspense>
       <h1 className="text-2xl font-bold">Dashboard</h1>
 
       {needsSetup && settings && (
@@ -370,6 +376,26 @@ function StatCard({ title, value }: { title: string; value: number }) {
   );
 }
 
+function OAuthResultHandler({ onSettingsUpdate }: { onSettingsUpdate: () => void }) {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const result = searchParams.get("notion_oauth");
+    if (!result) return;
+    if (result === "success") {
+      toast.success("Notion connected successfully");
+      onSettingsUpdate();
+    } else {
+      const reason = searchParams.get("reason")?.replace(/_/g, " ") ?? "unknown error";
+      toast.error(`Notion connection failed: ${reason}`);
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete("notion_oauth");
+    url.searchParams.delete("reason");
+    window.history.replaceState({}, "", url.toString());
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+}
+
 function SetupCard({
   settings,
   apiKey,
@@ -381,12 +407,21 @@ function SetupCard({
 }) {
   const notion = settings.data.notion;
   const wordpress = settings.data.wordpress;
-  const activeStep = !notion.configured ? 1 : !wordpress.configured ? 2 : !notion.databaseId ? 3 : 0;
+  const [templateDone, setTemplateDone] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem("notipo_template_done") === "1",
+  );
+
+  function markTemplateDone() {
+    localStorage.setItem("notipo_template_done", "1");
+    setTemplateDone(true);
+  }
+
+  const activeStep = !templateDone ? 1 : !notion.configured ? 2 : !wordpress.configured ? 3 : 0;
 
   const steps = [
-    { n: 1, done: notion.configured },
-    { n: 2, done: wordpress.configured },
-    { n: 3, done: !!notion.databaseId },
+    { n: 1, done: templateDone },
+    { n: 2, done: notion.configured },
+    { n: 3, done: wordpress.configured },
   ];
 
   return (
@@ -408,14 +443,14 @@ function SetupCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
-        <SetupStepRow number={1} title="Connect Notion" done={notion.configured} active={activeStep === 1}>
+        <SetupStepRow number={1} title="Duplicate Notion template" done={templateDone} active={activeStep === 1}>
+          <TemplateStepContent onDone={markTemplateDone} />
+        </SetupStepRow>
+        <SetupStepRow number={2} title="Connect Notion" done={notion.configured} active={activeStep === 2}>
           <NotionStepContent cfg={notion} apiKey={apiKey} onDone={onUpdate} />
         </SetupStepRow>
-        <SetupStepRow number={2} title="Connect WordPress" done={wordpress.configured} active={activeStep === 2}>
+        <SetupStepRow number={3} title="Connect WordPress" done={wordpress.configured} active={activeStep === 3}>
           <WordPressStepContent apiKey={apiKey} onDone={onUpdate} />
-        </SetupStepRow>
-        <SetupStepRow number={3} title="Set up Notion database" done={!!notion.databaseId} active={activeStep === 3}>
-          <DatabaseStepContent apiKey={apiKey} onDone={onUpdate} />
         </SetupStepRow>
       </CardContent>
     </Card>
@@ -463,6 +498,31 @@ function SetupStepRow({
   );
 }
 
+function TemplateStepContent({ onDone }: { onDone: () => void }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        Notipo uses a Notion database with specific properties (Status, Category, Tags, SEO Keyword, etc.)
+        to sync and publish your posts. Duplicate our template into your workspace to get started.
+      </p>
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant="outline" asChild>
+          <a
+            href="https://free-dentist-6b2.notion.site/30d842af972f8091a104eb8773fbf390?v=30d842af972f803dab87000cdbd5d9b6"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open template
+          </a>
+        </Button>
+        <Button size="sm" onClick={onDone}>
+          I&apos;ve duplicated it
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function NotionStepContent({
   cfg,
   apiKey,
@@ -504,9 +564,14 @@ function NotionStepContent({
   return (
     <div className="space-y-3">
       {cfg.oauthAvailable && (
-        <Button size="sm" onClick={connectOAuth}>
-          Connect to Notion
-        </Button>
+        <>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            When prompted, select the database you just duplicated to grant Notipo access.
+          </p>
+          <Button size="sm" onClick={connectOAuth}>
+            Connect to Notion
+          </Button>
+        </>
       )}
       {cfg.oauthAvailable && (
         <button
@@ -581,102 +646,43 @@ function WordPressStepContent({
   }
 
   return (
-    <form onSubmit={save} className="space-y-3">
-      <div className="space-y-1.5">
-        <Label className="text-xs">Site URL</Label>
-        <Input
-          type="url"
-          placeholder="https://yourblog.com"
-          value={siteUrl}
-          onChange={(e) => setSiteUrl(e.target.value)}
-          required
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label className="text-xs">Username</Label>
-        <Input value={username} onChange={(e) => setUsername(e.target.value)} required />
-      </div>
-      <div className="space-y-1.5">
-        <Label className="text-xs">Application Password</Label>
-        <Input
-          type="password"
-          value={appPassword}
-          onChange={(e) => setAppPassword(e.target.value)}
-          required
-          placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
-        />
-        <p className="text-xs text-muted-foreground">
-          Generate in WordPress under Users &rarr; Profile &rarr; Application Passwords
-        </p>
-      </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-      <Button type="submit" size="sm" disabled={saving}>
-        {saving ? "Saving..." : "Connect WordPress"}
-      </Button>
-    </form>
-  );
-}
-
-function DatabaseStepContent({
-  apiKey,
-  onDone,
-}: {
-  apiKey: string;
-  onDone: () => void;
-}) {
-  const [dbId, setDbId] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    try {
-      await api("/api/settings", {
-        method: "PATCH",
-        apiKey,
-        body: { databaseId: dbId.trim() },
-      });
-      onDone();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to save");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground leading-relaxed">
-        Notipo needs a Notion database with specific properties (Status, Category, Tags, etc.).
-        Duplicate our{" "}
-        <a
-          href="https://free-dentist-6b2.notion.site/30d842af972f8091a104eb8773fbf390?v=30d842af972f803dab87000cdbd5d9b6"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-violet-400 underline underline-offset-2"
-        >
-          template database
-        </a>{" "}
-        into your workspace, then paste its ID below.
-      </p>
-      <form onSubmit={save} className="space-y-2">
+      <form onSubmit={save} className="space-y-3">
         <div className="space-y-1.5">
-          <Label className="text-xs">Notion Database ID</Label>
+          <Label className="text-xs">Site URL</Label>
           <Input
-            value={dbId}
-            onChange={(e) => setDbId(e.target.value)}
-            placeholder="e.g. 30d842af972f8091a104eb8773fbf390"
+            type="url"
+            placeholder="https://yourblog.com"
+            value={siteUrl}
+            onChange={(e) => setSiteUrl(e.target.value)}
             required
           />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Username</Label>
+          <Input value={username} onChange={(e) => setUsername(e.target.value)} required />
           <p className="text-xs text-muted-foreground">
-            The 32-character string in your database&apos;s Notion URL.
+            Your WordPress admin username (found under Users in WP admin).
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Application Password</Label>
+          <Input
+            type="password"
+            value={appPassword}
+            onChange={(e) => setAppPassword(e.target.value)}
+            required
+            placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+          />
+          <p className="text-xs text-muted-foreground">
+            In WP admin, go to <strong>Users &rarr; Profile</strong>, scroll to
+            &ldquo;Application Passwords&rdquo;, enter a name (e.g. &ldquo;Notipo&rdquo;)
+            and click <strong>Add New Application Password</strong>.
           </p>
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
-        <Button type="submit" size="sm" disabled={saving || !dbId.trim()}>
-          {saving ? "Saving..." : "Save Database ID"}
+        <Button type="submit" size="sm" disabled={saving}>
+          {saving ? "Saving..." : "Connect WordPress"}
         </Button>
       </form>
     </div>
