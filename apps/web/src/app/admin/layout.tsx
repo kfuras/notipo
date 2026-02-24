@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/admin/app-sidebar";
 import { BottomNav } from "@/components/admin/bottom-nav";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { LoginForm } from "@/components/admin/login-form";
+import { Toaster } from "sonner";
 
 function AdminShell({ children }: { children: React.ReactNode }) {
   const { apiKey, isLoading } = useAuth();
@@ -32,6 +33,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
         <main className="flex-1 p-4 md:p-6 pb-20 md:pb-6">{children}</main>
       </SidebarInset>
       <BottomNav />
+      <Toaster theme="dark" position="top-center" />
     </SidebarProvider>
   );
 }

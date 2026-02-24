@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { useApi } from "@/hooks/use-api";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api-client";
@@ -38,6 +40,9 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
+      <Suspense fallback={null}>
+        <OAuthResultHandler />
+      </Suspense>
       <h1 className="text-2xl font-bold">Settings</h1>
 
       {cfg && (
@@ -292,6 +297,25 @@ function WordPressCard({
       </CardContent>
     </Card>
   );
+}
+
+function OAuthResultHandler() {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const result = searchParams.get("notion_oauth");
+    if (!result) return;
+    if (result === "success") {
+      toast.success("Notion connected successfully");
+    } else {
+      const reason = searchParams.get("reason")?.replace(/_/g, " ") ?? "unknown error";
+      toast.error(`Notion connection failed: ${reason}`);
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete("notion_oauth");
+    url.searchParams.delete("reason");
+    window.history.replaceState({}, "", url.toString());
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
 }
 
 function CodeHighlighterCard({

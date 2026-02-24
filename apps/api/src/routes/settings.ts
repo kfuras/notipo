@@ -24,6 +24,7 @@ const wordpressSettingsSchema = z.object({
 
 const generalSettingsSchema = z.object({
   codeHighlighter: z.enum(["PRISMATIC", "WP_CODE", "HIGHLIGHT_JS", "PRISM_JS"]).optional(),
+  databaseId: z.string().optional(),
   triggerStatus: z.string().optional(),
   publishTriggerStatus: z.string().optional(),
   updateTriggerStatus: z.string().optional(),
@@ -155,6 +156,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       where: { id: request.tenant.id },
       data: {
         ...(body.codeHighlighter !== undefined && { codeHighlighter: body.codeHighlighter }),
+        ...(body.databaseId !== undefined && { notionDatabaseId: body.databaseId }),
         ...(body.triggerStatus !== undefined && { notionTriggerStatus: body.triggerStatus }),
         ...(body.publishTriggerStatus !== undefined && { notionPublishTriggerStatus: body.publishTriggerStatus }),
         ...(body.updateTriggerStatus !== undefined && { notionUpdateTriggerStatus: body.updateTriggerStatus }),
