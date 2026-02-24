@@ -136,8 +136,8 @@ export async function registerPollNotionJob(boss: PgBoss, prisma: PrismaClient) 
     }
   });
 
-  // Poll every 5 minutes as a safety net (webhooks handle real-time delivery)
-  const POLL_INTERVAL_MS = 300_000;
+  // Poll every 60 seconds — primary trigger since Notion webhooks are slow (20-60 min)
+  const POLL_INTERVAL_MS = 60_000;
   setInterval(() => {
     boss.send("poll-notion", {}, { singletonKey: "poll-notion" }).catch((err: unknown) => {
       logger.error({ err }, "Failed to enqueue poll-notion job");
