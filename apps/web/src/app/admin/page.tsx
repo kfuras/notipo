@@ -205,10 +205,10 @@ export default function DashboardPage() {
                 <Button
                   size="sm"
                   className="w-full bg-violet-600 hover:bg-violet-700 text-white"
-                  disabled={syncing}
+                  disabled={syncing || liveJobs.size > 0}
                   onClick={handleSyncNow}
                 >
-                  {syncing ? "Syncing..." : "Sync Now"}
+                  {syncing || liveJobs.size > 0 ? "Syncing..." : "Sync Now"}
                 </Button>
                 {syncError && (
                   <p className="text-xs text-destructive mt-1">{syncError}</p>
