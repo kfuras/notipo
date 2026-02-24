@@ -284,16 +284,19 @@ The start command in `railway.toml` runs `prisma migrate deploy` before the app 
 
 After the app starts for the first time, the seed has created your tenant and owner user. You now need to connect Notion and WordPress credentials.
 
-Open the admin UI at `/admin` and either sign up with email and password (creates a new tenant) or enter your API key (the value of `SEED_API_KEY` or `API_KEY`). An onboarding stepper guides you through the remaining setup. Go to **Settings** and connect:
+Open the admin UI at `/admin` and either sign up with email and password (creates a new tenant) or enter your API key (the value of `SEED_API_KEY` or `API_KEY`). An inline onboarding stepper on the dashboard guides you through three steps:
 
-**Notion** (choose one):
-- **OAuth** (recommended): Click "Connect to Notion" → authorize in Notion's consent screen → select which database to share. Credentials and database ID are configured automatically. Requires OAuth env vars to be set.
-- **Manual token**: Create an internal integration at [notion.so/my-integrations](https://www.notion.so/my-integrations), copy the token, and paste it in Settings along with the database ID.
+**Step 1 — Duplicate the Notion template:**
+Open the [Notipo Blog Template](https://free-dentist-6b2.notion.site/30d842af972f8091a104eb8773fbf390?v=30d842af972f8091a104eb8773fbf390) and duplicate it to your workspace. This gives you a database with all required properties pre-configured. Confirm in the stepper once done.
 
-**WordPress:**
+**Step 2 — Connect Notion** (choose one):
+- **OAuth** (recommended): Click "Connect to Notion" → authorize in Notion's consent screen → select the database you just duplicated. Credentials and database ID are configured automatically. Requires OAuth env vars to be set.
+- **Manual token**: Create an internal integration at [notion.so/my-integrations](https://www.notion.so/my-integrations), copy the token, and paste it in the inline form.
+
+**Step 3 — Connect WordPress:**
 - Site URL (e.g. `https://yourblog.com`)
-- Username
-- Application password (WP Admin → Users → Application Passwords)
+- Username (your WordPress admin username, found under Users in WP admin)
+- Application password (WP admin → Users → Profile → scroll to Application Passwords → enter a name like "Notipo" → click "Add New Application Password")
 
 When you save WordPress credentials, all your WP categories and tags are automatically imported into Notipo and pushed to your Notion database as `Category` select and `Tags` multi-select options. They stay in sync — new categories or tags you create in WordPress are picked up every 60 seconds and appear in Notion automatically. You can also trigger a manual sync from the **Categories & Tags** page.
 
@@ -323,7 +326,7 @@ The `Status` options are configurable per tenant — the names above are default
 
 The admin UI is a Next.js app (shadcn/ui + Tailwind) served at `/admin`. Sign up with email and password, or enter an existing API key on first visit. The key is stored in `localStorage` and auto-detected as admin or tenant-level by probing the tenants endpoint.
 
-New tenants see an onboarding stepper that guides them through connecting Notion (with a link to the Notion database template) and WordPress. The stepper disappears once both services are configured.
+New tenants see an inline onboarding stepper on the dashboard that guides them through three steps: duplicating the Notion template, connecting Notion (OAuth or manual token), and connecting WordPress. Each step expands inline with its own form — no bouncing to the settings page. The stepper shows a progress bar and disappears once all steps are complete. OAuth redirects return to the dashboard with a toast notification.
 
 The admin uses a dark theme. The landing page has a light/dark theme toggle (sun/moon icon) — preference is stored in `localStorage`.
 
