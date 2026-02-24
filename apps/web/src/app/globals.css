@@ -36,40 +36,6 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Landing page mockup: 3-item status cycling (tight transitions ≈ instant) */
-  @keyframes cycle-3-a {
-    0%, 33%      { opacity: 1; }
-    33.5%, 100%  { opacity: 0; }
-  }
-  @keyframes cycle-3-b {
-    0%, 33%      { opacity: 0; }
-    33.5%, 66%   { opacity: 1; }
-    66.5%, 100%  { opacity: 0; }
-  }
-  @keyframes cycle-3-c {
-    0%, 66%      { opacity: 0; }
-    66.5%, 100%  { opacity: 1; }
-  }
-
-  @keyframes step-reveal {
-    0%   { opacity: 0; transform: translateX(-8px); }
-    100% { opacity: 1; transform: translateX(0); }
-  }
-
-  @keyframes check-appear {
-    0%, 80%  { opacity: 0; transform: scale(0.5); }
-    100%     { opacity: 1; transform: scale(1); }
-  }
-
-  @keyframes link-slide-in {
-    0%   { opacity: 0; transform: translateY(4px); }
-    100% { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes pulse-dot {
-    0%, 100% { opacity: 0.4; }
-    50%      { opacity: 1; }
-  }
 }
 
 body {
@@ -217,4 +183,35 @@ html.light {
   button, [role="button"], a, [type="submit"], [type="reset"], label[for], select, summary {
     cursor: pointer;
   }
+}
+
+/* ── Landing page mockup animations (outside @theme so they're emitted) ── */
+@keyframes cycle-3-a {
+  0%, 33%      { opacity: 1; }
+  33.5%, 100%  { opacity: 0; }
+}
+@keyframes cycle-3-b {
+  0%, 33%      { opacity: 0; }
+  33.5%, 66%   { opacity: 1; }
+  66.5%, 100%  { opacity: 0; }
+}
+@keyframes cycle-3-c {
+  0%, 66%      { opacity: 0; }
+  66.5%, 100%  { opacity: 1; }
+}
+@keyframes step-reveal {
+  0%   { opacity: 0; transform: translateX(-8px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes check-appear {
+  0%, 80%  { opacity: 0; transform: scale(0.5); }
+  100%     { opacity: 1; transform: scale(1); }
+}
+@keyframes link-slide-in {
+  0%   { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
 }
