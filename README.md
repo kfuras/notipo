@@ -8,7 +8,7 @@ A self-hosted backend that publishes blog posts from Notion to WordPress automat
 
 You write posts in Notion. When you change the status to your configured trigger value (e.g. "Post to Wordpress"), the app syncs the post to a WordPress draft. When you set it to "Publish", it goes live. To update content after syncing or publishing, use "Update Wordpress" — it re-syncs the content and only auto-publishes if the WP post is currently live. Drafts stay as drafts.
 
-The app receives real-time Notion webhook events and also polls every 5 minutes as a safety net. WordPress categories and tags are automatically imported and pushed to your Notion database as dropdown options, so you never need to look up numeric IDs or type names manually. After each sync or publish, the WordPress post URL is written back to a `WordPress Link` property on the Notion page. All credentials are stored encrypted in the database — never in plain environment variables.
+The app polls Notion every 60 seconds (the primary trigger) and also accepts Notion webhook events as a backup. WordPress categories and tags are automatically imported and pushed to your Notion database as dropdown options, so you never need to look up numeric IDs or type names manually. After syncing, the wp-admin edit URL is written back to the `WordPress Link` property on the Notion page (published posts get the live frontend URL instead). Rank Math SEO metadata (focus keyword, title, description) is applied during sync so it's ready for review in the WordPress editor. All credentials are stored encrypted in the database — never in plain environment variables. A "Sync Now" button on the dashboard lets you trigger an instant poll without waiting for the 60-second interval.
 
 New users can sign up with email and password via the admin UI, which creates a tenant and returns an API key. An onboarding stepper guides them through connecting Notion and WordPress. Self-service signup can be disabled by setting `ALLOW_SIGNUP=false`.
 
@@ -295,7 +295,7 @@ Open the admin UI at `/admin` and either sign up with email and password (create
 - Username
 - Application password (WP Admin → Users → Application Passwords)
 
-When you save WordPress credentials, all your WP categories and tags are automatically imported into Notipo and pushed to your Notion database as `Category` select and `Tags` multi-select options. They stay in sync — new categories or tags you create in WordPress are picked up every 5 minutes and appear in Notion automatically. You can also trigger a manual sync from the **Categories & Tags** page.
+When you save WordPress credentials, all your WP categories and tags are automatically imported into Notipo and pushed to your Notion database as `Category` select and `Tags` multi-select options. They stay in sync — new categories or tags you create in WordPress are picked up every 60 seconds and appear in Notion automatically. You can also trigger a manual sync from the **Categories & Tags** page.
 
 ---
 
@@ -315,7 +315,7 @@ Your Notion database needs these properties:
 | SEO Keyword | Text | Rank Math focus keyword |
 | WordPress Link | URL | Auto-filled with the WP post URL after sync/publish |
 
-The `Status` options are configurable per tenant — the names above are defaults. `Category` and `Tags` options are automatically synced from your WordPress site once you connect WP credentials. After syncing or publishing a post, the `WordPress Link` property is updated with a direct link to the post in WordPress.
+The `Status` options are configurable per tenant — the names above are defaults. `Category` and `Tags` options are automatically synced from your WordPress site once you connect WP credentials. After syncing, the `WordPress Link` property is updated with the wp-admin edit URL for drafts, or the live frontend URL for published posts. If you delete a WP post and re-trigger "Post to Wordpress", a fresh draft is created automatically.
 
 ---
 
@@ -331,9 +331,9 @@ The UI is mobile-optimized — on phones, the sidebar is replaced by a fixed bot
 
 Pages available:
 
-- **Dashboard** — post status counts, recent jobs with live step progress, config health check. Updates in real-time via Server-Sent Events.
+- **Dashboard** — post status counts, recent jobs with live step progress, config health check, "Sync Now" button for instant Notion polling. Updates in real-time via Server-Sent Events.
 - **Posts** — full post list with status badges, WordPress links, category display
-- **Categories & Tags** — auto-imported from WordPress, synced every 5 minutes. Manual sync available via button. Upload custom background images per category for featured image generation (supports PNG, JPEG, WebP up to 5 MB). Click a thumbnail to preview, replace, or remove the image.
+- **Categories & Tags** — auto-imported from WordPress, synced every 60 seconds. Manual sync available via button. Upload custom background images per category for featured image generation (supports PNG, JPEG, WebP up to 5 MB). Click a thumbnail to preview, replace, or remove the image.
 - **Jobs** — background job activity log with error display, status filtering, and clickable WP links
 - **Settings** — Notion connection (OAuth or manual token, with disconnect button), WordPress credentials (with disconnect button), trigger statuses, code highlighter (radio buttons)
 - **Tenants** — admin-only page for creating and managing tenants (API key shown once on creation)
