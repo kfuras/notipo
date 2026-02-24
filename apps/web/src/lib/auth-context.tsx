@@ -19,6 +19,7 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, blogName: string) => Promise<void>;
   setApiKey: (key: string) => Promise<void>;
   logout: () => void;
 }
@@ -83,6 +84,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [detectAdmin],
   );
 
+  const register = useCallback(
+    async (email: string, password: string, blogName: string) => {
+      const res = await api<{ data: { apiKey: string } }>(
+        "/api/auth/register",
+        { method: "POST", body: { email, password, blogName } },
+      );
+      localStorage.setItem("notipo_api_key", res.data.apiKey);
+      localStorage.setItem("notipo_email", email);
+      const isAdmin = await detectAdmin(res.data.apiKey);
+      setState({
+        apiKey: res.data.apiKey,
+        email,
+        isAdmin,
+        isLoading: false,
+      });
+    },
+    [detectAdmin],
+  );
+
   const logout = useCallback(() => {
     localStorage.removeItem("notipo_api_key");
     localStorage.removeItem("notipo_email");
@@ -91,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ ...state, login, setApiKey, logout }}
+      value={{ ...state, login, register, setApiKey, logout }}
     >
       {children}
     </AuthContext.Provider>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,16 +17,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogoIcon } from "@/components/landing/icons/logo";
 
 export function LoginForm() {
-  const { login, setApiKey } = useAuth();
+  const { login, register, setApiKey } = useAuth();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [signupEnabled, setSignupEnabled] = useState(false);
 
   // Email/password login
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // Registration
+  const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [blogName, setBlogName] = useState("");
+
   // API key login
   const [key, setKey] = useState("");
+
+  useEffect(() => {
+    api<{ data: { signup: boolean } }>("/api/auth/providers")
+      .then((res) => setSignupEnabled(res.data.signup))
+      .catch(() => {});
+  }, []);
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -35,6 +48,19 @@ export function LoginForm() {
       await login(email, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRegister(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await register(regEmail, regPassword, blogName);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -67,8 +93,13 @@ export function LoginForm() {
           <Tabs defaultValue="email">
             <TabsList className="w-full">
               <TabsTrigger value="email" className="flex-1">
-                Email
+                Sign in
               </TabsTrigger>
+              {signupEnabled && (
+                <TabsTrigger value="register" className="flex-1">
+                  Register
+                </TabsTrigger>
+              )}
               <TabsTrigger value="apikey" className="flex-1">
                 API Key
               </TabsTrigger>
@@ -103,6 +134,50 @@ export function LoginForm() {
                 </Button>
               </form>
             </TabsContent>
+            {signupEnabled && (
+              <TabsContent value="register">
+                <form onSubmit={handleRegister} className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-blog">Blog name</Label>
+                    <Input
+                      id="reg-blog"
+                      type="text"
+                      value={blogName}
+                      onChange={(e) => setBlogName(e.target.value)}
+                      placeholder="My Awesome Blog"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-email">Email</Label>
+                    <Input
+                      id="reg-email"
+                      type="email"
+                      value={regEmail}
+                      onChange={(e) => setRegEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-password">Password</Label>
+                    <Input
+                      id="reg-password"
+                      type="password"
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      minLength={8}
+                      required
+                    />
+                  </div>
+                  {error && (
+                    <p className="text-sm text-destructive">{error}</p>
+                  )}
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Creating account..." : "Create account"}
+                  </Button>
+                </form>
+              </TabsContent>
+            )}
             <TabsContent value="apikey">
               <form onSubmit={handleKeyLogin} className="space-y-4 mt-4">
                 <div className="space-y-2">
