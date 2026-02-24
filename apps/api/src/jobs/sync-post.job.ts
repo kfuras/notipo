@@ -32,13 +32,13 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient, ev
       },
     });
 
-    eventBus.emit("job:update", { tenantId, jobId: dbJob.id, type: "SYNC_POST", status: "RUNNING" });
+    eventBus.emit("job:update", { tenantId, jobId: dbJob.id, type: "SYNC_POST", status: "RUNNING", notionPageId });
 
     try {
       const syncService = new SyncService(prisma);
       const onStep = async (step: string) => {
         await prisma.job.update({ where: { id: dbJob.id }, data: { result: { step } } });
-        eventBus.emit("job:update", { tenantId, jobId: dbJob.id, type: "SYNC_POST", status: "RUNNING", step });
+        eventBus.emit("job:update", { tenantId, jobId: dbJob.id, type: "SYNC_POST", status: "RUNNING", notionPageId, step });
       };
       const { postId, wpStatus, wasPublished } = await syncService.syncPost(tenantId, notionPageId, onStep);
 

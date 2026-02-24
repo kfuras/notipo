@@ -24,6 +24,7 @@ interface JobUpdateEvent {
   status: string;
   step?: string;
   postId?: string;
+  notionPageId?: string;
 }
 
 interface LiveJob {
@@ -32,6 +33,7 @@ interface LiveJob {
   status: string;
   steps: string[];
   postId?: string;
+  notionPageId?: string;
 }
 
 export default function DashboardPage() {
@@ -67,6 +69,7 @@ export default function DashboardPage() {
           status: payload.status,
           steps,
           postId: payload.postId,
+          notionPageId: payload.notionPageId,
         });
         return next;
       });
@@ -175,7 +178,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {posts.slice(0, 4).map((post) => (
-                <PostPropertyCard key={post.id} post={post} />
+                <PostPropertyCard key={post.id} post={post} liveJobs={liveJobs} />
               ))}
             </div>
           </CardContent>
@@ -310,7 +313,15 @@ const postStatusStyle: Record<string, string> = {
   UPDATE_PENDING: "bg-orange-500/15 text-orange-400",
 };
 
-function PostPropertyCard({ post }: { post: ApiPost }) {
+function PostPropertyCard({ post, liveJobs }: { post: ApiPost; liveJobs: Map<string, LiveJob> }) {
+  // Check if a live job is running for this post
+  const liveJob = Array.from(liveJobs.values()).find(
+    (lj) => lj.notionPageId === post.notionPageId || lj.postId === post.id,
+  );
+  const liveStatus = liveJob
+    ? liveJob.type === "PUBLISH_POST" ? "Publishing" : "Syncing"
+    : null;
+
   return (
     <div className="rounded-xl border bg-card p-4 md:p-5">
       {/* Title header */}
@@ -325,9 +336,19 @@ function PostPropertyCard({ post }: { post: ApiPost }) {
       <div className="space-y-2.5">
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">Status</span>
-          <span className={`text-xs font-medium rounded-md px-3 py-0.5 ${postStatusStyle[post.status] ?? "bg-muted text-muted-foreground"}`}>
-            {post.status === "IMAGES_PROCESSING" ? "Processing" : post.status === "UPDATE_PENDING" ? "Updating" : post.status.charAt(0) + post.status.slice(1).toLowerCase()}
-          </span>
+          {liveStatus ? (
+            <span className="text-xs font-medium rounded-md px-3 py-0.5 bg-violet-500/15 text-violet-400 flex items-center gap-1.5">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-violet-400" />
+              </span>
+              {liveStatus}
+            </span>
+          ) : (
+            <span className={`text-xs font-medium rounded-md px-3 py-0.5 ${postStatusStyle[post.status] ?? "bg-muted text-muted-foreground"}`}>
+              {post.status === "IMAGES_PROCESSING" ? "Processing" : post.status === "UPDATE_PENDING" ? "Updating" : post.status.charAt(0) + post.status.slice(1).toLowerCase()}
+            </span>
+          )}
         </div>
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">Category</span>
