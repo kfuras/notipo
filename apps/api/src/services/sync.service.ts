@@ -159,6 +159,22 @@ export class SyncService {
           logger.warn({ wpPostId: existing!.wpPostId }, "WP post is trashed, re-creating draft");
           wpPostGone = true;
         }
+
+        // Apply/refresh Rank Math SEO meta on the existing WP post
+        if (result.metadata.seoKeyword && !wpPostGone) {
+          onStep?.("Setting SEO metadata…");
+          const seoDescription = this.deriveDescription(finalMarkdown);
+          await wp.updateRankMathSeo(existing!.wpPostId!, {
+            rank_math_focus_keyword: result.metadata.seoKeyword,
+            rank_math_title: "%title%",
+            rank_math_description: seoDescription,
+          });
+          await this.prisma.post.update({
+            where: { id: postId },
+            data: { seoDescription },
+          });
+          logger.info({ wpPostId: existing!.wpPostId, seoKeyword: result.metadata.seoKeyword }, "Rank Math SEO meta updated");
+        }
       } catch (err: unknown) {
         const status = (err as { response?: { status?: number } }).response?.status;
         if (status === 404) {
@@ -251,6 +267,22 @@ export class SyncService {
           wpContent,
         },
       });
+
+      // Apply Rank Math SEO meta on the draft so it's visible during review
+      if (result.metadata.seoKeyword) {
+        onStep?.("Setting SEO metadata…");
+        const seoDescription = this.deriveDescription(finalMarkdown);
+        await wp.updateRankMathSeo(wpPost.id, {
+          rank_math_focus_keyword: result.metadata.seoKeyword,
+          rank_math_title: "%title%",
+          rank_math_description: seoDescription,
+        });
+        await this.prisma.post.update({
+          where: { id: postId },
+          data: { seoDescription },
+        });
+        logger.info({ wpPostId: wpPost.id, seoKeyword: result.metadata.seoKeyword }, "Rank Math SEO meta applied to draft");
+      }
     }
 
     // 6. Update Notion status.
@@ -264,6 +296,17 @@ export class SyncService {
 
     logger.info({ tenantId, notionPageId, postId }, "Post synced successfully");
     return { postId, wpStatus, wasPublished };
+  }
+
+  /** Strip markdown syntax and truncate to ~160 chars for SEO description. */
+  private deriveDescription(markdown: string): string {
+    const plain = markdown
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, "")  // images
+      .replace(/\[[^\]]*\]\([^)]*\)/g, "")   // links
+      .replace(/[#*_`~>|-]/g, "")             // markdown syntax
+      .replace(/\s+/g, " ")
+      .trim();
+    return plain.length > 160 ? plain.slice(0, 159).trimEnd() + "..." : plain;
   }
 
   private async upsertPost(
