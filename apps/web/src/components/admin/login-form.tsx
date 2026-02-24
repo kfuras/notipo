@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -18,9 +19,11 @@ import { LogoIcon } from "@/components/landing/icons/logo";
 
 export function LoginForm() {
   const { login, register, setApiKey } = useAuth();
+  const searchParams = useSearchParams();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [signupEnabled, setSignupEnabled] = useState(false);
+  const defaultTab = searchParams.get("tab") === "register" ? "register" : "email";
 
   // Email/password login
   const [email, setEmail] = useState("");
@@ -90,7 +93,7 @@ export function LoginForm() {
           <CardDescription>Sign in to your dashboard</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="email">
+          <Tabs defaultValue={signupEnabled ? defaultTab : "email"}>
             <TabsList className="w-full">
               <TabsTrigger value="email" className="flex-1">
                 Sign in
