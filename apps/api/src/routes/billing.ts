@@ -78,6 +78,7 @@ export async function billingRoutes(app: FastifyInstance) {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
+      metadata: { tenantId: tenant.id },
       line_items: [{ price: config.STRIPE_PRO_PRICE_ID!, quantity: 1 }],
       success_url: `${baseUrl}/admin/billing?checkout=success`,
       cancel_url: `${baseUrl}/admin/billing`,
@@ -162,8 +163,24 @@ export async function billingRoutes(app: FastifyInstance) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
-        const tenantId = session.metadata?.tenantId;
-        if (!tenantId) break;
+        let tenantId = session.metadata?.tenantId;
+
+        // Fallback: look up tenant by Stripe customer ID
+        if (!tenantId && session.customer) {
+          const customerId = typeof session.customer === "string"
+            ? session.customer
+            : session.customer.id;
+          const tenant = await app.prisma.tenant.findUnique({
+            where: { stripeCustomerId: customerId },
+            select: { id: true },
+          });
+          tenantId = tenant?.id;
+        }
+
+        if (!tenantId) {
+          log.warn({ sessionId: session.id }, "checkout.session.completed: no tenantId found");
+          break;
+        }
 
         const subscriptionId = typeof session.subscription === "string"
           ? session.subscription
