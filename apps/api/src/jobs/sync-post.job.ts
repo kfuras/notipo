@@ -77,6 +77,8 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient, ev
           await boss.send("publish-post", { tenantId, postId }, { singletonKey: `publish:${postId}` });
           log.info({ postId, wpStatus, wasPublished }, "Post sync completed, publish enqueued");
         } else {
+          // Draft re-sync: revert status from UPDATE_PENDING back to SYNCED
+          await prisma.post.update({ where: { id: postId }, data: { status: "SYNCED" } });
           log.info({ postId, wpStatus }, "Post sync completed, skipping auto-publish (WP post is not live)");
         }
       } else {
