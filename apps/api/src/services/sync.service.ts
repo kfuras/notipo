@@ -219,10 +219,16 @@ export class SyncService {
       const wpContent = convertMarkdownToGutenberg(finalMarkdown, { highlighter });
 
       // Resolve tag IDs (post tags take priority over category defaults)
+      // Best-effort: some WP sites have /tags endpoint disabled (404)
       const tagNames = result.metadata.tags ?? [];
-      const tagIds = tagNames.length > 0
-        ? await wp.resolveTagIds(tagNames)
-        : (category?.wpTagIds ?? []);
+      let tagIds: number[] = [];
+      try {
+        tagIds = tagNames.length > 0
+          ? await wp.resolveTagIds(tagNames)
+          : (category?.wpTagIds ?? []);
+      } catch (err) {
+        logger.warn({ err }, "Failed to resolve tag IDs — skipping tags");
+      }
 
       // Generate featured image
       let wpFeaturedMediaId: number | undefined;
