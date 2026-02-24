@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useApi } from "@/hooks/use-api";
+import { useAuth } from "@/lib/auth-context";
+import { api, ApiError } from "@/lib/api-client";
 import { useEventSource } from "@/hooks/use-event-source";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -17,11 +19,14 @@ interface SettingsData {
 }
 
 export default function DashboardPage() {
+  const { apiKey } = useAuth();
   const { data: postsData, refetch: refetchPosts } = useApi<ApiListResponse<ApiPost>>("/api/posts");
   const { data: jobsData, refetch: refetchJobs } = useApi<{ data: ApiJob[]; total: number }>(
     "/api/jobs?limit=5",
   );
   const { data: settings } = useApi<SettingsData>("/api/settings");
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const onEvent = useCallback(() => {
     refetchJobs();
@@ -43,6 +48,18 @@ export default function DashboardPage() {
   };
 
   const needsSetup = settings && (!notion?.configured || !wordpress?.configured);
+
+  const handleSyncNow = async () => {
+    setSyncing(true);
+    setSyncError(null);
+    try {
+      await api("/api/sync-now", { method: "POST", apiKey: apiKey ?? undefined });
+    } catch (err) {
+      setSyncError(err instanceof ApiError ? err.message : "Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -107,6 +124,22 @@ export default function DashboardPage() {
                 {wordpress?.configured ? "Connected" : "Not connected"}
               </Badge>
             </div>
+            {notion?.configured && (
+              <div className="pt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                  disabled={syncing}
+                  onClick={handleSyncNow}
+                >
+                  {syncing ? "Syncing..." : "Sync Now"}
+                </Button>
+                {syncError && (
+                  <p className="text-xs text-destructive mt-1">{syncError}</p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
