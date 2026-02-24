@@ -36,13 +36,20 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Landing page mockup animations */
-  @keyframes status-cycle-3 {
-    0%, 8%    { opacity: 1; }
-    10%, 30%  { opacity: 0; }
-    31%, 39%  { opacity: 0; }
-    40%       { opacity: 0; }
-    97%       { opacity: 0; }
+  /* Landing page mockup: 3-item status cycling (no delay, loop-safe) */
+  @keyframes cycle-3-a {
+    0%, 28%   { opacity: 1; }
+    33%, 95%  { opacity: 0; }
+    100%      { opacity: 1; }
+  }
+  @keyframes cycle-3-b {
+    0%, 28%   { opacity: 0; }
+    33%, 61%  { opacity: 1; }
+    66%, 100% { opacity: 0; }
+  }
+  @keyframes cycle-3-c {
+    0%, 61%   { opacity: 0; }
+    66%, 95%  { opacity: 1; }
     100%      { opacity: 0; }
   }
 

@@ -173,8 +173,8 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {posts.slice(0, 5).map((post) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {posts.slice(0, 4).map((post) => (
                 <PostPropertyCard key={post.id} post={post} />
               ))}
             </div>
@@ -312,26 +312,26 @@ const postStatusStyle: Record<string, string> = {
 
 function PostPropertyCard({ post }: { post: ApiPost }) {
   return (
-    <div className="rounded-lg border p-4 space-y-2.5">
+    <div className="rounded-xl border bg-card p-4 md:p-5">
       {/* Title header */}
-      <div className="flex items-center gap-2 pb-2 border-b border-border">
+      <div className="flex items-center gap-2 mb-3 pb-2.5 border-b">
         <div className="w-5 h-5 rounded bg-violet-500/15 flex items-center justify-center shrink-0">
           <svg className="w-3 h-3 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
         </div>
         <span className="text-sm font-medium truncate">{post.title}</span>
       </div>
 
-      {/* Property rows */}
-      <div className="space-y-2">
+      {/* Property rows — matches landing page mockup layout */}
+      <div className="space-y-2.5">
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">Status</span>
-          <span className={`text-xs font-medium rounded-md px-2.5 py-0.5 ${postStatusStyle[post.status] ?? "bg-muted text-muted-foreground"}`}>
-            {post.status}
+          <span className={`text-xs font-medium rounded-md px-3 py-0.5 ${postStatusStyle[post.status] ?? "bg-muted text-muted-foreground"}`}>
+            {post.status === "IMAGES_PROCESSING" ? "Processing" : post.status === "UPDATE_PENDING" ? "Updating" : post.status.charAt(0) + post.status.slice(1).toLowerCase()}
           </span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">Category</span>
-          <span className="text-xs text-foreground/80 bg-muted px-2.5 py-0.5 rounded-md">
+          <span className="text-xs text-foreground/70 bg-muted px-3 py-0.5 rounded-md">
             {post.category?.name ?? "Uncategorized"}
           </span>
         </div>
@@ -342,7 +342,7 @@ function PostPropertyCard({ post }: { post: ApiPost }) {
               href={post.wpUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-violet-400 hover:underline truncate max-w-[200px]"
+              className="text-xs text-violet-400 hover:underline truncate max-w-[180px]"
             >
               {post.wpUrl.replace(/^https?:\/\//, "")}
             </a>
