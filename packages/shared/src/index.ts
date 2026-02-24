@@ -38,6 +38,13 @@ export const CodeHighlighter = {
 export type CodeHighlighter =
   (typeof CodeHighlighter)[keyof typeof CodeHighlighter];
 
+export const Plan = {
+  FREE: "FREE",
+  PRO: "PRO",
+  TRIAL: "TRIAL",
+} as const;
+export type Plan = (typeof Plan)[keyof typeof Plan];
+
 export const UserRole = {
   OWNER: "OWNER",
   ADMIN: "ADMIN",

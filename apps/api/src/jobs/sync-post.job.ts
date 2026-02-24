@@ -2,6 +2,7 @@ import type PgBoss from "pg-boss";
 import type { PrismaClient } from "@prisma/client";
 import type { EventEmitter } from "events";
 import { SyncService } from "../services/sync.service.js";
+import { canSyncPost } from "../lib/plan-limits.js";
 import { logger } from "../lib/logger.js";
 
 interface SyncPostPayload {
@@ -19,6 +20,23 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient, ev
     const log = logger.child({ jobId: job.id, tenantId, notionPageId });
 
     log.info("Starting post sync");
+
+    // Check plan limits — only for new posts (not re-syncs)
+    const existingPost = await prisma.post.findUnique({
+      where: { tenantId_notionPageId: { tenantId, notionPageId } },
+      select: { id: true },
+    });
+    if (!existingPost) {
+      const tenant = await prisma.tenant.findUniqueOrThrow({
+        where: { id: tenantId },
+        select: { plan: true, trialEndsAt: true },
+      });
+      const check = await canSyncPost(prisma, tenantId, tenant.plan, tenant.trialEndsAt);
+      if (!check.allowed) {
+        log.warn({ tenantId }, check.reason);
+        throw new Error(check.reason);
+      }
+    }
 
     // Track in jobs table
     const dbJob = await prisma.job.create({

@@ -6,6 +6,7 @@ import {
   FolderTree,
   Activity,
   Settings,
+  CreditCard,
   Users,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -18,6 +19,7 @@ const navItems = [
   { title: "Categories", href: "/admin/categories", icon: FolderTree },
   { title: "Jobs", href: "/admin/jobs", icon: Activity },
   { title: "Settings", href: "/admin/settings", icon: Settings },
+  { title: "Billing", href: "/admin/billing", icon: CreditCard },
 ];
 
 const adminItem = { title: "Tenants", href: "/admin/tenants", icon: Users };

@@ -11,6 +11,7 @@ import { WordPressService } from "./wordpress.service.js";
 import { CredentialService } from "./credential.service.js";
 import { convertMarkdownToGutenberg } from "./markdown-to-gutenberg.js";
 import { FeaturedImageService } from "./featured-image.service.js";
+import { canGenerateFeaturedImage } from "../lib/plan-limits.js";
 import { logger } from "../lib/logger.js";
 
 export class SyncService {
@@ -129,9 +130,10 @@ export class SyncService {
     onStep?.(isUpdate ? "Updating WP post…" : "Creating WP draft…");
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { codeHighlighter: true },
+      select: { codeHighlighter: true, plan: true, trialEndsAt: true },
     });
     const highlighter = tenant!.codeHighlighter;
+    const featuredImagesAllowed = canGenerateFeaturedImage(tenant!.plan, tenant!.trialEndsAt);
 
     // Determine whether to update the existing WP post or create a new draft.
     // If the existing WP post was deleted, fall back to creating a new draft and
@@ -230,16 +232,18 @@ export class SyncService {
         logger.warn({ err }, "Failed to resolve tag IDs — skipping tags");
       }
 
-      // Generate featured image
+      // Generate featured image (Pro/Trial only)
       let wpFeaturedMediaId: number | undefined;
-      if (!category) {
+      if (!featuredImagesAllowed) {
+        logger.info({ tenantId }, "Featured image generation skipped — Free plan");
+      } else if (!category) {
         logger.warn({ notionCategory: result.metadata.category }, "Category not found in DB — skipping featured image");
       } else if (!category.backgroundImage) {
         logger.warn({ categoryName: category.name }, "Category has no backgroundImage — skipping featured image");
       } else if (!result.metadata.featuredImageTitle) {
         logger.warn("featuredImageTitle is empty — skipping featured image");
       }
-      if (category?.backgroundImage && result.metadata.featuredImageTitle) {
+      if (featuredImagesAllowed && category?.backgroundImage && result.metadata.featuredImageTitle) {
         onStep?.("Generating featured image…");
         const imgService = new FeaturedImageService();
         const slug = result.metadata.slug || result.metadata.title;

@@ -66,11 +66,16 @@ export async function authRoutes(app: FastifyInstance) {
     const passwordHash = await bcrypt.hash(body.password, 12);
     const apiKey = randomBytes(32).toString("hex");
 
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+
     const tenant = await app.prisma.$transaction(async (tx) => {
       const t = await tx.tenant.create({
         data: {
           name: body.blogName,
           slug,
+          plan: "TRIAL",
+          trialEndsAt,
           users: {
             create: {
               email: body.email,
@@ -85,6 +90,8 @@ export async function authRoutes(app: FastifyInstance) {
           id: true,
           name: true,
           slug: true,
+          plan: true,
+          trialEndsAt: true,
           users: {
             select: { id: true, email: true, name: true, role: true, apiKey: true },
           },

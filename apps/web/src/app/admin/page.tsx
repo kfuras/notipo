@@ -19,6 +19,9 @@ interface SettingsData {
   data: {
     notion: { configured: boolean; oauthAvailable: boolean; databaseId: string | null };
     wordpress: { configured: boolean };
+    plan: string;
+    effectivePlan: string;
+    trialEndsAt: string | null;
   };
 }
 
@@ -95,6 +98,8 @@ export default function DashboardPage() {
   const jobs = jobsData?.data ?? [];
   const notion = settings?.data?.notion;
   const wordpress = settings?.data?.wordpress;
+  const effectivePlan = settings?.data?.effectivePlan;
+  const canSyncNow = effectivePlan !== "FREE";
 
   const stats = {
     total: posts.length,
@@ -132,12 +137,25 @@ export default function DashboardPage() {
       <Suspense fallback={null}>
         <OAuthResultHandler onSettingsUpdate={refetchSettings} />
       </Suspense>
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <div className="flex items-center gap-3">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        {settings?.data?.plan === "TRIAL" && settings?.data?.trialEndsAt && (
+          <Badge variant="secondary">
+            Trial — {Math.max(0, Math.ceil((new Date(settings.data.trialEndsAt).getTime() - Date.now()) / 86400000))} days left
+          </Badge>
+        )}
+        {settings?.data?.plan === "PRO" && (
+          <Badge className="bg-primary text-primary-foreground">Pro</Badge>
+        )}
+        {effectivePlan === "FREE" && settings?.data?.plan !== "TRIAL" && (
+          <Badge variant="outline">Free</Badge>
+        )}
+      </div>
 
       {needsSetup && settings && (
         <SetupCard settings={settings} apiKey={apiKey!} onUpdate={refetchSettings} />
       )}
-      {allSetUp && (
+      {allSetUp && canSyncNow && (
         <SetupCompleteCard onSyncNow={handleSyncNow} syncing={syncing || liveJobs.size > 0} />
       )}
 
@@ -185,7 +203,7 @@ export default function DashboardPage() {
                 {wordpress?.configured ? "Connected" : "Not connected"}
               </Badge>
             </div>
-            {notion?.configured && (
+            {notion?.configured && canSyncNow && (
               <div className="pt-2">
                 <Button
                   size="sm"
@@ -207,6 +225,14 @@ export default function DashboardPage() {
                 {syncError && (
                   <p className="text-xs text-destructive mt-1">{syncError}</p>
                 )}
+              </div>
+            )}
+            {notion?.configured && !canSyncNow && (
+              <div className="pt-2">
+                <p className="text-xs text-muted-foreground">
+                  Instant sync is a Pro feature.{" "}
+                  <Link href="/admin/billing" className="text-primary hover:underline">Upgrade</Link>
+                </p>
               </div>
             )}
           </CardContent>
@@ -380,18 +406,21 @@ function OAuthResultHandler({ onSettingsUpdate }: { onSettingsUpdate: () => void
   const searchParams = useSearchParams();
   useEffect(() => {
     const result = searchParams.get("notion_oauth");
-    if (!result) return;
-    if (result === "success") {
-      toast.success("Notion connected successfully");
-      onSettingsUpdate();
-    } else {
-      const reason = searchParams.get("reason")?.replace(/_/g, " ") ?? "unknown error";
-      toast.error(`Notion connection failed: ${reason}`);
+    if (result) {
+      if (result === "success") {
+        toast.success("Notion connected successfully");
+        onSettingsUpdate();
+      } else {
+        const reason = searchParams.get("reason")?.replace(/_/g, " ") ?? "unknown error";
+        toast.error(`Notion connection failed: ${reason}`);
+      }
     }
     const url = new URL(window.location.href);
     url.searchParams.delete("notion_oauth");
     url.searchParams.delete("reason");
-    window.history.replaceState({}, "", url.toString());
+    if (url.toString() !== window.location.href) {
+      window.history.replaceState({}, "", url.toString());
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 }

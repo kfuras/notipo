@@ -4,6 +4,7 @@ import { CredentialService } from "../services/credential.service.js";
 import { WordPressService } from "../services/wordpress.service.js";
 import { NotionService } from "../services/notion.service.js";
 import { syncWpCategories } from "../lib/sync-wp-categories.js";
+import { getEffectivePlan } from "../lib/plan-limits.js";
 import { config } from "../config.js";
 import { logger } from "../lib/logger.js";
 
@@ -46,6 +47,8 @@ export async function settingsRoutes(app: FastifyInstance) {
         notionUpdateTriggerStatus: true,
         wpSiteUrl: true,
         codeHighlighter: true,
+        plan: true,
+        trialEndsAt: true,
       },
     });
 
@@ -66,6 +69,9 @@ export async function settingsRoutes(app: FastifyInstance) {
           siteUrl: tenant.wpSiteUrl,
         },
         codeHighlighter: tenant.codeHighlighter,
+        plan: tenant.plan,
+        effectivePlan: getEffectivePlan(tenant.plan, tenant.trialEndsAt),
+        trialEndsAt: tenant.trialEndsAt?.toISOString() ?? null,
       },
     };
   });

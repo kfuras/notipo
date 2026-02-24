@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { pollTenant } from "../lib/poll-tenant.js";
+import { canUseWebhooks } from "../lib/plan-limits.js";
 
 // Per-tenant cooldown to avoid hitting Notion's 3 req/sec rate limit
 const lastSyncAt = new Map<string, number>();
@@ -22,6 +23,10 @@ export async function syncRoutes(app: FastifyInstance) {
 
     if (!tenant?.notionCredentials || !tenant.notionDatabaseId) {
       return reply.code(400).send({ error: "Notion is not configured" });
+    }
+
+    if (!canUseWebhooks(tenant.plan, tenant.trialEndsAt)) {
+      return reply.code(403).send({ error: "Instant sync is available on the Pro plan. Upgrade to unlock." });
     }
 
     lastSyncAt.set(tenantId, Date.now());

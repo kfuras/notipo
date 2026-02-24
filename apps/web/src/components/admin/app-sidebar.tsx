@@ -6,6 +6,7 @@ import {
   FolderTree,
   Activity,
   Settings,
+  CreditCard,
   Users,
   LogOut,
 } from "lucide-react";
@@ -31,6 +32,7 @@ const navItems = [
   { title: "Categories", href: "/admin/categories", icon: FolderTree },
   { title: "Jobs", href: "/admin/jobs", icon: Activity },
   { title: "Settings", href: "/admin/settings", icon: Settings },
+  { title: "Billing", href: "/admin/billing", icon: CreditCard },
 ];
 
 const adminItems = [

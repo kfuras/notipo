@@ -29,6 +29,12 @@ model Tenant {
   wpSiteUrl       String?
   codeHighlighter CodeHighlighter @default(PRISMATIC)
 
+  // Billing
+  plan                 Plan      @default(TRIAL)
+  trialEndsAt          DateTime?
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+
   users      User[]
   posts      Post[]
   categories Category[]
@@ -38,6 +44,12 @@ model Tenant {
 
   @@index([notionWorkspaceId])
   @@map("tenants")
+}
+
+enum Plan {
+  FREE
+  PRO
+  TRIAL
 }
 
 enum CodeHighlighter {
