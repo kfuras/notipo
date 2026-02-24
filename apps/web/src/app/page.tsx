@@ -10,7 +10,7 @@ export default function Home() {
   return (
     <>
       <Nav />
-      <main>
+      <main className="overflow-hidden">
         <Hero />
         <HowItWorks />
         <Features />
