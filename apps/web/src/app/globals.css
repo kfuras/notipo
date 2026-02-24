@@ -36,19 +36,19 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Landing page mockup: 3-item status cycling (step-end = instant switch) */
+  /* Landing page mockup: 3-item status cycling (tight transitions ≈ instant) */
   @keyframes cycle-3-a {
-    0%      { opacity: 1; }
-    33.33%  { opacity: 0; }
+    0%, 33%      { opacity: 1; }
+    33.5%, 100%  { opacity: 0; }
   }
   @keyframes cycle-3-b {
-    0%      { opacity: 0; }
-    33.33%  { opacity: 1; }
-    66.66%  { opacity: 0; }
+    0%, 33%      { opacity: 0; }
+    33.5%, 66%   { opacity: 1; }
+    66.5%, 100%  { opacity: 0; }
   }
   @keyframes cycle-3-c {
-    0%      { opacity: 0; }
-    66.66%  { opacity: 1; }
+    0%, 66%      { opacity: 0; }
+    66.5%, 100%  { opacity: 1; }
   }
 
   @keyframes step-reveal {
