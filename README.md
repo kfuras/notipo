@@ -348,7 +348,7 @@ New tenants start on a **7-day Pro trial** (no credit card required). After the 
 | Posts per month | 5 | Unlimited |
 | Featured images | No | Yes |
 | Webhooks + instant sync | No | Yes |
-| Poll interval | 15 min | 5 min |
+| Poll interval | 5 min | 5 min |
 | Code highlighting + SEO | Yes | Yes |
 
 Billing requires three Stripe env vars: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PRO_PRICE_ID`. Without them, the billing page shows "Billing is not configured" and all features remain unlocked.
@@ -381,5 +381,6 @@ Pages available:
 - **Jobs** — background job activity log with error display, status filtering, and clickable WP links
 - **Settings** — Notion connection (OAuth or manual token, with disconnect button), WordPress credentials (with disconnect button), trigger statuses, code highlighter (radio buttons)
 - **Billing** — current plan badge (Free/Pro/Trial with days remaining), upgrade button (→ Stripe Checkout), manage subscription button (→ Stripe Customer Portal), usage stats (posts, featured images, webhooks)
+- **Account** — user profile (email, role, organization), change password, delete account (OWNER deletion removes the entire tenant and all data)
 - **Tenants** — admin-only page for creating and managing tenants (API key shown once on creation)
 
