@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { config } from "../config.js";
 import { logger } from "../lib/logger.js";
 import { sendEmail } from "../lib/email.js";
-import { createResetToken, verifyResetToken } from "../lib/reset-token.js";
+import { createToken, verifyToken } from "../lib/auth-token.js";
 
 const log = logger.child({ route: "auth" });
 
@@ -30,12 +30,33 @@ const resetPasswordSchema = z.object({
   password: z.string().min(8).max(128),
 });
 
+const verifyEmailSchema = z.object({
+  token: z.string().min(1),
+});
+
+const resendVerificationSchema = z.object({
+  email: z.string().email(),
+});
+
 function slugify(name: string): string {
   return name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 50);
+}
+
+function getBaseUrl(): string {
+  return config.NOTION_OAUTH_REDIRECT_URI
+    ? new URL(config.NOTION_OAUTH_REDIRECT_URI).origin
+    : "https://notipo.com";
+}
+
+function verificationEmailHtml(verifyUrl: string): string {
+  return `<p>Welcome to Notipo! Please verify your email address to get started.</p>
+    <p><a href="${verifyUrl}" style="display:inline-block;padding:10px 20px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:6px;">Verify Email</a></p>
+    <p style="color:#888;font-size:13px;">Or copy this link: ${verifyUrl}</p>
+    <p style="color:#888;font-size:13px;">This link expires in 24 hours.</p>`;
 }
 
 export async function authRoutes(app: FastifyInstance) {
@@ -94,6 +115,7 @@ export async function authRoutes(app: FastifyInstance) {
               role: "OWNER",
               apiKey,
               passwordHash,
+              emailVerified: false,
             },
           },
         },
@@ -101,10 +123,8 @@ export async function authRoutes(app: FastifyInstance) {
           id: true,
           name: true,
           slug: true,
-          plan: true,
-          trialEndsAt: true,
           users: {
-            select: { id: true, email: true, name: true, role: true, apiKey: true },
+            select: { id: true, email: true },
           },
         },
       });
@@ -114,12 +134,14 @@ export async function authRoutes(app: FastifyInstance) {
     const user = tenant.users[0];
     log.info({ tenantId: tenant.id, email: body.email }, "New tenant registered");
 
+    // Send verification email
+    const token = createToken(user.id, "verify");
+    const verifyUrl = `${getBaseUrl()}/auth/verify?token=${token}`;
+    await sendEmail(body.email, "Verify your email — Notipo", verificationEmailHtml(verifyUrl));
+
     return reply.code(201).send({
-      data: {
-        apiKey: user.apiKey,
-        user: { id: user.id, email: user.email, name: user.name },
-        tenant: { id: tenant.id, name: tenant.name, slug: tenant.slug },
-      },
+      message: "Check your email to verify your account.",
+      needsVerification: true,
     });
   });
 
@@ -135,6 +157,7 @@ export async function authRoutes(app: FastifyInstance) {
         name: true,
         apiKey: true,
         passwordHash: true,
+        emailVerified: true,
         tenant: { select: { id: true, name: true, slug: true } },
       },
     });
@@ -148,6 +171,14 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.unauthorized("Invalid email or password");
     }
 
+    if (!user.emailVerified) {
+      return reply.code(403).send({
+        error: "Please verify your email before signing in.",
+        needsVerification: true,
+        email: user.email,
+      });
+    }
+
     return {
       data: {
         apiKey: user.apiKey,
@@ -155,6 +186,44 @@ export async function authRoutes(app: FastifyInstance) {
         tenant: { id: user.tenant.id, name: user.tenant.name, slug: user.tenant.slug },
       },
     };
+  });
+
+  /** POST /api/auth/verify-email — verify email using token */
+  app.post("/api/auth/verify-email", async (request, reply) => {
+    const { token } = verifyEmailSchema.parse(request.body);
+
+    const result = verifyToken(token, "verify");
+    if (!result) {
+      return reply.badRequest("Invalid or expired verification link.");
+    }
+
+    await app.prisma.user.update({
+      where: { id: result.userId },
+      data: { emailVerified: true },
+    });
+
+    log.info({ userId: result.userId }, "Email verified");
+    return { message: "Email verified successfully." };
+  });
+
+  /** POST /api/auth/resend-verification — resend verification email */
+  app.post("/api/auth/resend-verification", async (request) => {
+    const { email } = resendVerificationSchema.parse(request.body);
+
+    const user = await app.prisma.user.findFirst({
+      where: { email, passwordHash: { not: null }, emailVerified: false },
+      select: { id: true },
+    });
+
+    if (user) {
+      const token = createToken(user.id, "verify");
+      const verifyUrl = `${getBaseUrl()}/auth/verify?token=${token}`;
+      await sendEmail(email, "Verify your email — Notipo", verificationEmailHtml(verifyUrl));
+      log.info({ email }, "Verification email resent");
+    }
+
+    // Always return success to prevent email enumeration
+    return { message: "If that email exists and is unverified, a verification link has been sent." };
   });
 
   /** POST /api/auth/forgot-password — request a password reset email */
@@ -167,12 +236,8 @@ export async function authRoutes(app: FastifyInstance) {
     });
 
     if (user) {
-      const token = createResetToken(user.id);
-
-      const baseUrl = config.NOTION_OAUTH_REDIRECT_URI
-        ? new URL(config.NOTION_OAUTH_REDIRECT_URI).origin
-        : "https://notipo.com";
-      const resetUrl = `${baseUrl}/auth/reset?token=${token}`;
+      const token = createToken(user.id, "reset");
+      const resetUrl = `${getBaseUrl()}/auth/reset?token=${token}`;
 
       await sendEmail(
         email,
@@ -194,7 +259,7 @@ export async function authRoutes(app: FastifyInstance) {
   app.post("/api/auth/reset-password", async (request, reply) => {
     const { token, password } = resetPasswordSchema.parse(request.body);
 
-    const result = verifyResetToken(token);
+    const result = verifyToken(token, "reset");
     if (!result) {
       return reply.badRequest("Invalid or expired reset link. Please request a new one.");
     }

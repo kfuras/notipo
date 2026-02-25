@@ -4,6 +4,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public body?: Record<string, unknown>,
   ) {
     super(message);
     this.name = "ApiError";
@@ -32,7 +33,7 @@ export async function api<T>(
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({ message: res.statusText }));
-    throw new ApiError(res.status, data.message || res.statusText);
+    throw new ApiError(res.status, data.message || data.error || res.statusText, data);
   }
 
   if (res.status === 204) return undefined as T;
@@ -58,7 +59,7 @@ export async function apiUpload<T>(
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({ message: res.statusText }));
-    throw new ApiError(res.status, data.message || res.statusText);
+    throw new ApiError(res.status, data.message || data.error || res.statusText, data);
   }
 
   return res.json();

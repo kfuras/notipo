@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api-client";
+import { api, ApiError } from "@/lib/api-client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogoIcon } from "@/components/landing/icons/logo";
+import { Mail } from "lucide-react";
 
 export function LoginForm() {
   const { login, register, setApiKey } = useAuth();
@@ -34,6 +35,13 @@ export function LoginForm() {
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [blogName, setBlogName] = useState("");
+  const [registered, setRegistered] = useState(false);
+
+  // Verification needed (from login attempt)
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   // API key login
   const [key, setKey] = useState("");
@@ -47,11 +55,17 @@ export function LoginForm() {
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setNeedsVerification(false);
     setLoading(true);
     try {
       await login(email, password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      if (err instanceof ApiError && err.body?.needsVerification) {
+        setNeedsVerification(true);
+        setVerificationEmail((err.body.email as string) || email);
+      } else {
+        setError(err instanceof Error ? err.message : "Login failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -63,10 +77,27 @@ export function LoginForm() {
     setLoading(true);
     try {
       await register(regEmail, regPassword, blogName);
+      setRegistered(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleResend() {
+    setResending(true);
+    setResent(false);
+    try {
+      await api("/api/auth/resend-verification", {
+        method: "POST",
+        body: { email: verificationEmail || regEmail },
+      });
+      setResent(true);
+    } catch {
+      // silently fail — endpoint always returns success
+    } finally {
+      setResending(false);
     }
   }
 
@@ -81,6 +112,43 @@ export function LoginForm() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // "Check your email" state after registration
+  if (registered) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4 bg-background">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <LogoIcon className="w-12 h-12" />
+            </div>
+            <CardTitle className="text-2xl">Check your email</CardTitle>
+            <CardDescription>
+              We sent a verification link to <strong>{regEmail}</strong>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 text-center">
+            <Mail className="w-10 h-10 text-muted-foreground mx-auto" />
+            <p className="text-sm text-muted-foreground">
+              Click the link in the email to verify your account, then come back to sign in.
+              If you don&apos;t see it, check your spam folder.
+            </p>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleResend}
+              disabled={resending}
+            >
+              {resending ? "Sending..." : resent ? "Sent!" : "Resend verification email"}
+            </Button>
+            <Button variant="ghost" className="w-full" onClick={() => setRegistered(false)}>
+              Back to sign in
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -114,6 +182,29 @@ export function LoginForm() {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="email">
+              {needsVerification ? (
+                <div className="space-y-4 mt-4 text-center">
+                  <Mail className="w-10 h-10 text-muted-foreground mx-auto" />
+                  <p className="text-sm text-muted-foreground">
+                    Please verify your email before signing in. Check your inbox for a verification link.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleResend}
+                    disabled={resending}
+                  >
+                    {resending ? "Sending..." : resent ? "Sent!" : "Resend verification email"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full"
+                    onClick={() => setNeedsVerification(false)}
+                  >
+                    Try again
+                  </Button>
+                </div>
+              ) : (
               <form onSubmit={handleEmailLogin} className="space-y-4 mt-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
@@ -150,6 +241,7 @@ export function LoginForm() {
                   {loading ? "Signing in..." : "Sign in"}
                 </Button>
               </form>
+              )}
             </TabsContent>
             {signupEnabled && (
               <TabsContent value="register">

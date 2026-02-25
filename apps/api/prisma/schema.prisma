@@ -68,7 +68,8 @@ model User {
   tenantId String
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  passwordHash String?
+  passwordHash  String?
+  emailVerified Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
