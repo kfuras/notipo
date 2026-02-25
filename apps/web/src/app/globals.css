@@ -222,3 +222,42 @@ html.light {
   0%, 100% { opacity: 0.4; }
   50%      { opacity: 1; }
 }
+
+/* Notion database demo – 4-phase status cycling (10s loop) */
+@keyframes db-status-1 {
+  0%    { opacity: 1; }
+  22%   { opacity: 1; }
+  25%   { opacity: 0; }
+  97%   { opacity: 0; }
+  100%  { opacity: 1; }
+}
+@keyframes db-status-2 {
+  0%    { opacity: 0; }
+  22%   { opacity: 0; }
+  25%   { opacity: 1; }
+  47%   { opacity: 1; }
+  50%   { opacity: 0; }
+  100%  { opacity: 0; }
+}
+@keyframes db-status-3 {
+  0%    { opacity: 0; }
+  47%   { opacity: 0; }
+  50%   { opacity: 1; }
+  72%   { opacity: 1; }
+  75%   { opacity: 0; }
+  100%  { opacity: 0; }
+}
+@keyframes db-status-4 {
+  0%    { opacity: 0; }
+  72%   { opacity: 0; }
+  75%   { opacity: 1; }
+  97%   { opacity: 1; }
+  100%  { opacity: 0; }
+}
+@keyframes db-link-appear {
+  0%    { opacity: 0; transform: translateX(-4px); }
+  77%   { opacity: 0; transform: translateX(-4px); }
+  80%   { opacity: 1; transform: translateX(0); }
+  97%   { opacity: 1; transform: translateX(0); }
+  100%  { opacity: 0; transform: translateX(-4px); }
+}
