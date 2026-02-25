@@ -187,6 +187,9 @@ html.light {
   button, [role="button"], a, [type="submit"], [type="reset"], label[for], select, summary {
     cursor: pointer;
   }
+  details summary::-webkit-details-marker {
+    display: none;
+  }
 }
 
 /* ── Landing page mockup animations (outside @theme so they're emitted) ── */
