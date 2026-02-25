@@ -18,6 +18,8 @@ const envSchema = z.object({
   STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRO_PRICE_ID: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().optional().default("noreply@notipo.com"),
 });
 
 export type Config = z.infer<typeof envSchema>;
