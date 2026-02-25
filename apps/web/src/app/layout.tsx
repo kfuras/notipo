@@ -10,13 +10,30 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Notipo - Publish from Notion to WordPress, automatically",
+  metadataBase: new URL("https://notipo.com"),
+  title: {
+    default: "Notipo - Publish from Notion to WordPress, automatically",
+    template: "%s | Notipo",
+  },
   description:
     "Publish blog posts from Notion to WordPress with automated image handling, featured image generation, code syntax highlighting, and SEO optimization.",
   openGraph: {
-    title: "Notipo",
-    description: "Publish from Notion to WordPress, automatically",
+    title: "Notipo - Publish from Notion to WordPress, automatically",
+    description:
+      "Publish blog posts from Notion to WordPress with automated image handling, featured image generation, and SEO optimization.",
+    url: "https://notipo.com",
+    siteName: "Notipo",
     type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Notipo - Publish from Notion to WordPress, automatically",
+    description:
+      "Publish blog posts from Notion to WordPress with automated image handling, featured image generation, and SEO optimization.",
+  },
+  alternates: {
+    canonical: "https://notipo.com",
   },
 };
 

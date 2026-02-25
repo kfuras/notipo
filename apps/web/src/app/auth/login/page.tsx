@@ -58,6 +58,7 @@ function AuthGate() {
 export default function AuthLoginPage() {
   return (
     <div className="dark bg-background text-foreground min-h-screen">
+      <meta name="robots" content="noindex, nofollow" />
       <SetDarkMeta />
       <AuthProvider>
         <AuthGate />

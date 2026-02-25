@@ -66,6 +66,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="dark bg-background text-foreground min-h-screen">
+      <meta name="robots" content="noindex, nofollow" />
       <SetDarkMeta />
       <div className="flex min-h-screen items-center justify-center p-4 bg-background">
         <Card className="w-full max-w-sm">

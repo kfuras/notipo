@@ -74,6 +74,7 @@ export default function AdminLayout({
 }) {
   return (
     <div className="dark bg-background text-foreground min-h-screen">
+      <meta name="robots" content="noindex, nofollow" />
       <SetDarkMeta />
       <AuthProvider>
         <AdminShell>{children}</AdminShell>
