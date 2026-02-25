@@ -7,6 +7,7 @@ import {
   Activity,
   Settings,
   CreditCard,
+  UserCog,
   Users,
   LogOut,
 } from "lucide-react";
@@ -33,6 +34,7 @@ const navItems = [
   { title: "Jobs", href: "/admin/jobs", icon: Activity },
   { title: "Settings", href: "/admin/settings", icon: Settings },
   { title: "Billing", href: "/admin/billing", icon: CreditCard },
+  { title: "Account", href: "/admin/account", icon: UserCog },
 ];
 
 const adminItems = [

@@ -25,6 +25,7 @@ import { notionOAuthRoutes } from "./routes/notion-oauth.js";
 import { authRoutes } from "./routes/auth.js";
 import { syncRoutes } from "./routes/sync.js";
 import { billingRoutes } from "./routes/billing.js";
+import { accountRoutes } from "./routes/account.js";
 import { registerAllJobs } from "./jobs/index.js";
 
 export async function buildApp() {
@@ -94,6 +95,7 @@ export async function buildApp() {
   await app.register(authRoutes);
   await app.register(syncRoutes);
   await app.register(billingRoutes);
+  await app.register(accountRoutes);
 
   return app;
 }

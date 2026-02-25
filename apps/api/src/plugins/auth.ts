@@ -7,15 +7,23 @@ interface TenantContext {
   slug: string;
 }
 
+interface UserContext {
+  id: string;
+  email: string;
+  role: string;
+}
+
 declare module "fastify" {
   interface FastifyRequest {
     tenant: TenantContext;
+    user: UserContext;
     isAdmin: boolean;
   }
 }
 
 async function auth(app: FastifyInstance) {
   app.decorateRequest("tenant", null as unknown as TenantContext);
+  app.decorateRequest("user", null as unknown as UserContext);
   app.decorateRequest("isAdmin", false);
 
   app.addHook("onRequest", async (request: FastifyRequest, reply) => {
@@ -42,7 +50,7 @@ async function auth(app: FastifyInstance) {
     // All other routes: look up user by API key in the DB
     const user = await app.prisma.user.findUnique({
       where: { apiKey },
-      include: { tenant: { select: { id: true, slug: true } } },
+      select: { id: true, email: true, role: true, tenant: { select: { id: true, slug: true } } },
     });
 
     if (!user) {
@@ -50,6 +58,7 @@ async function auth(app: FastifyInstance) {
     }
 
     request.tenant = user.tenant;
+    request.user = { id: user.id, email: user.email, role: user.role };
   });
 }
 
