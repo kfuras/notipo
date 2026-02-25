@@ -22,7 +22,13 @@ export async function adminRoutes(app: FastifyInstance) {
         wpSiteUrl: true,
         notionDatabaseId: true,
         codeHighlighter: true,
+        plan: true,
         createdAt: true,
+        users: {
+          where: { role: "OWNER" },
+          select: { email: true },
+          take: 1,
+        },
         _count: { select: { users: true, posts: true } },
       },
     });

@@ -31,7 +31,9 @@ interface TenantRow {
   wpSiteUrl: string | null;
   notionDatabaseId: string | null;
   codeHighlighter: string;
+  plan: string;
   createdAt: string;
+  users: Array<{ email: string }>;
   _count: { users: number; posts: number };
 }
 
@@ -92,7 +94,7 @@ export default function TenantsPage() {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-medium text-sm">{t.name}</p>
-                  <p className="text-xs text-muted-foreground">{t.slug}</p>
+                  <p className="text-xs text-muted-foreground">{t.users[0]?.email ?? t.slug}</p>
                 </div>
                 <Button
                   variant="destructive"
@@ -103,8 +105,8 @@ export default function TenantsPage() {
                 </Button>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs">
+                <Badge variant={t.plan === "PRO" ? "default" : "secondary"}>{t.plan}</Badge>
                 <span className="text-muted-foreground">{t._count.posts} posts</span>
-                <span className="text-muted-foreground">{t._count.users} users</span>
                 <Badge variant={t.wpSiteUrl ? "default" : "secondary"}>
                   WP: {t.wpSiteUrl ? "Yes" : "No"}
                 </Badge>
@@ -123,9 +125,9 @@ export default function TenantsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Slug</TableHead>
+              <TableHead>Owner</TableHead>
+              <TableHead>Plan</TableHead>
               <TableHead>Posts</TableHead>
-              <TableHead>Users</TableHead>
               <TableHead>WordPress</TableHead>
               <TableHead>Notion</TableHead>
               <TableHead></TableHead>
@@ -142,9 +144,13 @@ export default function TenantsPage() {
               tenants.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.name}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{t.slug}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{t.users[0]?.email ?? "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant={t.plan === "PRO" ? "default" : "secondary"} className="text-xs">
+                      {t.plan}
+                    </Badge>
+                  </TableCell>
                   <TableCell>{t._count.posts}</TableCell>
-                  <TableCell>{t._count.users}</TableCell>
                   <TableCell>
                     <Badge variant={t.wpSiteUrl ? "default" : "secondary"}>
                       {t.wpSiteUrl ? "Connected" : "No"}
