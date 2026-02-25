@@ -10,7 +10,7 @@ You write posts in Notion. When you change the status to your configured trigger
 
 Notion webhooks (configured on the public integration) are the primary trigger — events are delivered automatically for all OAuth users. A safety-net poll runs every 5 minutes by default (`POLL_INTERVAL_SECONDS`) to catch any missed events. WordPress categories and tags are automatically imported and pushed to your Notion database as dropdown options, so you never need to look up numeric IDs or type names manually. After syncing, the wp-admin edit URL is written back to the `WordPress Link` property on the Notion page (published posts get the live frontend URL instead). Rank Math SEO metadata (focus keyword, title, description) is applied during sync so it's ready for review in the WordPress editor. All credentials are stored encrypted in the database — never in plain environment variables. A "Sync Now" button on the dashboard lets you trigger an instant poll without waiting for the 60-second interval.
 
-New users can sign up with email and password via the admin UI, which creates a tenant and returns an API key. An onboarding stepper guides them through connecting Notion and WordPress. Self-service signup can be disabled by setting `ALLOW_SIGNUP=false`.
+New users can sign up with email and password via the admin UI. A verification email is sent — users must click the link to verify their email before they can sign in. Once verified, an onboarding stepper guides them through connecting Notion and WordPress. Self-service signup can be disabled by setting `ALLOW_SIGNUP=false`.
 
 ---
 
@@ -358,7 +358,7 @@ Billing requires three Stripe env vars: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SEC
 
 ## Admin UI
 
-The admin UI is a Next.js app (shadcn/ui + Tailwind) served at `/admin`. The login page has three tabs: **Sign in** (email + password), **Register** (creates a new tenant with a 7-day Pro trial — only shown when `ALLOW_SIGNUP=true`), and **API Key** (direct key entry). The key is stored in `localStorage` and auto-detected as admin or tenant-level by probing the tenants endpoint.
+The admin UI is a Next.js app (shadcn/ui + Tailwind) served at `/admin`. The login page has three tabs: **Sign in** (email + password), **Register** (creates a new tenant with a 7-day Pro trial — only shown when `ALLOW_SIGNUP=true`), and **API Key** (direct key entry). Registration requires email verification — a verification link is sent and must be clicked before the user can sign in. Unverified login attempts show a "verify your email" message with a resend option. The key is stored in `localStorage` and auto-detected as admin or tenant-level by probing the tenants endpoint.
 
 New tenants see an inline onboarding stepper on the dashboard that guides them through three steps: duplicating the Notion template, connecting Notion (OAuth or manual token), and connecting WordPress. Each step expands inline with its own form — no bouncing to the settings page. The stepper shows a progress bar and disappears once all steps are complete. OAuth redirects return to the dashboard with a toast notification.
 
