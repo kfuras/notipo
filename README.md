@@ -66,6 +66,13 @@ cp .env.example .env
 | `NOTION_WEBHOOK_SECRET` | HMAC secret for webhook verification (from Notion integration settings) |
 | `POLL_INTERVAL_SECONDS` | Safety-net poll interval in seconds (default: `300`) |
 
+**Email (Resend)** (required for email verification and password reset):
+
+| Variable | Description |
+|----------|-------------|
+| `RESEND_API_KEY` | API key from [resend.com](https://resend.com) |
+| `RESEND_FROM_EMAIL` | Sender address (default: `noreply@notipo.com`) — verify your domain in Resend |
+
 **Stripe billing** (optional — enables subscription upgrades):
 
 | Variable | Description |

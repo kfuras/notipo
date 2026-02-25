@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
+import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import path from "node:path";
@@ -51,6 +52,9 @@ export async function buildApp() {
   // Plugins
   await app.register(cors);
   await app.register(sensible);
+  await app.register(rateLimit, {
+    global: false,
+  });
   await app.register(multipart, {
     limits: { fileSize: 5 * 1024 * 1024, files: 1 },
   });

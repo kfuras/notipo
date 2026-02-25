@@ -59,6 +59,18 @@ function verificationEmailHtml(verifyUrl: string): string {
     <p style="color:#888;font-size:13px;">This link expires in 24 hours.</p>`;
 }
 
+const authRateLimit = {
+  config: {
+    rateLimit: { max: 10, timeWindow: "15 minutes" },
+  },
+};
+
+const emailRateLimit = {
+  config: {
+    rateLimit: { max: 5, timeWindow: "15 minutes" },
+  },
+};
+
 export async function authRoutes(app: FastifyInstance) {
   /** GET /api/auth/providers — what auth methods are available */
   app.get("/api/auth/providers", async () => {
@@ -71,7 +83,7 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   /** POST /api/auth/register — create a new tenant with email+password */
-  app.post("/api/auth/register", async (request, reply) => {
+  app.post("/api/auth/register", authRateLimit, async (request, reply) => {
     if (!config.ALLOW_SIGNUP) {
       return reply.forbidden("Registration is disabled");
     }
@@ -146,7 +158,7 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   /** POST /api/auth/login — verify email+password, return API key */
-  app.post("/api/auth/login", async (request, reply) => {
+  app.post("/api/auth/login", authRateLimit, async (request, reply) => {
     const body = loginSchema.parse(request.body);
 
     const user = await app.prisma.user.findFirst({
@@ -189,7 +201,7 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   /** POST /api/auth/verify-email — verify email using token */
-  app.post("/api/auth/verify-email", async (request, reply) => {
+  app.post("/api/auth/verify-email", authRateLimit, async (request, reply) => {
     const { token } = verifyEmailSchema.parse(request.body);
 
     const result = verifyToken(token, "verify");
@@ -207,7 +219,7 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   /** POST /api/auth/resend-verification — resend verification email */
-  app.post("/api/auth/resend-verification", async (request) => {
+  app.post("/api/auth/resend-verification", emailRateLimit, async (request) => {
     const { email } = resendVerificationSchema.parse(request.body);
 
     const user = await app.prisma.user.findFirst({
@@ -227,7 +239,7 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   /** POST /api/auth/forgot-password — request a password reset email */
-  app.post("/api/auth/forgot-password", async (request) => {
+  app.post("/api/auth/forgot-password", emailRateLimit, async (request) => {
     const { email } = forgotPasswordSchema.parse(request.body);
 
     const user = await app.prisma.user.findFirst({
@@ -256,7 +268,7 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   /** POST /api/auth/reset-password — set a new password using a reset token */
-  app.post("/api/auth/reset-password", async (request, reply) => {
+  app.post("/api/auth/reset-password", authRateLimit, async (request, reply) => {
     const { token, password } = resetPasswordSchema.parse(request.body);
 
     const result = verifyToken(token, "reset");
