@@ -15,6 +15,7 @@ const envSchema = z.object({
   ALLOW_SIGNUP: z.string().default("true").transform((v) => v === "true"),
   POLL_INTERVAL_SECONDS: z.coerce.number().default(300),
   STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRO_PRICE_ID: z.string().optional(),
 });

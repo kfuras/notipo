@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useApi } from "@/hooks/use-api";
 import { useAuth } from "@/lib/auth-context";
@@ -45,6 +45,7 @@ export default function BillingPage() {
   const { data: billing, loading, refetch } = useApi<BillingData>("/api/billing");
   const [actionLoading, setActionLoading] = useState(false);
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
     if (searchParams.get("checkout") === "success") {
@@ -58,18 +59,8 @@ export default function BillingPage() {
 
   const b = billing?.data;
 
-  const handleCheckout = async () => {
-    setActionLoading(true);
-    try {
-      const res = await api<{ data: { url: string } }>("/api/billing/checkout", {
-        method: "POST",
-        apiKey: apiKey!,
-      });
-      window.location.href = res.data.url;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Checkout failed");
-      setActionLoading(false);
-    }
+  const handleCheckout = () => {
+    router.push("/admin/billing/checkout");
   };
 
   const handlePortal = async () => {

@@ -78,16 +78,21 @@ export async function billingRoutes(app: FastifyInstance) {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
+      ui_mode: "embedded",
       metadata: { tenantId: tenant.id },
       line_items: [{ price: config.STRIPE_PRO_PRICE_ID!, quantity: 1 }],
-      success_url: `${baseUrl}/admin/billing?checkout=success`,
-      cancel_url: `${baseUrl}/admin/billing`,
+      return_url: `${baseUrl}/admin/billing/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
       subscription_data: {
         metadata: { tenantId: tenant.id },
       },
     });
 
-    return { data: { url: session.url } };
+    return {
+      data: {
+        clientSecret: session.client_secret,
+        publishableKey: config.STRIPE_PUBLISHABLE_KEY,
+      },
+    };
   });
 
   /** POST /api/billing/portal — create Stripe Customer Portal session */
