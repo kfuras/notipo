@@ -85,7 +85,7 @@ export default function ForgotPasswordPage() {
               <div className="space-y-4 text-center">
                 <Mail className="w-10 h-10 text-muted-foreground mx-auto" />
                 <p className="text-sm text-muted-foreground">
-                  If an account with that email exists, you'll receive a password reset link shortly.
+                  If an account with that email exists, you'll receive a password reset link shortly. If you don't see it, check your spam folder.
                 </p>
                 <Button variant="outline" asChild className="w-full">
                   <Link href="/auth/login">Back to sign in</Link>
