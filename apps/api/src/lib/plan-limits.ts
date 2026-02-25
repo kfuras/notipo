@@ -12,7 +12,7 @@ const PLAN_CONFIG: Record<string, PlanLimits> = {
     postsPerMonth: 5,
     featuredImages: false,
     webhooks: false,
-    pollIntervalSeconds: 900, // 15 minutes
+    pollIntervalSeconds: 300, // 5 minutes
   },
   PRO: {
     postsPerMonth: null,
