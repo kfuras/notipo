@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { config } from "../config.js";
 
 interface JobUpdateEvent {
   tenantId: string;
@@ -12,6 +13,15 @@ export async function eventsRoutes(app: FastifyInstance) {
   /** GET /api/events — SSE stream of job updates scoped to the authenticated tenant */
   app.get("/api/events", async (request, reply) => {
     const tenantId = request.tenant.id;
+
+    // CORS headers must be set manually because reply.hijack() bypasses Fastify's response pipeline
+    const origin = request.headers.origin;
+    const allowed = config.FRONTEND_URL
+      ? [config.FRONTEND_URL, "http://localhost:3001"]
+      : null;
+    if (origin && (!allowed || allowed.includes(origin))) {
+      reply.raw.setHeader("Access-Control-Allow-Origin", origin);
+    }
 
     reply.raw.setHeader("Content-Type", "text/event-stream");
     reply.raw.setHeader("Cache-Control", "no-cache");
@@ -33,10 +43,10 @@ export async function eventsRoutes(app: FastifyInstance) {
 
     app.eventBus.on("job:update", onJobUpdate);
 
-    // Keep-alive ping every 30 seconds
+    // Keep-alive ping every 15 seconds (Render and some proxies have short idle timeouts)
     const keepAlive = setInterval(() => {
       reply.raw.write(": ping\n\n");
-    }, 30_000);
+    }, 15_000);
 
     // Cleanup on disconnect
     request.raw.on("close", () => {
