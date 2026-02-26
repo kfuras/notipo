@@ -7,7 +7,7 @@ services:
     dockerContext: .
     plan: starter
     healthCheckPath: /health
-    preDeployCommand: cd apps/api && npx prisma migrate deploy && npx prisma db seed
+    preDeployCommand: npx prisma migrate deploy && npx prisma db seed
     disk:
       name: uploads
       mountPath: /app/apps/api/uploads
@@ -43,6 +43,6 @@ services:
 
 databases:
   - name: notipo-db
-    plan: basic-256
+    plan: basic-256mb
     databaseName: notipo
     postgresMajorVersion: "16"
