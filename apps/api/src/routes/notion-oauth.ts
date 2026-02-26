@@ -34,12 +34,12 @@ export async function notionOAuthRoutes(app: FastifyInstance) {
 
     if (query.error) {
       log.warn({ error: query.error }, "Notion OAuth error");
-      return reply.redirect(`${frontendUrl}/admin/settings?notion_oauth=error&reason=${encodeURIComponent(query.error)}`);
+      return reply.redirect(`${frontendUrl}/admin?notion_oauth=error&reason=${encodeURIComponent(query.error)}`);
     }
 
     const { code, state } = query;
     if (!code || !state) {
-      return reply.redirect(`${frontendUrl}/admin/settings?notion_oauth=error&reason=missing_params`);
+      return reply.redirect(`${frontendUrl}/admin?notion_oauth=error&reason=missing_params`);
     }
 
     // Verify HMAC-signed state and extract tenant ID
@@ -47,7 +47,7 @@ export async function notionOAuthRoutes(app: FastifyInstance) {
     try {
       tenantId = verifyState(state);
     } catch {
-      return reply.redirect(`${frontendUrl}/admin/settings?notion_oauth=error&reason=invalid_state`);
+      return reply.redirect(`${frontendUrl}/admin?notion_oauth=error&reason=invalid_state`);
     }
 
     // Exchange authorization code for access token
@@ -72,7 +72,7 @@ export async function notionOAuthRoutes(app: FastifyInstance) {
       if (!tokenRes.ok) {
         const err = await tokenRes.text();
         log.error({ status: tokenRes.status, body: err }, "Notion token exchange failed");
-        return reply.redirect(`${frontendUrl}/admin/settings?notion_oauth=error&reason=token_exchange_failed`);
+        return reply.redirect(`${frontendUrl}/admin?notion_oauth=error&reason=token_exchange_failed`);
       }
 
       const tokenData = (await tokenRes.json()) as {
@@ -121,10 +121,10 @@ export async function notionOAuthRoutes(app: FastifyInstance) {
       });
 
       log.info({ tenantId, workspaceId: tokenData.workspace_id }, "Notion OAuth completed");
-      return reply.redirect(`${frontendUrl}/admin/settings?notion_oauth=success`);
+      return reply.redirect(`${frontendUrl}/admin?notion_oauth=success`);
     } catch (err) {
       log.error({ err }, "Notion OAuth callback error");
-      return reply.redirect(`${frontendUrl}/admin/settings?notion_oauth=error&reason=internal_error`);
+      return reply.redirect(`${frontendUrl}/admin?notion_oauth=error&reason=internal_error`);
     }
   });
 }
