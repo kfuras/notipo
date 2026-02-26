@@ -27,7 +27,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-const navItems = [
+const tenantNavItems = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { title: "Posts", href: "/admin/posts", icon: FileText },
   { title: "Categories", href: "/admin/categories", icon: FolderTree },
@@ -45,10 +45,13 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { email, isAdmin, impersonating, logout } = useAuth();
 
+  // Admin without impersonation: only show admin items
+  const showTenantNav = !isAdmin || impersonating;
+
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
-        <Link href="/admin" className="flex items-center gap-2">
+        <Link href={isAdmin && !impersonating ? "/admin/tenants" : "/admin"} className="flex items-center gap-2">
           <LogoIcon className="w-7 h-7" />
           <span className="font-semibold text-lg">Notipo</span>
         </Link>
@@ -59,29 +62,31 @@ export function AppSidebar() {
         )}
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={
-                      item.href === "/admin"
-                        ? pathname === "/admin"
-                        : pathname.startsWith(item.href)
-                    }
-                  >
-                    <Link href={item.href}>
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {showTenantNav && (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {tenantNavItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={
+                        item.href === "/admin"
+                          ? pathname === "/admin"
+                          : pathname.startsWith(item.href)
+                      }
+                    >
+                      <Link href={item.href}>
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
         {isAdmin && (
           <SidebarGroup>
             <SidebarGroupContent>

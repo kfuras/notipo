@@ -14,7 +14,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 
-const navItems = [
+const tenantNavItems = [
   { title: "Home", href: "/admin", icon: LayoutDashboard },
   { title: "Posts", href: "/admin/posts", icon: FileText },
   { title: "Categories", href: "/admin/categories", icon: FolderTree },
@@ -28,9 +28,14 @@ const adminItem = { title: "Tenants", href: "/admin/tenants", icon: Users };
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { isAdmin } = useAuth();
+  const { isAdmin, impersonating } = useAuth();
 
-  const items = isAdmin ? [...navItems, adminItem] : navItems;
+  // Admin without impersonation: only show Tenants
+  const items = isAdmin && !impersonating
+    ? [adminItem]
+    : isAdmin && impersonating
+      ? [...tenantNavItems, adminItem]
+      : tenantNavItems;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background md:hidden">

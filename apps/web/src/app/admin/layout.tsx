@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { AppSidebar } from "@/components/admin/app-sidebar";
 import { BottomNav } from "@/components/admin/bottom-nav";
@@ -37,14 +37,22 @@ function ImpersonationBanner() {
 }
 
 function AdminShell({ children }: { children: React.ReactNode }) {
-  const { apiKey, isLoading } = useAuth();
+  const { apiKey, isLoading, isAdmin, impersonating } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isLoading && !apiKey) {
       router.replace("/auth/login");
     }
   }, [apiKey, isLoading, router]);
+
+  // Admin without impersonation: redirect to tenants page (tenant routes won't work)
+  useEffect(() => {
+    if (!isLoading && isAdmin && !impersonating && !pathname.startsWith("/admin/tenants")) {
+      router.replace("/admin/tenants");
+    }
+  }, [isLoading, isAdmin, impersonating, pathname, router]);
 
   if (isLoading || !apiKey) {
     return (
