@@ -8,14 +8,17 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 export function useEventSource(
   onEvent: (event: string, data: unknown) => void,
 ) {
-  const { apiKey } = useAuth();
+  const { apiKey, impersonating } = useAuth();
   const callbackRef = useRef(onEvent);
   callbackRef.current = onEvent;
 
   useEffect(() => {
     if (!apiKey) return;
 
-    const url = `${API_BASE}/api/events?token=${encodeURIComponent(apiKey)}`;
+    let url = `${API_BASE}/api/events?token=${encodeURIComponent(apiKey)}`;
+    if (impersonating?.tenantId) {
+      url += `&impersonateTenant=${encodeURIComponent(impersonating.tenantId)}`;
+    }
     const es = new EventSource(url);
 
     es.addEventListener("job_update", (e) => {
@@ -32,5 +35,5 @@ export function useEventSource(
     };
 
     return () => es.close();
-  }, [apiKey]);
+  }, [apiKey, impersonating?.tenantId]);
 }

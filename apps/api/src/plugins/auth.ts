@@ -38,13 +38,41 @@ async function auth(app: FastifyInstance) {
       return reply.unauthorized("Missing x-api-key header");
     }
 
-    // Admin routes use the env API_KEY — no tenant context
-    if (request.url.startsWith("/api/admin")) {
-      if (apiKey !== config.API_KEY) {
-        return reply.unauthorized("Invalid admin API key");
-      }
+    // Admin API key — supports both /api/admin/* and tenant impersonation
+    if (apiKey === config.API_KEY) {
       request.isAdmin = true;
+
+      // Pure admin routes — no tenant context needed
+      if (request.url.startsWith("/api/admin")) {
+        return;
+      }
+
+      // Impersonation: admin can access tenant routes via X-Impersonate-Tenant header or query param
+      const impersonateTenantId =
+        (request.headers["x-impersonate-tenant"] as string | undefined) ||
+        (request.query as Record<string, string>)["impersonateTenant"];
+
+      if (!impersonateTenantId) {
+        return reply.unauthorized("Admin key requires X-Impersonate-Tenant header for tenant routes");
+      }
+
+      const tenant = await app.prisma.tenant.findUnique({
+        where: { id: impersonateTenantId },
+        select: { id: true, slug: true },
+      });
+
+      if (!tenant) {
+        return reply.notFound("Tenant not found");
+      }
+
+      request.tenant = tenant;
+      request.user = { id: "admin", email: "admin", role: "ADMIN" };
       return;
+    }
+
+    // Non-admin admin routes — reject
+    if (request.url.startsWith("/api/admin")) {
+      return reply.unauthorized("Invalid admin API key");
     }
 
     // All other routes: look up user by API key in the DB

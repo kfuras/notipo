@@ -1,9 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useApi } from "@/hooks/use-api";
-import { useAuth } from "@/lib/auth-context";
-import { api, apiUpload } from "@/lib/api-client";
+import { useApi, useApiCall } from "@/hooks/use-api";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -41,13 +39,12 @@ function getPreviewUrl(backgroundImage: string | null): string | null {
 
 function CategoryImageCell({
   category,
-  apiKey,
   onUpdate,
 }: {
   category: ApiCategory;
-  apiKey: string;
   onUpdate: () => void;
 }) {
+  const { call, upload } = useApiCall();
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -59,7 +56,7 @@ function CategoryImageCell({
     if (!file) return;
     setUploading(true);
     try {
-      await apiUpload(`/api/categories/${category.id}/background-image`, file, { apiKey });
+      await upload(`/api/categories/${category.id}/background-image`, file);
       onUpdate();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Upload failed");
@@ -71,9 +68,8 @@ function CategoryImageCell({
 
   async function handleRemove() {
     try {
-      await api(`/api/categories/${category.id}/background-image`, {
+      await call(`/api/categories/${category.id}/background-image`, {
         method: "DELETE",
-        apiKey,
       });
       onUpdate();
       setOpen(false);
@@ -153,7 +149,7 @@ function CategoryImageCell({
 }
 
 export default function CategoriesPage() {
-  const { apiKey } = useAuth();
+  const { call } = useApiCall();
   const { data: catData, loading, refetch } = useApi<ApiListResponse<ApiCategory>>("/api/categories");
   const { data: tagData } = useApi<ApiListResponse<ApiTag>>("/api/tags");
   const [syncing, setSyncing] = useState(false);
@@ -162,10 +158,9 @@ export default function CategoriesPage() {
   const tags = tagData?.data ?? [];
 
   async function syncFromWP() {
-    if (!apiKey) return;
     setSyncing(true);
     try {
-      await api("/api/categories/sync", { method: "POST", apiKey });
+      await call("/api/categories/sync", { method: "POST" });
       await refetch();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Sync failed");
@@ -217,12 +212,11 @@ export default function CategoriesPage() {
                     <TableRow key={cat.id}>
                       <TableCell className="font-medium">{cat.name}</TableCell>
                       <TableCell className="text-muted-foreground">
-                        {cat.wpCategoryId ?? "—"}
+                        {cat.wpCategoryId ?? "\u2014"}
                       </TableCell>
                       <TableCell>
                         <CategoryImageCell
                           category={cat}
-                          apiKey={apiKey!}
                           onUpdate={refetch}
                         />
                       </TableCell>
@@ -256,7 +250,7 @@ export default function CategoriesPage() {
                     <TableRow key={tag.id}>
                       <TableCell className="font-medium">{tag.name}</TableCell>
                       <TableCell className="text-muted-foreground">
-                        {tag.wpTagId ?? "—"}
+                        {tag.wpTagId ?? "\u2014"}
                       </TableCell>
                     </TableRow>
                   ))

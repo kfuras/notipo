@@ -7,6 +7,34 @@ import { AppSidebar } from "@/components/admin/app-sidebar";
 import { BottomNav } from "@/components/admin/bottom-nav";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Toaster } from "sonner";
+import { X } from "lucide-react";
+
+function ImpersonationBanner() {
+  const { impersonating, stopImpersonating } = useAuth();
+  const router = useRouter();
+
+  if (!impersonating) return null;
+
+  function exit() {
+    stopImpersonating();
+    router.push("/admin/tenants");
+  }
+
+  return (
+    <div className="bg-amber-600 text-white text-sm px-4 py-2 flex items-center justify-between">
+      <span>
+        Viewing as <strong>{impersonating.tenantName}</strong>
+      </span>
+      <button
+        onClick={exit}
+        className="flex items-center gap-1 rounded px-2 py-0.5 hover:bg-amber-700 transition-colors"
+      >
+        <X className="w-3.5 h-3.5" />
+        Exit
+      </button>
+    </div>
+  );
+}
 
 function AdminShell({ children }: { children: React.ReactNode }) {
   const { apiKey, isLoading } = useAuth();
@@ -30,6 +58,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
+        <ImpersonationBanner />
         <header className="hidden md:flex h-12 items-center border-b px-4">
           <SidebarTrigger />
         </header>

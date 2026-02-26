@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useApi } from "@/hooks/use-api";
-import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api-client";
+import { useApi, useApiCall } from "@/hooks/use-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +30,6 @@ interface SettingsData {
 }
 
 export default function SettingsPage() {
-  const { apiKey } = useAuth();
   const { data: settings, refetch } = useApi<SettingsData>("/api/settings");
   const cfg = settings?.data;
 
@@ -42,9 +39,9 @@ export default function SettingsPage() {
 
       {cfg && (
         <>
-          <NotionCard cfg={cfg.notion} apiKey={apiKey!} onUpdate={refetch} />
-          <WordPressCard cfg={cfg.wordpress} apiKey={apiKey!} onUpdate={refetch} />
-          <CodeHighlighterCard current={cfg.codeHighlighter} apiKey={apiKey!} onUpdate={refetch} />
+          <NotionCard cfg={cfg.notion} onUpdate={refetch} />
+          <WordPressCard cfg={cfg.wordpress} onUpdate={refetch} />
+          <CodeHighlighterCard current={cfg.codeHighlighter} onUpdate={refetch} />
         </>
       )}
     </div>
@@ -53,23 +50,19 @@ export default function SettingsPage() {
 
 function NotionCard({
   cfg,
-  apiKey,
   onUpdate,
 }: {
   cfg: SettingsData["data"]["notion"];
-  apiKey: string;
   onUpdate: () => void;
 }) {
+  const { call } = useApiCall();
   const [showManual, setShowManual] = useState(false);
   const [token, setToken] = useState("");
   const [dbId, setDbId] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function connectOAuth() {
-    const res = await api<{ data: { url: string } }>(
-      "/api/notion/oauth/authorize",
-      { apiKey },
-    );
+    const res = await call<{ data: { url: string } }>("/api/notion/oauth/authorize");
     window.location.href = res.data.url;
   }
 
@@ -77,9 +70,8 @@ function NotionCard({
     e.preventDefault();
     setSaving(true);
     try {
-      await api("/api/settings/notion", {
+      await call("/api/settings/notion", {
         method: "PUT",
-        apiKey,
         body: { accessToken: token, databaseId: dbId || undefined },
       });
       setToken("");
@@ -95,7 +87,7 @@ function NotionCard({
 
   async function disconnect() {
     if (!confirm("Disconnect Notion?")) return;
-    await api("/api/settings/notion", { method: "DELETE", apiKey });
+    await call("/api/settings/notion", { method: "DELETE" });
     onUpdate();
   }
 
@@ -181,13 +173,12 @@ function NotionCard({
 
 function WordPressCard({
   cfg,
-  apiKey,
   onUpdate,
 }: {
   cfg: SettingsData["data"]["wordpress"];
-  apiKey: string;
   onUpdate: () => void;
 }) {
+  const { call } = useApiCall();
   const [editing, setEditing] = useState(false);
   const [siteUrl, setSiteUrl] = useState("");
   const [username, setUsername] = useState("");
@@ -198,9 +189,8 @@ function WordPressCard({
     e.preventDefault();
     setSaving(true);
     try {
-      await api("/api/settings/wordpress", {
+      await call("/api/settings/wordpress", {
         method: "PUT",
-        apiKey,
         body: { siteUrl, username, appPassword },
       });
       setEditing(false);
@@ -214,7 +204,7 @@ function WordPressCard({
 
   async function disconnect() {
     if (!confirm("Disconnect WordPress?")) return;
-    await api("/api/settings/wordpress", { method: "DELETE", apiKey });
+    await call("/api/settings/wordpress", { method: "DELETE" });
     onUpdate();
   }
 
@@ -296,13 +286,12 @@ function WordPressCard({
 
 function CodeHighlighterCard({
   current,
-  apiKey,
   onUpdate,
 }: {
   current: string;
-  apiKey: string;
   onUpdate: () => void;
 }) {
+  const { call } = useApiCall();
   const options = [
     { value: "WP_CODE", label: "WordPress Code Block" },
     { value: "HIGHLIGHT_JS", label: "Highlight.js" },
@@ -311,9 +300,8 @@ function CodeHighlighterCard({
   ];
 
   async function change(value: string) {
-    await api("/api/settings", {
+    await call("/api/settings", {
       method: "PATCH",
-      apiKey,
       body: { codeHighlighter: value },
     });
     onUpdate();

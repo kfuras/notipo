@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useApi } from "@/hooks/use-api";
-import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api-client";
+import { useApi, useApiCall } from "@/hooks/use-api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +39,7 @@ function PlanBadge({ plan, trialDaysRemaining }: { plan: string; trialDaysRemain
 }
 
 export default function BillingPage() {
-  const { apiKey } = useAuth();
+  const { call } = useApiCall();
   const { data: billing, loading, refetch } = useApi<BillingData>("/api/billing");
   const [actionLoading, setActionLoading] = useState(false);
   const searchParams = useSearchParams();
@@ -66,9 +64,8 @@ export default function BillingPage() {
   const handlePortal = async () => {
     setActionLoading(true);
     try {
-      const res = await api<{ data: { url: string } }>("/api/billing/portal", {
+      const res = await call<{ data: { url: string } }>("/api/billing/portal", {
         method: "POST",
-        apiKey: apiKey!,
       });
       window.location.href = res.data.url;
     } catch (err) {

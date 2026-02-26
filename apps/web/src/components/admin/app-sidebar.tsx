@@ -43,7 +43,7 @@ const adminItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { email, isAdmin, logout } = useAuth();
+  const { email, isAdmin, impersonating, logout } = useAuth();
 
   return (
     <Sidebar>
@@ -52,6 +52,11 @@ export function AppSidebar() {
           <LogoIcon className="w-7 h-7" />
           <span className="font-semibold text-lg">Notipo</span>
         </Link>
+        {impersonating && (
+          <p className="text-xs text-amber-400 mt-1 truncate">
+            Viewing: {impersonating.tenantName}
+          </p>
+        )}
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

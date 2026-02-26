@@ -3,9 +3,8 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { useApi } from "@/hooks/use-api";
-import { useAuth } from "@/lib/auth-context";
-import { api, ApiError } from "@/lib/api-client";
+import { useApi, useApiCall } from "@/hooks/use-api";
+import { ApiError } from "@/lib/api-client";
 import { useEventSource } from "@/hooks/use-event-source";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -44,7 +43,7 @@ interface LiveJob {
 }
 
 export default function DashboardPage() {
-  const { apiKey } = useAuth();
+  const { call } = useApiCall();
   const { data: postsData, refetch: refetchPosts } = useApi<ApiListResponse<ApiPost>>("/api/posts");
   const { data: jobsData, refetch: refetchJobs } = useApi<{ data: ApiJob[]; total: number }>(
     "/api/jobs?limit=5",
@@ -116,7 +115,7 @@ export default function DashboardPage() {
     setSyncing(true);
     setSyncError(null);
     try {
-      await api("/api/sync-now", { method: "POST", apiKey: apiKey ?? undefined });
+      await call("/api/sync-now", { method: "POST" });
     } catch (err) {
       setSyncError(err instanceof ApiError ? err.message : "Sync failed");
     } finally {
@@ -153,7 +152,7 @@ export default function DashboardPage() {
       </div>
 
       {needsSetup && settings && (
-        <SetupCard settings={settings} apiKey={apiKey!} onUpdate={refetchSettings} />
+        <SetupCard settings={settings} onUpdate={refetchSettings} />
       )}
       {allSetUp && canSyncNow && (
         <SetupCompleteCard onSyncNow={handleSyncNow} syncing={syncing || liveJobs.size > 0} />
@@ -427,11 +426,9 @@ function OAuthResultHandler({ onSettingsUpdate }: { onSettingsUpdate: () => void
 
 function SetupCard({
   settings,
-  apiKey,
   onUpdate,
 }: {
   settings: SettingsData;
-  apiKey: string;
   onUpdate: () => void;
 }) {
   const notion = settings.data.notion;
@@ -476,10 +473,10 @@ function SetupCard({
           <TemplateStepContent onDone={markTemplateDone} />
         </SetupStepRow>
         <SetupStepRow number={2} title="Connect Notion" done={notion.configured} active={activeStep === 2}>
-          <NotionStepContent cfg={notion} apiKey={apiKey} onDone={onUpdate} />
+          <NotionStepContent cfg={notion} onDone={onUpdate} />
         </SetupStepRow>
         <SetupStepRow number={3} title="Connect WordPress" done={wordpress.configured} active={activeStep === 3}>
-          <WordPressStepContent apiKey={apiKey} onDone={onUpdate} />
+          <WordPressStepContent onDone={onUpdate} />
         </SetupStepRow>
       </CardContent>
     </Card>
@@ -554,13 +551,12 @@ function TemplateStepContent({ onDone }: { onDone: () => void }) {
 
 function NotionStepContent({
   cfg,
-  apiKey,
   onDone,
 }: {
   cfg: SettingsData["data"]["notion"];
-  apiKey: string;
   onDone: () => void;
 }) {
+  const { call } = useApiCall();
   const [showManual, setShowManual] = useState(!cfg.oauthAvailable);
   const [token, setToken] = useState("");
   const [dbId, setDbId] = useState("");
@@ -568,7 +564,7 @@ function NotionStepContent({
   const [error, setError] = useState<string | null>(null);
 
   async function connectOAuth() {
-    const res = await api<{ data: { url: string } }>("/api/notion/oauth/authorize", { apiKey });
+    const res = await call<{ data: { url: string } }>("/api/notion/oauth/authorize");
     window.location.href = res.data.url;
   }
 
@@ -577,9 +573,8 @@ function NotionStepContent({
     setSaving(true);
     setError(null);
     try {
-      await api("/api/settings/notion", {
+      await call("/api/settings/notion", {
         method: "PUT",
-        apiKey,
         body: { accessToken: token, databaseId: dbId || undefined },
       });
       onDone();
@@ -644,12 +639,11 @@ function NotionStepContent({
 }
 
 function WordPressStepContent({
-  apiKey,
   onDone,
 }: {
-  apiKey: string;
   onDone: () => void;
 }) {
+  const { call } = useApiCall();
   const [siteUrl, setSiteUrl] = useState("");
   const [username, setUsername] = useState("");
   const [appPassword, setAppPassword] = useState("");
@@ -661,9 +655,8 @@ function WordPressStepContent({
     setSaving(true);
     setError(null);
     try {
-      await api("/api/settings/wordpress", {
+      await call("/api/settings/wordpress", {
         method: "PUT",
-        apiKey,
         body: { siteUrl, username, appPassword },
       });
       onDone();

@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useApi } from "@/hooks/use-api";
+import { useApi, useApiCall } from "@/hooks/use-api";
 import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +29,8 @@ interface AccountData {
 }
 
 export default function AccountPage() {
-  const { apiKey, logout } = useAuth();
+  const { logout } = useAuth();
+  const { call } = useApiCall();
   const { data: account, loading } = useApi<AccountData>("/api/account");
   const router = useRouter();
 
@@ -57,10 +57,9 @@ export default function AccountPage() {
     }
     setPasswordLoading(true);
     try {
-      await api("/api/account/password", {
+      await call("/api/account/password", {
         method: "PATCH",
         body: { currentPassword, newPassword },
-        apiKey: apiKey!,
       });
       toast.success("Password updated successfully");
       setCurrentPassword("");
@@ -76,10 +75,9 @@ export default function AccountPage() {
   const handleDeleteAccount = async () => {
     setDeleteLoading(true);
     try {
-      await api("/api/account", {
+      await call("/api/account", {
         method: "DELETE",
         body: { password: deletePassword },
-        apiKey: apiKey!,
       });
       logout();
       router.push("/");

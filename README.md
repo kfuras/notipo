@@ -382,5 +382,5 @@ Pages available:
 - **Settings** — Notion connection (OAuth or manual token, with disconnect button), WordPress credentials (with disconnect button), trigger statuses, code highlighter (radio buttons)
 - **Billing** — current plan badge (Free/Pro/Trial with days remaining), upgrade button (→ Stripe Checkout), manage subscription button (→ Stripe Customer Portal), usage stats (posts, featured images, webhooks)
 - **Account** — user profile (email, role, organization), change password, delete account (OWNER deletion removes the entire tenant and all data)
-- **Tenants** — admin-only page for creating and managing tenants (API key shown once on creation)
+- **Tenants** — admin-only page for creating and managing tenants (API key shown once on creation). Click "View" on any tenant to impersonate them — browse their dashboard, posts, categories, settings, and jobs as if you were that customer. An amber banner shows which tenant you're viewing with an "Exit" button to return to the tenant list.
 

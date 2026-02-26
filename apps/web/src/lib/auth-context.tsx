@@ -10,11 +10,17 @@ import {
 } from "react";
 import { api, ApiError } from "./api-client";
 
+interface Impersonation {
+  tenantId: string;
+  tenantName: string;
+}
+
 interface AuthState {
   apiKey: string | null;
   email: string | null;
   isAdmin: boolean;
   isLoading: boolean;
+  impersonating: Impersonation | null;
 }
 
 interface AuthContextValue extends AuthState {
@@ -22,9 +28,13 @@ interface AuthContextValue extends AuthState {
   register: (email: string, password: string, blogName: string) => Promise<void>;
   setApiKey: (key: string) => Promise<void>;
   logout: () => void;
+  impersonate: (tenantId: string, tenantName: string) => void;
+  stopImpersonating: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+const IMPERSONATION_KEY = "notipo_impersonating";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
@@ -32,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: null,
     isAdmin: false,
     isLoading: true,
+    impersonating: null,
   });
 
   const detectAdmin = useCallback(async (key: string) => {
@@ -47,9 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem("notipo_api_key");
     const email = localStorage.getItem("notipo_email");
+    const imp = sessionStorage.getItem(IMPERSONATION_KEY);
+    const impersonating = imp ? (JSON.parse(imp) as Impersonation) : null;
     if (stored) {
       detectAdmin(stored).then((isAdmin) => {
-        setState({ apiKey: stored, email, isAdmin, isLoading: false });
+        setState({ apiKey: stored, email, isAdmin, isLoading: false, impersonating });
       });
     } else {
       setState((s) => ({ ...s, isLoading: false }));
@@ -60,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (key: string) => {
       const isAdmin = await detectAdmin(key);
       localStorage.setItem("notipo_api_key", key);
-      setState({ apiKey: key, email: null, isAdmin, isLoading: false });
+      setState({ apiKey: key, email: null, isAdmin, isLoading: false, impersonating: null });
     },
     [detectAdmin],
   );
@@ -79,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email,
         isAdmin,
         isLoading: false,
+        impersonating: null,
       });
     },
     [detectAdmin],
@@ -98,12 +112,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem("notipo_api_key");
     localStorage.removeItem("notipo_email");
-    setState({ apiKey: null, email: null, isAdmin: false, isLoading: false });
+    sessionStorage.removeItem(IMPERSONATION_KEY);
+    setState({ apiKey: null, email: null, isAdmin: false, isLoading: false, impersonating: null });
+  }, []);
+
+  const impersonate = useCallback((tenantId: string, tenantName: string) => {
+    const imp = { tenantId, tenantName };
+    sessionStorage.setItem(IMPERSONATION_KEY, JSON.stringify(imp));
+    setState((s) => ({ ...s, impersonating: imp }));
+  }, []);
+
+  const stopImpersonating = useCallback(() => {
+    sessionStorage.removeItem(IMPERSONATION_KEY);
+    setState((s) => ({ ...s, impersonating: null }));
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ ...state, login, register, setApiKey, logout }}
+      value={{ ...state, login, register, setApiKey, logout, impersonate, stopImpersonating }}
     >
       {children}
     </AuthContext.Provider>

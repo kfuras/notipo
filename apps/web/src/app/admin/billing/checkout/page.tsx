@@ -6,8 +6,7 @@ import {
   EmbeddedCheckoutProvider,
   EmbeddedCheckout,
 } from "@stripe/react-stripe-js";
-import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api-client";
+import { useApiCall } from "@/hooks/use-api";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 
@@ -19,16 +18,14 @@ interface CheckoutResponse {
 }
 
 export default function CheckoutPage() {
-  const { apiKey } = useAuth();
+  const { call } = useApiCall();
   const [stripe, setStripe] = useState<Promise<Stripe | null> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!apiKey) return;
-    api<CheckoutResponse>("/api/billing/checkout", {
+    call<CheckoutResponse>("/api/billing/checkout", {
       method: "POST",
-      apiKey,
     })
       .then((res) => {
         setStripe(loadStripe(res.data.publishableKey));
@@ -37,7 +34,7 @@ export default function CheckoutPage() {
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Failed to initialize checkout");
       });
-  }, [apiKey]);
+  }, [call]);
 
   if (error) {
     return (

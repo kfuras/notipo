@@ -17,12 +17,14 @@ export async function api<T>(
     method?: string;
     body?: unknown;
     apiKey?: string;
+    impersonateTenant?: string;
   } = {},
 ): Promise<T> {
-  const { method = "GET", body, apiKey } = options;
+  const { method = "GET", body, apiKey, impersonateTenant } = options;
 
   const headers: Record<string, string> = {};
   if (apiKey) headers["x-api-key"] = apiKey;
+  if (impersonateTenant) headers["x-impersonate-tenant"] = impersonateTenant;
   if (body) headers["Content-Type"] = "application/json";
 
   const res = await fetch(`${API_BASE}${path}`, {
@@ -43,10 +45,11 @@ export async function api<T>(
 export async function apiUpload<T>(
   path: string,
   file: File,
-  options: { apiKey?: string } = {},
+  options: { apiKey?: string; impersonateTenant?: string } = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
   if (options.apiKey) headers["x-api-key"] = options.apiKey;
+  if (options.impersonateTenant) headers["x-impersonate-tenant"] = options.impersonateTenant;
 
   const formData = new FormData();
   formData.append("file", file);

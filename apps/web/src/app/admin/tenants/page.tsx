@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useApi } from "@/hooks/use-api";
+import { useRouter } from "next/navigation";
+import { useApi, useApiCall } from "@/hooks/use-api";
 import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Eye } from "lucide-react";
 
 interface TenantRow {
   id: string;
@@ -47,17 +48,24 @@ interface CreateResult {
 }
 
 export default function TenantsPage() {
-  const { apiKey } = useAuth();
+  const { impersonate } = useAuth();
+  const { call } = useApiCall();
   const { data, refetch } = useApi<{ data: TenantRow[] }>("/api/admin/tenants");
   const [open, setOpen] = useState(false);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const router = useRouter();
 
   const tenants = data?.data ?? [];
 
   async function deleteTenant(id: string, name: string) {
     if (!confirm(`Delete tenant "${name}"? This cannot be undone.`)) return;
-    await api(`/api/admin/tenants/${id}`, { method: "DELETE", apiKey: apiKey! });
+    await call(`/api/admin/tenants/${id}`, { method: "DELETE" });
     refetch();
+  }
+
+  function viewTenant(tenant: TenantRow) {
+    impersonate(tenant.id, tenant.name);
+    router.push("/admin");
   }
 
   return (
@@ -76,7 +84,6 @@ export default function TenantsPage() {
               <CreatedKeyDisplay apiKey={createdKey} onClose={() => { setOpen(false); setCreatedKey(null); }} />
             ) : (
               <CreateTenantForm
-                apiKey={apiKey!}
                 onCreated={(key) => { setCreatedKey(key); refetch(); }}
               />
             )}
@@ -92,17 +99,27 @@ export default function TenantsPage() {
           tenants.map((t) => (
             <div key={t.id} className="rounded-md border p-3 space-y-2">
               <div className="flex items-start justify-between gap-2">
-                <div>
+                <button onClick={() => viewTenant(t)} className="text-left">
                   <p className="font-medium text-sm">{t.name}</p>
                   <p className="text-xs text-muted-foreground">{t.users[0]?.email ?? t.slug}</p>
+                </button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => viewTenant(t)}
+                  >
+                    <Eye className="size-3" />
+                    View
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => deleteTenant(t.id, t.name)}
+                  >
+                    Delete
+                  </Button>
                 </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => deleteTenant(t.id, t.name)}
-                >
-                  Delete
-                </Button>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 <Badge variant={t.plan === "PRO" ? "default" : "secondary"}>{t.plan}</Badge>
@@ -142,9 +159,9 @@ export default function TenantsPage() {
               </TableRow>
             ) : (
               tenants.map((t) => (
-                <TableRow key={t.id}>
+                <TableRow key={t.id} className="cursor-pointer" onClick={() => viewTenant(t)}>
                   <TableCell className="font-medium">{t.name}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{t.users[0]?.email ?? "—"}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{t.users[0]?.email ?? "\u2014"}</TableCell>
                   <TableCell>
                     <Badge variant={t.plan === "PRO" ? "default" : "secondary"} className="text-xs">
                       {t.plan}
@@ -162,13 +179,23 @@ export default function TenantsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => deleteTenant(t.id, t.name)}
-                    >
-                      Delete
-                    </Button>
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => viewTenant(t)}
+                      >
+                        <Eye className="size-3 mr-1" />
+                        View
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => deleteTenant(t.id, t.name)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -181,12 +208,11 @@ export default function TenantsPage() {
 }
 
 function CreateTenantForm({
-  apiKey,
   onCreated,
 }: {
-  apiKey: string;
   onCreated: (apiKey: string) => void;
 }) {
+  const { call } = useApiCall();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [email, setEmail] = useState("");
@@ -196,9 +222,8 @@ function CreateTenantForm({
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await api<CreateResult>("/api/admin/tenants", {
+      const res = await call<CreateResult>("/api/admin/tenants", {
         method: "POST",
-        apiKey,
         body: { name, slug, ownerEmail: email },
       });
       const key = res.data.users[0]?.apiKey;
