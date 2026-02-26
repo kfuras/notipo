@@ -99,7 +99,7 @@ export default function BillingPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="w-5 h-5" />
-            Current Plan
+            {isPro ? "Pro Plan" : "Free Plan"}
           </CardTitle>
           <CardDescription>
             {isPro
