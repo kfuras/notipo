@@ -26,6 +26,24 @@ const authRateLimit = {
 export async function accountRoutes(app: FastifyInstance) {
   /** GET /api/account — current user + tenant info */
   app.get("/api/account", async (request) => {
+    // Admin impersonation uses a synthetic user — return tenant owner instead
+    if (request.user.id === "admin") {
+      const owner = await app.prisma.user.findFirst({
+        where: { tenantId: request.tenant.id, role: "OWNER" },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true,
+          tenant: {
+            select: { name: true, slug: true, plan: true, createdAt: true },
+          },
+        },
+      });
+      return { data: owner };
+    }
+
     const user = await app.prisma.user.findUniqueOrThrow({
       where: { id: request.user.id },
       select: {
