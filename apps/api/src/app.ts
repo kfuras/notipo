@@ -51,7 +51,12 @@ export async function buildApp() {
   });
 
   // Plugins
-  await app.register(cors);
+  await app.register(cors, {
+    origin: config.FRONTEND_URL
+      ? [config.FRONTEND_URL, "http://localhost:3001"]
+      : true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  });
   await app.register(sensible);
   await app.register(rateLimit, {
     global: false,

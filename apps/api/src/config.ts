@@ -20,6 +20,7 @@ const envSchema = z.object({
   STRIPE_PRO_PRICE_ID: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().optional().default("noreply@notipo.com"),
+  FRONTEND_URL: z.string().url().optional(),
 });
 
 export type Config = z.infer<typeof envSchema>;

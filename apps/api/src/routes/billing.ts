@@ -71,9 +71,7 @@ export async function billingRoutes(app: FastifyInstance) {
       });
     }
 
-    const baseUrl = config.NOTION_OAUTH_REDIRECT_URI
-      ? new URL(config.NOTION_OAUTH_REDIRECT_URI).origin
-      : "https://notipo.com";
+    const baseUrl = config.FRONTEND_URL || "https://notipo.com";
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -111,9 +109,7 @@ export async function billingRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "No billing account found. Please upgrade first." });
     }
 
-    const baseUrl = config.NOTION_OAUTH_REDIRECT_URI
-      ? new URL(config.NOTION_OAUTH_REDIRECT_URI).origin
-      : "https://notipo.com";
+    const baseUrl = config.FRONTEND_URL || "https://notipo.com";
 
     const session = await stripe.billingPortal.sessions.create({
       customer: tenant.stripeCustomerId,

@@ -1,0 +1,48 @@
+services:
+  # Fastify API — Docker web service with persistent disk for uploads
+  - type: web
+    name: notipo-api
+    runtime: docker
+    dockerfilePath: apps/api/Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /health
+    preDeployCommand: cd apps/api && npx prisma migrate deploy && npx prisma db seed
+    disk:
+      name: uploads
+      mountPath: /app/apps/api/uploads
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: notipo-db
+          property: connectionString
+      - key: FRONTEND_URL
+        value: https://notipo.com
+      - key: NODE_ENV
+        value: production
+      # Set these manually in the Render dashboard:
+      # ENCRYPTION_KEY, API_KEY, ALLOW_SIGNUP,
+      # NOTION_OAUTH_CLIENT_ID, NOTION_OAUTH_CLIENT_SECRET, NOTION_OAUTH_REDIRECT_URI,
+      # NOTION_WEBHOOK_SECRET, STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY,
+      # STRIPE_WEBHOOK_SECRET, STRIPE_PRO_PRICE_ID, RESEND_API_KEY
+
+  # Next.js static site — free CDN hosting
+  - type: web
+    name: notipo-web
+    runtime: static
+    buildCommand: npm ci && npm run build -w @notipo/shared && npm run build -w @notipo/web
+    staticPublishPath: apps/web/out
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://api.notipo.com
+
+databases:
+  - name: notipo-db
+    plan: basic-256
+    databaseName: notipo
+    postgresMajorVersion: "16"
