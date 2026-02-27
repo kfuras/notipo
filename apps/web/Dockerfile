@@ -19,4 +19,8 @@ RUN npm run build --workspace=@notipo/web
 FROM nginx:alpine
 COPY --from=builder /app/apps/web/out /usr/share/nginx/html
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/web/nginx.conf.template /etc/nginx/templates/default.conf.template
 EXPOSE 80
+# When API_INTERNAL_URL is set (Railway), envsubst renders the template at startup.
+# When unset (VPS/Render), the plain nginx.conf is used as-is.
+CMD ["sh", "-c", "if [ -n \"$API_INTERNAL_URL\" ]; then envsubst '${API_INTERNAL_URL}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf; fi && nginx -g 'daemon off;'"]
