@@ -25,12 +25,14 @@ export const metadata: Metadata = {
     siteName: "Notipo",
     type: "website",
     locale: "en_US",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Notipo - Publish from Notion to WordPress" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Notipo - Publish from Notion to WordPress, automatically",
     description:
       "Publish blog posts from Notion to WordPress with automated image handling, featured image generation, and SEO optimization.",
+    images: ["/og.png"],
   },
   alternates: {
     canonical: "https://notipo.com",
