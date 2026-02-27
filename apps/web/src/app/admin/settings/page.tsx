@@ -60,6 +60,7 @@ function NotionCard({
   const [token, setToken] = useState("");
   const [dbId, setDbId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function connectOAuth() {
     const res = await call<{ data: { url: string } }>("/api/notion/oauth/authorize");
@@ -69,6 +70,7 @@ function NotionCard({
   async function saveManual(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    setError(null);
     try {
       await call("/api/settings/notion", {
         method: "PUT",
@@ -79,7 +81,7 @@ function NotionCard({
       setShowManual(false);
       onUpdate();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed");
+      setError(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -145,6 +147,9 @@ function NotionCard({
                     onChange={(e) => setDbId(e.target.value)}
                   />
                 </div>
+                {error && (
+                  <p className="text-sm text-destructive">{error}</p>
+                )}
                 <div className="flex gap-2">
                   <Button type="submit" size="sm" disabled={saving}>
                     {saving ? "Saving..." : "Save"}
@@ -184,10 +189,12 @@ function WordPressCard({
   const [username, setUsername] = useState("");
   const [appPassword, setAppPassword] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    setError(null);
     try {
       await call("/api/settings/wordpress", {
         method: "PUT",
@@ -196,7 +203,7 @@ function WordPressCard({
       setEditing(false);
       onUpdate();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed");
+      setError(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -262,6 +269,9 @@ function WordPressCard({
                 required
               />
             </div>
+            {error && (
+              <p className="text-sm text-destructive">{error}</p>
+            )}
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={saving}>
                 {saving ? "Saving..." : "Save"}
