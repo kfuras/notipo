@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useApi } from "@/hooks/use-api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -58,9 +59,26 @@ export default function PostsPage() {
       {/* Mobile card list */}
       <div className="md:hidden space-y-2">
         {loading ? (
-          <p className="text-center text-muted-foreground py-4">Loading...</p>
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-md border p-3 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+          ))
         ) : posts.length === 0 ? (
-          <p className="text-center text-muted-foreground py-4">No posts</p>
+          <div className="text-center py-12">
+            <svg className="mx-auto h-8 w-8 text-muted-foreground/50 mb-3" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+            <p className="text-sm text-muted-foreground">No posts yet</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Posts will appear here after syncing from Notion</p>
+          </div>
         ) : (
           posts.map((post) => (
             <div key={post.id} className="rounded-md border p-3 space-y-1">
@@ -96,15 +114,22 @@ export default function PostsPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground">
-                  Loading...
-                </TableCell>
-              </TableRow>
+              Array.from({ length: 4 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-10" /></TableCell>
+                </TableRow>
+              ))
             ) : posts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground">
-                  No posts
+                <TableCell colSpan={4} className="text-center py-12">
+                  <svg className="mx-auto h-8 w-8 text-muted-foreground/50 mb-3" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
+                  <p className="text-sm text-muted-foreground">No posts yet</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Posts will appear here after syncing from Notion</p>
                 </TableCell>
               </TableRow>
             ) : (

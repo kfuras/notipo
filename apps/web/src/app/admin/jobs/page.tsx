@@ -5,6 +5,7 @@ import { useApi } from "@/hooks/use-api";
 import { useEventSource } from "@/hooks/use-event-source";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -13,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { toast } from "sonner";
 import type { JobStatus } from "@notipo/shared";
 
 interface JobRow {
@@ -87,6 +89,15 @@ export default function JobsPage() {
         next.set(payload.jobId, { steps });
         return next;
       });
+    } else if (payload?.jobId && payload.status === "FAILED") {
+      setLiveSteps((prev) => {
+        const next = new Map(prev);
+        next.delete(payload.jobId);
+        return next;
+      });
+      toast.error(`Job failed: ${jobTypeLabel(payload.type)}`, {
+        description: "Check the jobs page for details",
+      });
     } else if (payload?.jobId && payload.status !== "RUNNING") {
       setLiveSteps((prev) => {
         const next = new Map(prev);
@@ -102,13 +113,16 @@ export default function JobsPage() {
   const jobs = data?.data ?? [];
   const total = data?.total ?? 0;
 
-  function fmtTime(iso: string) {
-    return new Date(iso).toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  function timeAgo(iso: string) {
+    const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (seconds < 60) return "just now";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }
 
   function getJobStep(job: JobRow): string | null {
@@ -145,9 +159,24 @@ export default function JobsPage() {
       {/* Mobile card list */}
       <div className="md:hidden space-y-2">
         {loading ? (
-          <p className="text-center text-muted-foreground py-4">Loading...</p>
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-md border p-3 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+          ))
         ) : jobs.length === 0 ? (
-          <p className="text-center text-muted-foreground py-4">No jobs</p>
+          <div className="text-center py-12">
+            <svg className="mx-auto h-8 w-8 text-muted-foreground/50 mb-3" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+            </svg>
+            <p className="text-sm text-muted-foreground">No jobs yet</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Jobs are created when posts sync from Notion</p>
+          </div>
         ) : (
           jobs.map((job) => {
             const step = getJobStep(job);
@@ -189,7 +218,7 @@ export default function JobsPage() {
                   <p className="text-xs text-violet-400">{step}</p>
                 )}
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{fmtTime(job.createdAt)}</span>
+                  <span>{timeAgo(job.createdAt)}</span>
                 </div>
                 {job.error && (
                   <p className="text-xs text-destructive">{job.error}</p>
@@ -215,15 +244,24 @@ export default function JobsPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
-                  Loading...
-                </TableCell>
-              </TableRow>
+              Array.from({ length: 4 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-14" /></TableCell>
+                  <TableCell />
+                </TableRow>
+              ))
             ) : jobs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
-                  No jobs
+                <TableCell colSpan={6} className="text-center py-12">
+                  <svg className="mx-auto h-8 w-8 text-muted-foreground/50 mb-3" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                  </svg>
+                  <p className="text-sm text-muted-foreground">No jobs yet</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Jobs are created when posts sync from Notion</p>
                 </TableCell>
               </TableRow>
             ) : (
@@ -254,7 +292,7 @@ export default function JobsPage() {
                       {step ?? "\u2014"}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {fmtTime(job.createdAt)}
+                      {timeAgo(job.createdAt)}
                     </TableCell>
                     <TableCell className="text-xs text-destructive truncate max-w-[200px]">
                       {job.error ?? ""}
