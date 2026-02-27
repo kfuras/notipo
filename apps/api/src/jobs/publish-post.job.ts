@@ -4,6 +4,7 @@ import type { EventEmitter } from "events";
 import { PublishService } from "../services/publish.service.js";
 import { NotionService } from "../services/notion.service.js";
 import { CredentialService } from "../services/credential.service.js";
+import { sendWebhook } from "../lib/webhook.js";
 import { logger } from "../lib/logger.js";
 
 interface PublishPostPayload {
@@ -98,6 +99,13 @@ export async function registerPublishPostJob(boss: PgBoss, prisma: PrismaClient,
       } catch (notionErr) {
         log.warn({ error: notionErr }, "Failed to reset Notion status after publish failure");
       }
+
+      // Send webhook notification
+      const failedPost = await prisma.post.findFirst({
+        where: { id: postId, tenantId },
+        select: { title: true },
+      });
+      sendWebhook(prisma, tenantId, { jobType: "PUBLISH_POST", status: "FAILED", postTitle: failedPost?.title, error: message });
 
       throw error;
     }

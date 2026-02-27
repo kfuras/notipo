@@ -26,6 +26,7 @@ interface SettingsData {
       siteUrl: string | null;
     };
     codeHighlighter: string;
+    webhookUrl: string | null;
   };
 }
 
@@ -42,6 +43,7 @@ export default function SettingsPage() {
           <NotionCard cfg={cfg.notion} onUpdate={refetch} />
           <WordPressCard cfg={cfg.wordpress} onUpdate={refetch} />
           <CodeHighlighterCard current={cfg.codeHighlighter} onUpdate={refetch} />
+          <WebhookCard current={cfg.webhookUrl} onUpdate={refetch} />
         </>
       )}
     </div>
@@ -358,6 +360,104 @@ function CodeHighlighterCard({
             </Button>
           ))}
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function WebhookCard({
+  current,
+  onUpdate,
+}: {
+  current: string | null;
+  onUpdate: () => void;
+}) {
+  const { call } = useApiCall();
+  const [url, setUrl] = useState(current ?? "");
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await call("/api/settings", {
+        method: "PATCH",
+        body: { webhookUrl: url },
+      });
+      setSuccess("Saved");
+      onUpdate();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function testWebhook() {
+    setTesting(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: "✅ Notipo webhook test — connection working!",
+          content: "✅ Notipo webhook test — connection working!",
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setSuccess("Test message sent!");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send test");
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Webhook Notifications</CardTitle>
+        <CardDescription>
+          Get notified in Slack or Discord when a sync or publish fails.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={save} className="space-y-3">
+          <div className="space-y-2">
+            <Label>Webhook URL</Label>
+            <Input
+              type="url"
+              placeholder="https://hooks.slack.com/services/..."
+              value={url}
+              onChange={(e) => { setUrl(e.target.value); setSuccess(null); }}
+            />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          {success && <p className="text-sm text-green-500">{success}</p>}
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" disabled={saving}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
+            {url && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={testing || !url}
+                onClick={testWebhook}
+              >
+                {testing ? "Sending..." : "Test"}
+              </Button>
+            )}
+          </div>
+        </form>
       </CardContent>
     </Card>
   );

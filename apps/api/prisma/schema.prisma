@@ -29,6 +29,9 @@ model Tenant {
   wpSiteUrl       String?
   codeHighlighter CodeHighlighter @default(PRISMATIC)
 
+  // Notifications
+  webhookUrl           String?
+
   // Billing
   plan                 Plan      @default(TRIAL)
   trialEndsAt          DateTime?

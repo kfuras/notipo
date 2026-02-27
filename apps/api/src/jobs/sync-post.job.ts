@@ -5,6 +5,7 @@ import { SyncService } from "../services/sync.service.js";
 import { NotionService } from "../services/notion.service.js";
 import { CredentialService } from "../services/credential.service.js";
 import { canSyncPost } from "../lib/plan-limits.js";
+import { sendWebhook } from "../lib/webhook.js";
 import { logger } from "../lib/logger.js";
 
 interface SyncPostPayload {
@@ -134,6 +135,13 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient, ev
       } catch (notionErr) {
         log.warn({ error: notionErr }, "Failed to reset Notion status after sync failure");
       }
+
+      // Send webhook notification
+      const failedPost = await prisma.post.findUnique({
+        where: { tenantId_notionPageId: { tenantId, notionPageId } },
+        select: { title: true },
+      });
+      sendWebhook(prisma, tenantId, { jobType: "SYNC_POST", status: "FAILED", postTitle: failedPost?.title, error: message });
 
       throw error; // pg-boss will retry
     }

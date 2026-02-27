@@ -29,6 +29,7 @@ const generalSettingsSchema = z.object({
   triggerStatus: z.string().optional(),
   publishTriggerStatus: z.string().optional(),
   updateTriggerStatus: z.string().optional(),
+  webhookUrl: z.string().url().or(z.literal("")).optional(),
 });
 
 export async function settingsRoutes(app: FastifyInstance) {
@@ -47,6 +48,7 @@ export async function settingsRoutes(app: FastifyInstance) {
         notionUpdateTriggerStatus: true,
         wpSiteUrl: true,
         codeHighlighter: true,
+        webhookUrl: true,
         plan: true,
         trialEndsAt: true,
       },
@@ -69,6 +71,7 @@ export async function settingsRoutes(app: FastifyInstance) {
           siteUrl: tenant.wpSiteUrl,
         },
         codeHighlighter: tenant.codeHighlighter,
+        webhookUrl: tenant.webhookUrl,
         plan: tenant.plan,
         effectivePlan: getEffectivePlan(tenant.plan, tenant.trialEndsAt),
         trialEndsAt: tenant.trialEndsAt?.toISOString() ?? null,
@@ -177,6 +180,7 @@ export async function settingsRoutes(app: FastifyInstance) {
         ...(body.triggerStatus !== undefined && { notionTriggerStatus: body.triggerStatus }),
         ...(body.publishTriggerStatus !== undefined && { notionPublishTriggerStatus: body.publishTriggerStatus }),
         ...(body.updateTriggerStatus !== undefined && { notionUpdateTriggerStatus: body.updateTriggerStatus }),
+        ...(body.webhookUrl !== undefined && { webhookUrl: body.webhookUrl || null }),
       },
     });
 
