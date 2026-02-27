@@ -1,6 +1,10 @@
 #!/bin/sh
 set -e
 
+echo "=== entrypoint.sh starting ==="
+echo "API_INTERNAL_URL=${API_INTERNAL_URL:-not set}"
+echo "PORT=${PORT:-not set}"
+
 if [ -n "$API_INTERNAL_URL" ]; then
     export NGINX_PORT=${PORT:-80}
 
@@ -17,7 +21,7 @@ if [ -n "$API_INTERNAL_URL" ]; then
     echo "DNS_RESOLVER: $DNS_RESOLVER"
 
     envsubst '${API_INTERNAL_URL} ${NGINX_PORT} ${DNS_RESOLVER}' \
-        < /etc/nginx/templates/default.conf.template \
+        < /etc/nginx/proxy.conf.template \
         > /etc/nginx/conf.d/default.conf
 
     echo "=== Generated nginx config ==="
