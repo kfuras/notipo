@@ -67,11 +67,6 @@ export async function notionWebhookRoutes(app: FastifyInstance) {
 
     const expected = `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}`;
 
-    log.info(
-      { signatureHeader: signature, expectedPrefix: expected.substring(0, 15), secretLength: secret.length },
-      "Webhook signature debug"
-    );
-
     try {
       const isValid = timingSafeEqual(
         Buffer.from(expected),
