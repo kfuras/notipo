@@ -217,6 +217,20 @@ export class SyncService {
     }
 
     if (needsNewDraft) {
+      // Guard: re-check DB for existing wpPostId to prevent duplicate WP drafts.
+      // A concurrent job or prior sync may have already created one.
+      const freshPost = await this.prisma.post.findUnique({
+        where: { tenantId_notionPageId: { tenantId, notionPageId } },
+        select: { wpPostId: true },
+      });
+      if (freshPost?.wpPostId) {
+        logger.warn({ tenantId, notionPageId, wpPostId: freshPost.wpPostId }, "Post already has a WP draft — aborting to prevent duplicate");
+        onStep?.("Updating Notion status…");
+        const existingWpUrl = `${wpCreds.siteUrl}/wp-admin/post.php?post=${freshPost.wpPostId}&action=edit`;
+        await notion.updatePageStatus(notionPageId, "Ready to Review", existingWpUrl);
+        return { postId, wpStatus: "draft", wasPublished: false };
+      }
+
       // Re-convert markdown → Gutenberg using the (possibly refreshed) finalMarkdown
       const wpContent = convertMarkdownToGutenberg(finalMarkdown, { highlighter });
 
