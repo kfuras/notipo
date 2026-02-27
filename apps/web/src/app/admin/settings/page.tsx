@@ -87,9 +87,11 @@ function NotionCard({
     }
   }
 
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+
   async function disconnect() {
-    if (!confirm("Disconnect Notion?")) return;
     await call("/api/settings/notion", { method: "DELETE" });
+    setConfirmDisconnect(false);
     onUpdate();
   }
 
@@ -119,9 +121,17 @@ function NotionCard({
                 <code className="text-xs">{cfg.databaseId}</code>
               </div>
             )}
-            <Button variant="destructive" size="sm" onClick={disconnect}>
-              Disconnect
-            </Button>
+            {confirmDisconnect ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Disconnect Notion?</span>
+                <Button variant="destructive" size="sm" onClick={disconnect}>Yes</Button>
+                <Button variant="ghost" size="sm" onClick={() => setConfirmDisconnect(false)}>Cancel</Button>
+              </div>
+            ) : (
+              <Button variant="destructive" size="sm" onClick={() => setConfirmDisconnect(true)}>
+                Disconnect
+              </Button>
+            )}
           </>
         ) : (
           <div className="space-y-3">
@@ -209,9 +219,11 @@ function WordPressCard({
     }
   }
 
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+
   async function disconnect() {
-    if (!confirm("Disconnect WordPress?")) return;
     await call("/api/settings/wordpress", { method: "DELETE" });
+    setConfirmDisconnect(false);
     onUpdate();
   }
 
@@ -232,14 +244,22 @@ function WordPressCard({
       </CardHeader>
       <CardContent>
         {cfg.configured && !editing ? (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-              Update
-            </Button>
-            <Button variant="destructive" size="sm" onClick={disconnect}>
-              Disconnect
-            </Button>
-          </div>
+          confirmDisconnect ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Disconnect WordPress?</span>
+              <Button variant="destructive" size="sm" onClick={disconnect}>Yes</Button>
+              <Button variant="ghost" size="sm" onClick={() => setConfirmDisconnect(false)}>Cancel</Button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                Update
+              </Button>
+              <Button variant="destructive" size="sm" onClick={() => setConfirmDisconnect(true)}>
+                Disconnect
+              </Button>
+            </div>
+          )
         ) : (
           <form onSubmit={save} className="space-y-3">
             <div className="space-y-2">
