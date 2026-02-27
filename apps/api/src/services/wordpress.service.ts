@@ -39,6 +39,12 @@ export class WordPressService {
     });
   }
 
+  /** Verify credentials by fetching the authenticated user profile. */
+  async testConnection(): Promise<{ id: number; name: string }> {
+    const { data } = await this.client.get("/users/me");
+    return { id: data.id, name: data.name };
+  }
+
   /** Create a draft post. */
   async createDraft(payload: WPPostPayload) {
     const response = await this.client.post("/posts", {

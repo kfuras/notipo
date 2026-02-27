@@ -104,7 +104,7 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient, ev
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      log.error({ error: message }, "Post sync failed");
+      log.error({ error: message }, `Post sync failed: ${message}`);
 
       await prisma.job.update({
         where: { id: dbJob.id },

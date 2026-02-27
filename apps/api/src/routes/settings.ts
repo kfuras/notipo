@@ -132,8 +132,20 @@ export async function settingsRoutes(app: FastifyInstance) {
   /** PUT /api/settings/wordpress — set WordPress credentials */
   app.put("/api/settings/wordpress", async (request, reply) => {
     const body = wordpressSettingsSchema.parse(request.body);
-    const credService = new CredentialService(app.prisma);
 
+    // Verify credentials before saving
+    const wp = new WordPressService(body);
+    try {
+      await wp.testConnection();
+    } catch (e) {
+      const status = (e as any)?.response?.status;
+      if (status === 401 || status === 403) {
+        return reply.code(400).send({ error: "Invalid WordPress credentials. Check your username and application password." });
+      }
+      return reply.code(400).send({ error: "Could not connect to WordPress. Check your site URL." });
+    }
+
+    const credService = new CredentialService(app.prisma);
     await credService.setWordPressCredentials(request.tenant.id, {
       siteUrl: body.siteUrl,
       username: body.username,
@@ -142,7 +154,6 @@ export async function settingsRoutes(app: FastifyInstance) {
 
     // Auto-sync WP categories into the DB (and push to Notion if connected)
     try {
-      const wp = new WordPressService(body);
       const notionCreds = await credService.getNotionCredentials(request.tenant.id);
       const tenant = await app.prisma.tenant.findUniqueOrThrow({ where: { id: request.tenant.id }, select: { notionDatabaseId: true } });
       const notion = notionCreds ? new NotionService(notionCreds.accessToken) : undefined;
