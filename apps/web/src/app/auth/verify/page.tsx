@@ -1,9 +1,10 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -42,6 +43,8 @@ function SetDarkMeta() {
 
 function VerifyContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const auth = useAuth();
   const token = searchParams.get("token");
 
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
@@ -54,16 +57,24 @@ function VerifyContent() {
       return;
     }
 
-    api("/api/auth/verify-email", {
+    api<{ data?: { apiKey: string; user: { email: string } } }>("/api/auth/verify-email", {
       method: "POST",
       body: { token },
     })
-      .then(() => setStatus("success"))
+      .then((res) => {
+        if (res?.data?.apiKey) {
+          auth.setApiKey(res.data.apiKey);
+          localStorage.setItem("notipo_email", res.data.user.email);
+          router.replace("/admin");
+        } else {
+          setStatus("success");
+        }
+      })
       .catch((err) => {
         setStatus("error");
         setError(err instanceof Error ? err.message : "Verification failed");
       });
-  }, [token]);
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (status === "loading") {
     return (
@@ -118,9 +129,11 @@ export default function VerifyEmailPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Suspense>
-              <VerifyContent />
-            </Suspense>
+            <AuthProvider>
+              <Suspense>
+                <VerifyContent />
+              </Suspense>
+            </AuthProvider>
           </CardContent>
         </Card>
       </div>

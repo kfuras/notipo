@@ -209,13 +209,21 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.badRequest("Invalid or expired verification link.");
     }
 
-    await app.prisma.user.update({
+    const user = await app.prisma.user.update({
       where: { id: result.userId },
       data: { emailVerified: true },
+      include: { tenant: { select: { id: true, name: true, slug: true } } },
     });
 
     log.info({ userId: result.userId }, "Email verified");
-    return { message: "Email verified successfully." };
+    return {
+      message: "Email verified successfully.",
+      data: {
+        apiKey: user.apiKey,
+        user: { id: user.id, email: user.email, name: user.name },
+        tenant: user.tenant,
+      },
+    };
   });
 
   /** POST /api/auth/resend-verification — resend verification email */
