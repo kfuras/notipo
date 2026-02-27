@@ -26,5 +26,17 @@ export async function registerAllJobs(boss: PgBoss, prisma: PrismaClient, eventB
   await registerPollNotionJob(boss, prisma);
   await registerCheckTrialsJob(boss, prisma);
 
+  // Periodically fail jobs stuck in RUNNING for more than 5 minutes
+  setInterval(async () => {
+    const cutoff = new Date(Date.now() - 5 * 60 * 1000);
+    const stuck = await prisma.job.updateMany({
+      where: { status: "RUNNING", startedAt: { lt: cutoff } },
+      data: { status: "FAILED", error: "Timed out after 5 minutes" },
+    });
+    if (stuck.count > 0) {
+      logger.warn({ count: stuck.count }, "Marked timed-out RUNNING jobs as FAILED");
+    }
+  }, 60 * 1000);
+
   logger.info("All job handlers registered");
 }
