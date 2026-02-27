@@ -99,10 +99,12 @@ export default function BillingPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="w-5 h-5" />
-            {isPro ? "Pro Plan" : "Free Plan"}
+            {b.plan === "TRIAL" ? "Trial" : isPro ? "Pro Plan" : "Free Plan"}
           </CardTitle>
           <CardDescription>
-            {isPro
+            {b.plan === "TRIAL"
+              ? `You have Pro features for ${b.trialDaysRemaining} more day${b.trialDaysRemaining !== 1 ? "s" : ""}. Upgrade to keep them.`
+              : isPro
               ? "You have access to all features."
               : "Upgrade to Pro for unlimited posts, featured images, and instant sync."}
           </CardDescription>
