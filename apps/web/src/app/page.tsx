@@ -8,10 +8,12 @@ import { Pricing } from "@/components/landing/pricing";
 import { Faq } from "@/components/landing/faq";
 import { Cta } from "@/components/landing/cta";
 import { Footer } from "@/components/landing/footer";
+import { JsonLd } from "@/components/landing/json-ld";
 
 export default function Home() {
   return (
     <>
+      <JsonLd />
       <Nav />
       <main className="overflow-hidden">
         <Hero />
