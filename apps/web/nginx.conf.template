@@ -1,5 +1,5 @@
 server {
-    listen 80;
+    listen ${NGINX_PORT};
     root /usr/share/nginx/html;
     index index.html;
 

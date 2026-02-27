@@ -22,5 +22,6 @@ COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY apps/web/nginx.conf.template /etc/nginx/templates/default.conf.template
 EXPOSE 80
 # When API_INTERNAL_URL is set (Railway), envsubst renders the template at startup.
+# NGINX_PORT defaults to 80, but Railway sets PORT dynamically.
 # When unset (VPS/Render), the plain nginx.conf is used as-is.
-CMD ["sh", "-c", "if [ -n \"$API_INTERNAL_URL\" ]; then envsubst '${API_INTERNAL_URL}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf; fi && nginx -g 'daemon off;'"]
+CMD ["sh", "-c", "if [ -n \"$API_INTERNAL_URL\" ]; then export NGINX_PORT=${PORT:-80}; envsubst '${API_INTERNAL_URL} ${NGINX_PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf; fi && nginx -g 'daemon off;'"]
