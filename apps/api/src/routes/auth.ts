@@ -151,6 +151,15 @@ export async function authRoutes(app: FastifyInstance) {
     const verifyUrl = `${getBaseUrl()}/auth/verify?token=${token}`;
     await sendEmail(body.email, "Verify your email — Notipo", verificationEmailHtml(verifyUrl));
 
+    // Notify admin of new signup (fire-and-forget)
+    if (config.ADMIN_NOTIFY_EMAIL) {
+      sendEmail(
+        config.ADMIN_NOTIFY_EMAIL,
+        `New signup: ${body.blogName}`,
+        `<p><strong>${body.name}</strong> (${body.email}) just registered with blog name <strong>${body.blogName}</strong>.</p>`,
+      ).catch(() => {});
+    }
+
     return reply.code(201).send({
       message: "Check your email to verify your account.",
       needsVerification: true,
