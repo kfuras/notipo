@@ -2,6 +2,8 @@ import type PgBoss from "pg-boss";
 import type { PrismaClient } from "@prisma/client";
 import type { EventEmitter } from "events";
 import { SyncService } from "../services/sync.service.js";
+import { NotionService } from "../services/notion.service.js";
+import { CredentialService } from "../services/credential.service.js";
 import { canSyncPost } from "../lib/plan-limits.js";
 import { logger } from "../lib/logger.js";
 
@@ -120,6 +122,18 @@ export async function registerSyncPostJob(boss: PgBoss, prisma: PrismaClient, ev
           data: { status: "FAILED" },
         })
         .catch(() => undefined); // post may not exist yet if failure was early
+
+      // Reset Notion status so the page isn't stuck on "Syncing"
+      try {
+        const credService = new CredentialService(prisma);
+        const creds = await credService.getNotionCredentials(tenantId);
+        if (creds) {
+          const notion = new NotionService(creds.accessToken);
+          await notion.updatePageStatus(notionPageId, "Sync Failed");
+        }
+      } catch (notionErr) {
+        log.warn({ error: notionErr }, "Failed to reset Notion status after sync failure");
+      }
 
       throw error; // pg-boss will retry
     }

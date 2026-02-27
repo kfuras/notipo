@@ -9,6 +9,7 @@ import { registerSyncPostJob } from "./sync-post.job.js";
 import { registerPublishPostJob } from "./publish-post.job.js";
 import { registerPollNotionJob } from "./poll-notion.job.js";
 import { registerCheckTrialsJob } from "./check-trials.job.js";
+import { resetNotionStatusForFailedJobs } from "./reset-notion-status.js";
 import { logger } from "../lib/logger.js";
 
 export async function registerAllJobs(boss: PgBoss, prisma: PrismaClient, eventBus: EventEmitter) {
@@ -19,6 +20,7 @@ export async function registerAllJobs(boss: PgBoss, prisma: PrismaClient, eventB
   });
   if (stale.count > 0) {
     logger.warn({ count: stale.count }, "Marked stale RUNNING jobs as FAILED on startup");
+    await resetNotionStatusForFailedJobs(prisma);
   }
 
   await registerSyncPostJob(boss, prisma, eventBus);
@@ -35,6 +37,7 @@ export async function registerAllJobs(boss: PgBoss, prisma: PrismaClient, eventB
     });
     if (stuck.count > 0) {
       logger.warn({ count: stuck.count }, "Marked timed-out RUNNING jobs as FAILED");
+      await resetNotionStatusForFailedJobs(prisma);
     }
   }, 60 * 1000);
 
