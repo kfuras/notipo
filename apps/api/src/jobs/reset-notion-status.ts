@@ -3,40 +3,56 @@ import { NotionService } from "../services/notion.service.js";
 import { CredentialService } from "../services/credential.service.js";
 import { logger } from "../lib/logger.js";
 
+const STUCK_STATUSES: Record<string, string> = {
+  Syncing: "Sync Failed",
+  Publishing: "Publish Failed",
+};
+
 /**
- * Find posts stuck in non-terminal status (SYNCED/IMAGES_PROCESSING/UPDATE_PENDING)
- * whose latest job FAILED, and reset their Notion status to "Sync Failed"
- * so the page isn't stuck on "Syncing" forever.
+ * Find recently failed jobs and reset Notion pages stuck on
+ * "Syncing" or "Publishing" to their respective failure status.
  */
 export async function resetNotionStatusForFailedJobs(prisma: PrismaClient) {
-  // Find FAILED sync jobs from the last hour that might have left Notion stuck
   const failedJobs = await prisma.job.findMany({
     where: {
-      type: "SYNC_POST",
+      type: { in: ["SYNC_POST", "PUBLISH_POST"] },
       status: "FAILED",
       startedAt: { gt: new Date(Date.now() - 60 * 60 * 1000) },
     },
-    select: { tenantId: true, payload: true },
+    select: { tenantId: true, type: true, postId: true, payload: true },
   });
 
   const credService = new CredentialService(prisma);
 
   for (const job of failedJobs) {
+    // Get notionPageId from payload (sync jobs) or from the post (publish jobs)
+    let notionPageId: string | undefined;
     const payload = job.payload as { notionPageId?: string } | null;
-    if (!payload?.notionPageId) continue;
+    if (payload?.notionPageId) {
+      notionPageId = payload.notionPageId;
+    } else if (job.postId) {
+      const post = await prisma.post.findFirst({
+        where: { id: job.postId, tenantId: job.tenantId },
+        select: { notionPageId: true },
+      });
+      notionPageId = post?.notionPageId ?? undefined;
+    }
+    if (!notionPageId) continue;
 
     try {
       const creds = await credService.getNotionCredentials(job.tenantId);
       if (!creds) continue;
 
       const notion = new NotionService(creds.accessToken);
-      // Only reset if page is still stuck on "Syncing"
-      const page = await notion.getPageProperties(payload.notionPageId);
+      const page = await notion.getPageProperties(notionPageId);
       const props = (page as Record<string, unknown>).properties as Record<string, unknown>;
       const statusProp = props?.Status as { select?: { name?: string } } | undefined;
-      if (statusProp?.select?.name === "Syncing") {
-        await notion.updatePageStatus(payload.notionPageId, "Sync Failed");
-        logger.info({ tenantId: job.tenantId, notionPageId: payload.notionPageId }, "Reset Notion status from Syncing to Sync Failed");
+      const currentStatus = statusProp?.select?.name;
+
+      const failedStatus = currentStatus ? STUCK_STATUSES[currentStatus] : undefined;
+      if (failedStatus) {
+        await notion.updatePageStatus(notionPageId, failedStatus);
+        logger.info({ tenantId: job.tenantId, notionPageId, from: currentStatus, to: failedStatus }, "Reset stuck Notion status");
       }
     } catch (err) {
       logger.warn({ tenantId: job.tenantId, err }, "Failed to reset Notion status for failed job");

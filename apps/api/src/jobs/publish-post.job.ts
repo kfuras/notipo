@@ -2,6 +2,8 @@ import type PgBoss from "pg-boss";
 import type { PrismaClient } from "@prisma/client";
 import type { EventEmitter } from "events";
 import { PublishService } from "../services/publish.service.js";
+import { NotionService } from "../services/notion.service.js";
+import { CredentialService } from "../services/credential.service.js";
 import { logger } from "../lib/logger.js";
 
 interface PublishPostPayload {
@@ -78,6 +80,24 @@ export async function registerPublishPostJob(boss: PgBoss, prisma: PrismaClient,
           data: { status: "FAILED" },
         })
         .catch(() => undefined);
+
+      // Reset Notion status so the page isn't stuck on "Publishing"
+      try {
+        const post = await prisma.post.findFirst({
+          where: { id: postId, tenantId },
+          select: { notionPageId: true },
+        });
+        if (post?.notionPageId) {
+          const credService = new CredentialService(prisma);
+          const creds = await credService.getNotionCredentials(tenantId);
+          if (creds) {
+            const notion = new NotionService(creds.accessToken);
+            await notion.updatePageStatus(post.notionPageId, "Publish Failed");
+          }
+        }
+      } catch (notionErr) {
+        log.warn({ error: notionErr }, "Failed to reset Notion status after publish failure");
+      }
 
       throw error;
     }
