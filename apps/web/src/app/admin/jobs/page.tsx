@@ -237,7 +237,6 @@ export default function JobsPage() {
               <TableHead>Type</TableHead>
               <TableHead>Post</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Step</TableHead>
               <TableHead>Time</TableHead>
               <TableHead>Error</TableHead>
             </TableRow>
@@ -249,14 +248,13 @@ export default function JobsPage() {
                   <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-14" /></TableCell>
                   <TableCell />
                 </TableRow>
               ))
             ) : jobs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12">
+                <TableCell colSpan={5} className="text-center py-12">
                   <svg className="mx-auto h-8 w-8 text-muted-foreground/50 mb-3" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
                   </svg>
@@ -265,9 +263,7 @@ export default function JobsPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              jobs.map((job) => {
-                const step = getJobStep(job);
-                return (
+              jobs.map((job) => (
                   <TableRow key={job.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -288,9 +284,6 @@ export default function JobsPage() {
                         {job.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
-                      {step ?? "\u2014"}
-                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {timeAgo(job.createdAt)}
                     </TableCell>
@@ -298,8 +291,7 @@ export default function JobsPage() {
                       {job.error ?? ""}
                     </TableCell>
                   </TableRow>
-                );
-              })
+                ))
             )}
           </TableBody>
         </Table>

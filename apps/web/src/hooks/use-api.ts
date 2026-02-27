@@ -10,9 +10,9 @@ export function useApi<T>(path: string | null) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(!!path);
 
-  const refetch = useCallback(async () => {
+  const fetchData = useCallback(async (isInitial: boolean) => {
     if (!path || !apiKey) return;
-    setLoading(true);
+    if (isInitial) setLoading(true);
     setError(null);
     try {
       const res = await api<T>(path, {
@@ -23,13 +23,15 @@ export function useApi<T>(path: string | null) {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Request failed");
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   }, [path, apiKey, impersonating?.tenantId]);
 
+  const refetch = useCallback(() => fetchData(false), [fetchData]);
+
   useEffect(() => {
-    refetch();
-  }, [refetch]);
+    fetchData(true);
+  }, [fetchData]);
 
   return { data, error, loading, refetch };
 }
