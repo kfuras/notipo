@@ -186,4 +186,30 @@ export async function settingsRoutes(app: FastifyInstance) {
 
     return reply.code(204).send();
   });
+
+  /** POST /api/settings/test-webhook — send a test message to the saved webhook URL */
+  app.post("/api/settings/test-webhook", async (request, reply) => {
+    const tenant = await app.prisma.tenant.findUniqueOrThrow({
+      where: { id: request.tenant.id },
+      select: { webhookUrl: true },
+    });
+
+    if (!tenant.webhookUrl) {
+      return reply.code(400).send({ error: "No webhook URL configured" });
+    }
+
+    const message = "✅ Notipo webhook test — connection working!";
+    const res = await fetch(tenant.webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: message, content: message }),
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!res.ok) {
+      return reply.code(400).send({ error: `Webhook returned HTTP ${res.status}` });
+    }
+
+    return reply.code(204).send();
+  });
 }

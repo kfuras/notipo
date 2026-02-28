@@ -403,15 +403,7 @@ function WebhookCard({
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: "✅ Notipo webhook test — connection working!",
-          content: "✅ Notipo webhook test — connection working!",
-        }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await call("/api/settings/test-webhook", { method: "POST" });
       setSuccess("Test message sent!");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send test");
