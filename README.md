@@ -10,7 +10,9 @@ You write posts in Notion. When you change the status to your configured trigger
 
 Notion webhooks (configured on the public integration) are the primary trigger — events are delivered automatically for all OAuth users. A safety-net poll runs every 5 minutes by default (`POLL_INTERVAL_SECONDS`) to catch any missed events. WordPress categories and tags are automatically imported and pushed to your Notion database as dropdown options, so you never need to look up numeric IDs or type names manually. After syncing, the wp-admin edit URL is written back to the `WordPress Link` property on the Notion page (published posts get the live frontend URL instead). Rank Math SEO metadata (focus keyword, title, description) is applied during sync so it's ready for review in the WordPress editor. All credentials are stored encrypted in the database — never in plain environment variables. A "Sync Now" button on the dashboard lets you trigger an instant poll without waiting for the 60-second interval.
 
-New users can sign up with email and password via the admin UI. A verification email is sent — users must click the link to verify their email before they can sign in. Once verified, an onboarding stepper guides them through connecting Notion and WordPress. Self-service signup can be disabled by setting `ALLOW_SIGNUP=false`.
+If a sync or publish job fails, the Notion status is automatically reset so you can retry. Jobs stuck in a running state for more than 5 minutes are auto-failed. You can configure a Slack or Discord webhook URL in Settings to receive push notifications when jobs fail. WordPress credentials are validated on save — the app tests the connection before storing them.
+
+New users can sign up with email and password via the admin UI. A verification email is sent — clicking the link verifies the email and logs the user in automatically. An onboarding stepper then guides them through connecting Notion and WordPress. Self-service signup can be disabled by setting `ALLOW_SIGNUP=false`. Set `ADMIN_NOTIFY_EMAIL` to receive an email when new users sign up.
 
 ---
 
@@ -72,6 +74,7 @@ cp .env.example .env
 |----------|-------------|
 | `RESEND_API_KEY` | API key from [resend.com](https://resend.com) |
 | `RESEND_FROM_EMAIL` | Sender address (default: `noreply@notipo.com`) — verify your domain in Resend |
+| `ADMIN_NOTIFY_EMAIL` | (Optional) Email address to notify when new users sign up |
 
 **Stripe billing** (optional — enables subscription upgrades):
 
@@ -365,7 +368,7 @@ Billing requires three Stripe env vars: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SEC
 
 ## Admin UI
 
-The admin UI is a Next.js app (shadcn/ui + Tailwind) served at `/admin`. The login page has three tabs: **Sign in** (email + password), **Register** (creates a new tenant with a 7-day Pro trial — only shown when `ALLOW_SIGNUP=true`), and **API Key** (direct key entry). Registration requires email verification — a verification link is sent and must be clicked before the user can sign in. Unverified login attempts show a "verify your email" message with a resend option. The key is stored in `localStorage` and auto-detected as admin or tenant-level by probing the tenants endpoint.
+The admin UI is a Next.js app (shadcn/ui + Tailwind) served at `/admin`. The login page has three tabs: **Sign in** (email + password), **Register** (creates a new tenant with a 7-day Pro trial — only shown when `ALLOW_SIGNUP=true`), and **API Key** (direct key entry). Registration requires email verification — a verification link is sent, and clicking it verifies the email and logs the user in automatically. Unverified login attempts show a "verify your email" message with a resend option. The key is stored in `localStorage` and auto-detected as admin or tenant-level by probing the tenants endpoint.
 
 New tenants see an inline onboarding stepper on the dashboard that guides them through three steps: duplicating the Notion template, connecting Notion (OAuth or manual token), and connecting WordPress. Each step expands inline with its own form — no bouncing to the settings page. The stepper shows a progress bar and disappears once all steps are complete. OAuth redirects return to the dashboard with a toast notification.
 
@@ -379,8 +382,10 @@ Pages available:
 - **Posts** — full post list with status badges, WordPress links, category display
 - **Categories & Tags** — auto-imported from WordPress, synced every 60 seconds. Manual sync available via button. Upload custom background images per category for featured image generation (supports PNG, JPEG, WebP up to 5 MB). Click a thumbnail to preview, replace, or remove the image.
 - **Jobs** — background job activity log with error display, status filtering, and clickable WP links
-- **Settings** — Notion connection (OAuth or manual token, with disconnect button), WordPress credentials (with disconnect button), trigger statuses, code highlighter (radio buttons)
+- **Settings** — Notion connection (OAuth or manual token, with disconnect button), WordPress credentials (validated on save, with disconnect button), trigger statuses, code highlighter (radio buttons), webhook notifications (Slack/Discord URL with test button)
 - **Billing** — current plan badge (Free/Pro/Trial with days remaining), upgrade button (→ Stripe Checkout), manage subscription button (→ Stripe Customer Portal), usage stats (posts, featured images, webhooks)
 - **Account** — user profile (email, role, organization), change password, delete account (OWNER deletion removes the entire tenant and all data)
 - **Tenants** — admin-only page for creating and managing tenants (API key shown once on creation). Click "View" on any tenant to impersonate them — browse their dashboard, posts, categories, settings, and jobs as if you were that customer. An amber banner shows which tenant you're viewing with an "Exit" button to return to the tenant list.
+
+The marketing site also includes a **Blog** section (`/blog`) with SEO-optimized posts (JSON-LD structured data, per-post OG images, RSS feed at `/blog/feed.xml`), a **Feedback** page (`/feedback`) using Web3Forms, and a custom 404 page.
 

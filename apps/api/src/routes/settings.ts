@@ -198,7 +198,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "No webhook URL configured" });
     }
 
-    const message = "✅ Notipo webhook test — connection working!";
+    const message = "<!channel> ✅ Notipo webhook test — connection working!";
     const res = await fetch(tenant.webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
