@@ -86,6 +86,15 @@ export default function DashboardPage() {
         next.delete(payload.jobId);
         return next;
       });
+
+      if (payload.status === "COMPLETED") {
+        const label = payload.type === "PUBLISH_POST" ? "Published" : "Synced";
+        toast.success(`${label} successfully`);
+      } else if (payload.status === "FAILED") {
+        const label = payload.type === "PUBLISH_POST" ? "Publish" : "Sync";
+        toast.error(`${label} failed — check Jobs for details`);
+      }
+
       refetchJobs();
       refetchPosts();
     }
