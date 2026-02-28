@@ -9,6 +9,7 @@ import {
   CreditCard,
   UserCog,
   Users,
+  LogOut,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -28,7 +29,7 @@ const adminItem = { title: "Tenants", href: "/admin/tenants", icon: Users };
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { isAdmin, impersonating } = useAuth();
+  const { isAdmin, impersonating, logout } = useAuth();
 
   // Admin without impersonation: only show Tenants
   const items = isAdmin && !impersonating
@@ -60,6 +61,13 @@ export function BottomNav() {
             </Link>
           );
         })}
+        <button
+          onClick={logout}
+          className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[10px] text-muted-foreground"
+        >
+          <LogOut className="w-5 h-5" />
+          <span>Logout</span>
+        </button>
       </div>
     </nav>
   );
