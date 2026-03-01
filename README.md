@@ -84,6 +84,14 @@ cp .env.example .env
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret (`whsec_...`) |
 | `STRIPE_PRO_PRICE_ID` | Stripe Price ID for the Pro plan (`price_...`) |
 
+**Web frontend (Next.js)** — build-time variables:
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_PLAUSIBLE_SRC` | Plausible analytics script URL (optional — no tracking if unset) |
+
+These are inlined at build time. In Docker, they're passed as build args via `docker-compose.prod.yml`. On Railway, set them as regular env vars.
+
 **Required for VPS deployment only:**
 
 | Variable | Description |
