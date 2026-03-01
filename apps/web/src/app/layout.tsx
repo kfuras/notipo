@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { DM_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/landing/theme-provider";
 import "./globals.css";
@@ -46,6 +47,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
+      <head>
+        {process.env.NEXT_PUBLIC_PLAUSIBLE_SRC && (
+          <>
+            <Script
+              async
+              src={process.env.NEXT_PUBLIC_PLAUSIBLE_SRC}
+              strategy="afterInteractive"
+            />
+            <Script id="plausible-init" strategy="afterInteractive">
+              {`window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()`}
+            </Script>
+          </>
+        )}
+      </head>
       <body className={`${dmSans.variable} font-sans antialiased`}>
         <ThemeProvider>{children}</ThemeProvider>
       </body>
