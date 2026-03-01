@@ -12,7 +12,7 @@ Notion webhooks (configured on the public integration) are the primary trigger �
 
 If a sync or publish job fails, the Notion status is automatically reset so you can retry. Jobs stuck in a running state for more than 5 minutes are auto-failed. You can configure a Slack or Discord webhook URL in Settings to receive push notifications when jobs fail. WordPress credentials are validated on save — the app tests the connection before storing them.
 
-New users can sign up with email and password via the admin UI. A verification email is sent — clicking the link verifies the email and logs the user in automatically. An onboarding stepper then guides them through connecting Notion and WordPress. Self-service signup can be disabled by setting `ALLOW_SIGNUP=false`. Set `ADMIN_NOTIFY_EMAIL` to receive an email when new users sign up.
+New users can sign up with email and password via the admin UI. A verification email is sent — clicking the link verifies the email and logs the user in automatically. An onboarding stepper then guides them through connecting Notion and WordPress. Self-service signup can be disabled by setting `ALLOW_SIGNUP=false`. Optionally set `ADMIN_NOTIFY_EMAIL` to receive an email when new users sign up.
 
 ---
 
@@ -73,7 +73,7 @@ cp .env.example .env
 | Variable | Description |
 |----------|-------------|
 | `RESEND_API_KEY` | API key from [resend.com](https://resend.com) |
-| `RESEND_FROM_EMAIL` | Sender address (default: `noreply@notipo.com`) — verify your domain in Resend |
+| `RESEND_FROM_EMAIL` | Sender address (e.g. `noreply@yourdomain.com`) — verify your domain in Resend |
 | `ADMIN_NOTIFY_EMAIL` | (Optional) Email address to notify when new users sign up |
 
 **Stripe billing** (optional — enables subscription upgrades):
@@ -354,15 +354,15 @@ The `Status` options are configurable per tenant — the names above are default
 
 New tenants start on a **7-day Pro trial** (no credit card required). After the trial expires, they drop to the Free plan. Users can upgrade to Pro at any time via Stripe Checkout.
 
-| Feature | Free | Pro ($19/mo) |
-|---------|------|--------------|
+| Feature | Free | Pro |
+|---------|------|-----|
 | Posts per month | 5 | Unlimited |
 | Featured images | No | Yes |
 | Webhooks + instant sync | No | Yes |
 | Poll interval | 5 min | 5 min |
 | Code highlighting + SEO | Yes | Yes |
 
-Billing requires three Stripe env vars: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PRO_PRICE_ID`. Without them, the billing page shows "Billing is not configured" and all features remain unlocked.
+Billing requires three Stripe env vars: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PRO_PRICE_ID`. The price is determined by the Stripe Price ID you configure. Without these env vars, the billing page shows "Billing is not configured" and all features remain unlocked.
 
 **Stripe webhook setup:** Create a webhook endpoint in the Stripe dashboard pointing to `https://yourdomain.com/api/billing/webhook`. Subscribe to these events:
 - `checkout.session.completed`
@@ -393,7 +393,7 @@ Pages available:
 - **Settings** — Notion connection (OAuth or manual token, with disconnect button), WordPress credentials (validated on save, with disconnect button), trigger statuses, code highlighter (radio buttons), webhook notifications (Slack/Discord URL with test button)
 - **Billing** — current plan badge (Free/Pro/Trial with days remaining), upgrade button (→ Stripe Checkout), manage subscription button (→ Stripe Customer Portal), usage stats (posts, featured images, webhooks)
 - **Account** — user profile (email, role, organization), change password, delete account (OWNER deletion removes the entire tenant and all data)
-- **Tenants** — admin-only page for creating and managing tenants (API key shown once on creation). Click "View" on any tenant to impersonate them — browse their dashboard, posts, categories, settings, and jobs as if you were that customer. An amber banner shows which tenant you're viewing with an "Exit" button to return to the tenant list.
+- **Tenants** — admin-only page for creating and managing tenants (API key shown once on creation). Admins can view any tenant's data for support purposes.
 
 The marketing site also includes a **Blog** section (`/blog`) with SEO-optimized posts (JSON-LD structured data, per-post OG images, RSS feed at `/blog/feed.xml`), a **Feedback** page (`/feedback`) using Web3Forms, and a custom 404 page.
 
