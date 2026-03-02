@@ -21,7 +21,6 @@ New users can sign up with email and password via the admin UI. A verification e
 - [Prerequisites](#prerequisites)
 - [Environment variables](#environment-variables)
 - [Development — native Node](#development--native-node)
-- [Development — VS Code dev container](#development--vs-code-dev-container)
 - [Development — local Docker (no Node required)](#development--local-docker-no-node-required)
 - [Production — VPS self-hosted](#production--vps-self-hosted)
 - [Production — Railway](#production--railway)
@@ -158,37 +157,6 @@ npm run dev -w @notipo/web    # Web at http://localhost:3001
 ```
 
 The API is available at `http://localhost:3000`.
-The admin UI is at `http://localhost:3001/admin`.
-
----
-
-## Development — VS Code dev container
-
-The dev container runs the app and Postgres together inside Docker. No local Node installation needed.
-
-**Requirements:** VS Code with the [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension.
-
-**1. Copy env file:**
-
-```bash
-cp apps/api/.env.example apps/api/.env
-```
-
-**2. Open in container:**
-
-Press `F1` and run `Dev Containers: Reopen in Container`, or click the popup that appears when you open the workspace.
-
-VS Code will build the container, run `npm install`, and then on each start run migrations.
-
-**3. Start the apps (inside the container terminal):**
-
-```bash
-turbo dev
-```
-
-Ports 3000 (API), 3001 (web), and 5432 (Postgres) are forwarded to your host automatically.
-
-The API is at `http://localhost:3000`.
 The admin UI is at `http://localhost:3001/admin`.
 
 ---
