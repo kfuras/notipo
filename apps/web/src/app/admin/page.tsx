@@ -119,8 +119,9 @@ export default function DashboardPage() {
   };
 
   const templateDone = typeof window !== "undefined" && !!apiKey && localStorage.getItem("notipo_template_done") === apiKey;
-  const needsSetup = settings && (!templateDone || !notion?.configured || !wordpress?.configured);
-  const allSetUp = !!templateDone && !!notion?.configured && !!wordpress?.configured;
+  const servicesConnected = !!notion?.configured && !!wordpress?.configured;
+  const needsSetup = settings && !servicesConnected;
+  const allSetUp = servicesConnected && templateDone;
 
   const handleSyncNow = async () => {
     setSyncing(true);
