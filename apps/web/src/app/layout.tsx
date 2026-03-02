@@ -47,7 +47,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth" suppressHydrationWarning>
-      <head>
+      <body className={`${dmSans.variable} font-sans antialiased`}>
+        <ThemeProvider>{children}</ThemeProvider>
         {process.env.NEXT_PUBLIC_PLAUSIBLE_SRC && (
           <>
             <Script
@@ -60,9 +61,6 @@ export default function RootLayout({
             </Script>
           </>
         )}
-      </head>
-      <body className={`${dmSans.variable} font-sans antialiased`}>
-        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );
