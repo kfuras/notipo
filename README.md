@@ -1,32 +1,70 @@
 # Notipo
 
-A self-hosted backend that publishes blog posts from Notion to WordPress automatically. It watches a Notion database for status changes, converts the content to Gutenberg blocks, generates featured images, handles inline image uploads, and applies Rank Math SEO metadata — all without touching WordPress manually.
+Publish blog posts from Notion to WordPress, automatically.
+
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org)
+[![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://docker.com)
+
+Self-host on any VPS with Docker, or use the hosted version at [notipo.com](https://notipo.com).
 
 ---
 
-## How it works
+## Features
 
-You write posts in Notion. When you change the status to your configured trigger value (e.g. "Post to Wordpress"), the app syncs the post to a WordPress draft. When you set it to "Publish", it goes live. To update content after syncing or publishing, use "Update Wordpress" — it re-syncs the content and only auto-publishes if the WP post is currently live. Drafts stay as drafts.
-
-Notion webhooks (configured on the public integration) are the primary trigger — events are delivered automatically for all OAuth users. A safety-net poll runs every 5 minutes by default (`POLL_INTERVAL_SECONDS`) to catch any missed events. WordPress categories and tags are automatically imported and pushed to your Notion database as dropdown options, so you never need to look up numeric IDs or type names manually. After syncing, the wp-admin edit URL is written back to the `WordPress Link` property on the Notion page (published posts get the live frontend URL instead). Rank Math SEO metadata (focus keyword, title, description) is applied during sync so it's ready for review in the WordPress editor. All credentials are stored encrypted in the database — never in plain environment variables. A "Sync Now" button on the dashboard lets you trigger an instant poll without waiting for the 60-second interval.
-
-If a sync or publish job fails, the Notion status is automatically reset so you can retry. Jobs stuck in a running state for more than 5 minutes are auto-failed. You can configure a Slack or Discord webhook URL in Settings to receive push notifications when jobs fail. WordPress credentials are validated on save — the app tests the connection before storing them.
-
-New users can sign up with email and password via the admin UI. A verification email is sent — clicking the link verifies the email and logs the user in automatically. An onboarding stepper then guides them through connecting Notion and WordPress. Self-service signup can be disabled by setting `ALLOW_SIGNUP=false`. Optionally set `ADMIN_NOTIFY_EMAIL` to receive an email when new users sign up.
+- **Notion to WordPress sync** — change a status in Notion, post appears as a WordPress draft
+- **Two-step publish** — review the draft in WordPress, then set "Publish" in Notion to go live
+- **Content updates** — re-sync content from Notion without creating duplicates
+- **Featured images** — auto-created with your post title overlaid on a category background image
+- **Inline images** — Notion images uploaded to your WordPress media library, URLs replaced automatically
+- **SEO metadata** — Rank Math focus keyword, title, and description applied during sync
+- **Code highlighting** — Prism.js or Highlight.js syntax blocks in your posts
+- **Category and tag sync** — WordPress categories and tags imported into Notion as dropdown options
+- **Webhook notifications** — Slack or Discord alerts when jobs fail
+- **Multi-tenant** — run multiple blogs from a single instance
+- **Self-hosted** — run on any VPS with Docker, or use [notipo.com](https://notipo.com)
 
 ---
 
-## Table of contents
+## How It Works
+
+You write posts in Notion. When you change the status to "Post to Wordpress", Notipo converts the content to Gutenberg blocks, uploads images, generates a featured image, applies SEO metadata, and creates a WordPress draft. When you set the status to "Publish", the draft goes live. Use "Update Wordpress" to re-sync content — it only auto-publishes if the post is currently live.
+
+Notion webhooks are the primary trigger. A safety-net poll runs every 5 minutes to catch missed events. If a job fails, the Notion status resets automatically so you can retry.
+
+All credentials are encrypted in the database with AES-256-GCM. WordPress credentials are validated on save.
+
+---
+
+## Quick Start
+
+The fastest way to try Notipo locally with Docker (no Node.js required):
+
+```bash
+git clone https://github.com/kfuras/notipo.git
+cd notipo
+cp apps/api/.env.example apps/api/.env
+# Edit apps/api/.env — set ENCRYPTION_KEY and API_KEY at minimum
+docker compose --profile full up --build
+```
+
+The admin UI is at `http://localhost/admin`. See [First-run setup](#first-run-setup) to connect Notion and WordPress.
+
+---
+
+## Documentation
 
 - [Prerequisites](#prerequisites)
 - [Environment variables](#environment-variables)
 - [Development — native Node](#development--native-node)
-- [Development — local Docker (no Node required)](#development--local-docker-no-node-required)
+- [Development — local Docker](#development--local-docker-no-node-required)
 - [Production — VPS self-hosted](#production--vps-self-hosted)
 - [Production — Railway](#production--railway)
 - [First-run setup](#first-run-setup)
 - [Notion database setup](#notion-database-setup)
+- [Billing and plans](#billing--plans)
 - [Admin UI](#admin-ui)
+- [Tech stack](#tech-stack)
 
 ---
 
@@ -45,7 +83,7 @@ New users can sign up with email and password via the admin UI. A verification e
 Copy the example file and fill in the values:
 
 ```bash
-cp .env.example .env
+cp apps/api/.env.example apps/api/.env
 ```
 
 **Required for all environments:**
@@ -95,7 +133,7 @@ These are inlined at build time. In Docker, they're passed as build args via `do
 
 | Variable | Description |
 |----------|-------------|
-| `DOMAIN` | Your public domain, e.g. `api.yourdomain.com` |
+| `DOMAIN` | Your public domain, e.g. `yourdomain.com` |
 | `ACME_EMAIL` | Email for Let's Encrypt certificate notifications |
 | `DB_PASSWORD` | Postgres password — `openssl rand -hex 16` |
 
@@ -179,7 +217,7 @@ docker compose --profile full up --build
 ```
 
 The API runs at `http://localhost:3000`.
-The admin UI is at `http://localhost:80/admin` (served by nginx).
+The admin UI is at `http://localhost/admin` (served by nginx).
 
 On first start the API container runs migrations and seed automatically.
 
@@ -197,14 +235,14 @@ Uses `docker-compose.prod.yml` with Traefik as a reverse proxy. TLS certificates
 **1. Clone the repo on the VPS:**
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/kfuras/notipo.git
 cd notipo
 ```
 
 **2. Create and configure `.env`:**
 
 ```bash
-cp .env.example .env
+cp apps/api/.env.example apps/api/.env
 ```
 
 Set at minimum:
@@ -344,26 +382,31 @@ Billing requires three Stripe env vars: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SEC
 
 ## Admin UI
 
-The admin UI is a Next.js app (shadcn/ui + Tailwind) served at `/admin`. The login page has three tabs: **Sign in** (email + password), **Register** (creates a new tenant with a 7-day Pro trial — only shown when `ALLOW_SIGNUP=true`), and **API Key** (direct key entry). Registration requires email verification — a verification link is sent, and clicking it verifies the email and logs the user in automatically. Unverified login attempts show a "verify your email" message with a resend option. The key is stored in `localStorage` and auto-detected as admin or tenant-level by probing the tenants endpoint.
+The admin UI is served at `/admin`. Login with email and password, or enter an API key directly.
 
-New tenants see an inline onboarding stepper on the dashboard that guides them through three steps: duplicating the Notion template, connecting Notion (OAuth or manual token), and connecting WordPress. Each step expands inline with its own form — no bouncing to the settings page. The stepper shows a progress bar and disappears once all steps are complete. OAuth redirects return to the dashboard with a toast notification.
+New tenants see an onboarding stepper that guides them through connecting Notion and WordPress. The dashboard shows post status counts, recent jobs with live progress updates (via Server-Sent Events), and a "Sync Now" button for instant Notion polling.
 
-The admin uses a dark theme. The landing page has a light/dark theme toggle (sun/moon icon) — preference is stored in `localStorage`.
+Pages:
 
-The UI is mobile-optimized — on phones, the sidebar is replaced by a fixed bottom navigation bar, tables switch to stacked card layouts, and padding is adjusted for smaller screens.
+- **Dashboard** — post counts, recent jobs, config health check, instant sync
+- **Posts** — full post list with status badges, WordPress links, categories
+- **Categories & Tags** — auto-imported from WordPress, custom background images for featured image generation
+- **Jobs** — background job log with error details and status filtering
+- **Settings** — Notion connection, WordPress credentials, trigger statuses, code highlighter, webhook URL
+- **Billing** — current plan, upgrade to Pro, manage subscription
+- **Account** — profile, change password, delete account
+- **Tenants** — admin-only, create and manage tenants
 
-Pages available:
+Mobile-optimized: bottom navigation on phones, sidebar on desktop.
 
-- **Dashboard** — post status counts, recent jobs with live step progress, config health check, "Sync Now" button for instant Notion polling. Updates in real-time via Server-Sent Events.
-- **Posts** — full post list with status badges, WordPress links, category display
-- **Categories & Tags** — auto-imported from WordPress, synced every 60 seconds. Manual sync available via button. Upload custom background images per category for featured image generation (supports PNG, JPEG, WebP up to 5 MB). Click a thumbnail to preview, replace, or remove the image.
-- **Jobs** — background job activity log with error display, status filtering, and clickable WP links
-- **Settings** — Notion connection (OAuth or manual token, with disconnect button), WordPress credentials (validated on save, with disconnect button), trigger statuses, code highlighter (radio buttons), webhook notifications (Slack/Discord URL with test button)
-- **Billing** — current plan badge (Free/Pro/Trial with days remaining), upgrade button (→ Stripe Checkout), manage subscription button (→ Stripe Customer Portal), usage stats (posts, featured images, webhooks)
-- **Account** — user profile (email, role, organization), change password, delete account (OWNER deletion removes the entire tenant and all data)
-- **Tenants** — admin-only page for creating and managing tenants (API key shown once on creation). Admins can view any tenant's data for support purposes.
+---
 
-The marketing site also includes a **Blog** section (`/blog`) with SEO-optimized posts (JSON-LD structured data, per-post OG images, RSS feed at `/blog/feed.xml`), a **Feedback** page (`/feedback`) using Web3Forms, and a custom 404 page.
+## Tech Stack
+
+- **Backend:** [Fastify](https://fastify.dev), [Prisma](https://prisma.io), PostgreSQL, [pg-boss](https://github.com/timgit/pg-boss)
+- **Frontend:** [Next.js](https://nextjs.org), [Tailwind CSS](https://tailwindcss.com), [shadcn/ui](https://ui.shadcn.com)
+- **Infrastructure:** Docker, [Traefik](https://traefik.io), nginx
+- **Monorepo:** [Turborepo](https://turbo.build) + npm workspaces
 
 ---
 
@@ -372,4 +415,3 @@ The marketing site also includes a **Blog** section (`/blog`) with SEO-optimized
 Copyright (C) 2026 Kjetil Furås
 
 Licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE).
-
