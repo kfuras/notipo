@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useApi, useApiCall } from "@/hooks/use-api";
+import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api-client";
 import { useEventSource } from "@/hooks/use-event-source";
 import Link from "next/link";
@@ -43,6 +44,7 @@ interface LiveJob {
 }
 
 export default function DashboardPage() {
+  const { apiKey } = useAuth();
   const { call } = useApiCall();
   const { data: postsData, refetch: refetchPosts } = useApi<ApiListResponse<ApiPost>>("/api/posts");
   const { data: jobsData, refetch: refetchJobs } = useApi<{ data: ApiJob[]; total: number }>(
@@ -116,7 +118,7 @@ export default function DashboardPage() {
     failed: posts.filter((p) => p.status === "FAILED").length,
   };
 
-  const templateDone = typeof window !== "undefined" && localStorage.getItem("notipo_template_done") === "1";
+  const templateDone = typeof window !== "undefined" && !!apiKey && localStorage.getItem("notipo_template_done") === apiKey;
   const needsSetup = settings && (!templateDone || !notion?.configured || !wordpress?.configured);
   const allSetUp = !!templateDone && !!notion?.configured && !!wordpress?.configured;
 
@@ -161,10 +163,10 @@ export default function DashboardPage() {
       </div>
 
       {needsSetup && settings && (
-        <SetupCard settings={settings} onUpdate={refetchSettings} />
+        <SetupCard settings={settings} onUpdate={refetchSettings} apiKey={apiKey} />
       )}
       {allSetUp && canSyncNow && (
-        <SetupCompleteCard onSyncNow={handleSyncNow} syncing={syncing || liveJobs.size > 0} />
+        <SetupCompleteCard onSyncNow={handleSyncNow} syncing={syncing || liveJobs.size > 0} apiKey={apiKey} />
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -436,18 +438,20 @@ function OAuthResultHandler({ onSettingsUpdate }: { onSettingsUpdate: () => void
 function SetupCard({
   settings,
   onUpdate,
+  apiKey,
 }: {
   settings: SettingsData;
   onUpdate: () => void;
+  apiKey: string | null;
 }) {
   const notion = settings.data.notion;
   const wordpress = settings.data.wordpress;
   const [templateDone, setTemplateDone] = useState(
-    () => typeof window !== "undefined" && localStorage.getItem("notipo_template_done") === "1",
+    () => typeof window !== "undefined" && !!apiKey && localStorage.getItem("notipo_template_done") === apiKey,
   );
 
   function markTemplateDone() {
-    localStorage.setItem("notipo_template_done", "1");
+    if (apiKey) localStorage.setItem("notipo_template_done", apiKey);
     setTemplateDone(true);
   }
 
@@ -723,18 +727,20 @@ function WordPressStepContent({
 function SetupCompleteCard({
   onSyncNow,
   syncing,
+  apiKey,
 }: {
   onSyncNow: () => void;
   syncing: boolean;
+  apiKey: string | null;
 }) {
   const [dismissed, setDismissed] = useState(
-    () => typeof window !== "undefined" && localStorage.getItem("notipo_setup_dismissed") === "1",
+    () => typeof window !== "undefined" && !!apiKey && localStorage.getItem("notipo_setup_dismissed") === apiKey,
   );
 
   if (dismissed) return null;
 
   function dismiss() {
-    localStorage.setItem("notipo_setup_dismissed", "1");
+    if (apiKey) localStorage.setItem("notipo_setup_dismissed", apiKey);
     setDismissed(true);
   }
 

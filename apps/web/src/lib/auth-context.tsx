@@ -120,8 +120,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem("notipo_api_key");
     localStorage.removeItem("notipo_email");
-    localStorage.removeItem("notipo_template_done");
-    localStorage.removeItem("notipo_setup_dismissed");
     sessionStorage.removeItem(IMPERSONATION_KEY);
     setState({ apiKey: null, email: null, isAdmin: false, isLoading: false, impersonating: null });
   }, []);
