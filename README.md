@@ -1,14 +1,32 @@
-# Notipo
+<p align="center">
+  <a href="https://notipo.com">
+    <img alt="Notipo" src="https://notipo.com/icon.svg" width="80" />
+  </a>
+</p>
 
-Publish blog posts from Notion to WordPress, automatically.
+<h1 align="center">Notipo</h1>
 
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org)
-[![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://docker.com)
+<p align="center">
+  <strong>Publish blog posts from Notion to WordPress, automatically.</strong>
+</p>
 
-Self-host on any VPS with Docker, or use the hosted version at [notipo.com](https://notipo.com).
+<p align="center">
+  <a href="https://opensource.org/license/agpl-v3"><img src="https://img.shields.io/badge/License-AGPL%203.0-blue.svg" alt="License"></a>
+  <img src="https://img.shields.io/badge/Node.js-20+-green.svg" alt="Node.js">
+  <img src="https://img.shields.io/badge/Docker-ready-blue.svg" alt="Docker">
+</p>
 
----
+<p align="center">
+  <a href="https://notipo.com/auth/register"><strong>Try the hosted version free for 7 days</strong></a> · <a href="https://notipo.com/docs"><strong>Docs</strong></a> · <a href="https://notipo.com/docs/self-hosting"><strong>Self-Hosting Guide</strong></a>
+</p>
+
+<br />
+
+## About
+
+Notipo lets you write blog posts in Notion and publish them to WordPress by changing a status. Images, SEO metadata, featured images, and code blocks are handled automatically. Self-host it on any VPS with Docker, or use the hosted version at [notipo.com](https://notipo.com).
+
+Don't want to self-host? [Sign up for a free account](https://notipo.com/auth/register) — every new account gets a **7-day Pro trial** with all features, no credit card required.
 
 ## Features
 
@@ -22,9 +40,6 @@ Self-host on any VPS with Docker, or use the hosted version at [notipo.com](http
 - **Category and tag sync** — WordPress categories and tags imported into Notion as dropdown options
 - **Webhook notifications** — Slack or Discord alerts when jobs fail
 - **Multi-tenant** — run multiple blogs from a single instance
-- **Self-hosted** — run on any VPS with Docker, or use [notipo.com](https://notipo.com)
-
----
 
 ## How It Works
 
@@ -62,7 +77,6 @@ The admin UI is at `http://localhost/admin`. See [First-run setup](#first-run-se
 - [Production — Railway](#production--railway)
 - [First-run setup](#first-run-setup)
 - [Notion database setup](#notion-database-setup)
-- [Billing and plans](#billing--plans)
 - [Admin UI](#admin-ui)
 - [Tech stack](#tech-stack)
 
@@ -112,14 +126,6 @@ cp apps/api/.env.example apps/api/.env
 | `RESEND_API_KEY` | API key from [resend.com](https://resend.com) |
 | `RESEND_FROM_EMAIL` | Sender address (e.g. `noreply@yourdomain.com`) — verify your domain in Resend |
 | `ADMIN_NOTIFY_EMAIL` | (Optional) Email address to notify when new users sign up |
-
-**Stripe billing** (optional — enables subscription upgrades):
-
-| Variable | Description |
-|----------|-------------|
-| `STRIPE_SECRET_KEY` | Stripe API secret key |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret (`whsec_...`) |
-| `STRIPE_PRO_PRICE_ID` | Stripe Price ID for the Pro plan (`price_...`) |
 
 **Web frontend (Next.js)** — build-time variables:
 
@@ -358,25 +364,9 @@ The `Status` options are configurable per tenant — the names above are default
 
 ## Billing & Plans
 
-New tenants start on a **7-day Pro trial** (no credit card required). After the trial expires, they drop to the Free plan. Users can upgrade to Pro at any time via Stripe Checkout.
+When self-hosting, **all features are unlocked** with no restrictions — unlimited posts, featured images, webhooks, and instant sync. No billing configuration needed.
 
-| Feature | Free | Pro |
-|---------|------|-----|
-| Posts per month | 5 | Unlimited |
-| Featured images | No | Yes |
-| Webhooks + instant sync | No | Yes |
-| Poll interval | 5 min | 5 min |
-| Code highlighting + SEO | Yes | Yes |
-
-Billing requires three Stripe env vars: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PRO_PRICE_ID`. The price is determined by the Stripe Price ID you configure. Without these env vars, the billing page shows "Billing is not configured" and all features remain unlocked.
-
-**Stripe webhook setup:** Create a webhook endpoint in the Stripe dashboard pointing to `https://yourdomain.com/api/billing/webhook`. Subscribe to these events:
-- `checkout.session.completed`
-- `customer.subscription.updated`
-- `customer.subscription.deleted`
-- `invoice.payment_failed`
-
-**Customer Portal:** Enable "Cancel subscriptions" in Stripe Dashboard → Settings → Billing → Customer portal so users can manage their subscription.
+The hosted version at [notipo.com](https://notipo.com) offers a Free tier (5 posts/month) and a Pro plan ($19/month) with unlimited posts and all features.
 
 ---
 
