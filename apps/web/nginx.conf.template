@@ -31,7 +31,15 @@ server {
         proxy_set_header Host $host;
     }
 
+    # Next.js hashed static assets — cache forever
+    location /_next/static/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # HTML pages — always revalidate
     location / {
+        add_header Cache-Control "no-cache";
         try_files $uri $uri.html $uri/ =404;
     }
 
