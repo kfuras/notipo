@@ -35,7 +35,7 @@ export async function api<T>(
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({ message: res.statusText }));
-    throw new ApiError(res.status, data.message || data.error || res.statusText, data);
+    throw new ApiError(res.status, data.message || data.error || res.statusText || `Request failed (${res.status})`, data);
   }
 
   if (res.status === 204) return undefined as T;
@@ -62,7 +62,7 @@ export async function apiUpload<T>(
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({ message: res.statusText }));
-    throw new ApiError(res.status, data.message || data.error || res.statusText, data);
+    throw new ApiError(res.status, data.message || data.error || res.statusText || `Request failed (${res.status})`, data);
   }
 
   return res.json();

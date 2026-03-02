@@ -7,6 +7,8 @@ server {
 
     set $api_upstream ${API_INTERNAL_URL};
 
+    client_max_body_size 6m;
+
     # Reverse proxy API to Fastify service (Railway internal networking)
     location /api/ {
         proxy_pass $api_upstream;
