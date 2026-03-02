@@ -25,7 +25,7 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, blogName: string) => Promise<void>;
+  register: (email: string, password: string, blogName: string) => Promise<boolean>;
   setApiKey: (key: string) => Promise<void>;
   logout: () => void;
   impersonate: (tenantId: string, tenantName: string) => void;
