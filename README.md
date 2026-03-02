@@ -397,3 +397,11 @@ Pages available:
 
 The marketing site also includes a **Blog** section (`/blog`) with SEO-optimized posts (JSON-LD structured data, per-post OG images, RSS feed at `/blog/feed.xml`), a **Feedback** page (`/feedback`) using Web3Forms, and a custom 404 page.
 
+---
+
+## License
+
+Copyright (C) 2026 Kjetil Furås
+
+Licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE).
+
