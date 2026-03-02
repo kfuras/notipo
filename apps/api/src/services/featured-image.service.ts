@@ -5,7 +5,6 @@
  */
 
 import sharp from "sharp";
-import { createCanvas, GlobalFonts, loadImage } from "@napi-rs/canvas";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import fs from "node:fs/promises";
@@ -22,11 +21,24 @@ const SMALL_FONT_SIZE = 24;
 const LINE_HEIGHT = FONT_SIZE + 14;
 const FONT_NAME = "DejaVuSans";
 
-// Register the bundled font once at module load — same TTF the Python service used
-GlobalFonts.registerFromPath(
-  path.join(__dirname, "../../public/fonts/DejaVuSans-Bold.ttf"),
-  FONT_NAME,
-);
+// Lazy-load @napi-rs/canvas — its prebuilt binary requires modern CPU instructions
+// (SSE4/AVX) that older/basic KVM virtual CPUs may not support.
+let canvasModule: typeof import("@napi-rs/canvas") | null = null;
+let fontRegistered = false;
+
+async function getCanvas() {
+  if (!canvasModule) {
+    canvasModule = await import("@napi-rs/canvas");
+  }
+  if (!fontRegistered) {
+    canvasModule.GlobalFonts.registerFromPath(
+      path.join(__dirname, "../../public/fonts/DejaVuSans-Bold.ttf"),
+      FONT_NAME,
+    );
+    fontRegistered = true;
+  }
+  return canvasModule;
+}
 
 function wrapText(
   ctx: { measureText: (text: string) => { width: number } },
@@ -82,6 +94,7 @@ export class FeaturedImageService {
       .toBuffer();
 
     // Compose overlay and text on canvas
+    const { createCanvas, loadImage } = await getCanvas();
     const canvas = createCanvas(WIDTH, HEIGHT);
     const ctx = canvas.getContext("2d");
 

@@ -11,9 +11,7 @@ services:
     container_name: notipo-cloudflared
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    command: tunnel run
-    environment:
-      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN}
+    command: tunnel --no-autoupdate --protocol http2 run --token ${CF_TUNNEL_TOKEN}
 
   traefik:
     container_name: notipo-traefik
@@ -23,6 +21,8 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
+      - --accesslog=true
+      - --log.level=DEBUG
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
