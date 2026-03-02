@@ -121,7 +121,7 @@ export default function VerifyEmailPage() {
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <LogoIcon className="w-12 h-12" />
+              <LogoIcon className="w-12 h-12" id="verify" />
             </div>
             <CardTitle className="text-2xl">Email Verification</CardTitle>
             <CardDescription>

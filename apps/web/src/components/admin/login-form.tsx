@@ -123,7 +123,7 @@ export function LoginForm() {
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <LogoIcon className="w-12 h-12" />
+              <LogoIcon className="w-12 h-12" id="login-verify" />
             </div>
             <CardTitle className="text-2xl">Check your email</CardTitle>
             <CardDescription>
@@ -158,7 +158,7 @@ export function LoginForm() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <LogoIcon className="w-12 h-12" />
+            <LogoIcon className="w-12 h-12" id="login" />
           </div>
           <CardTitle className="text-2xl">Notipo</CardTitle>
           <CardDescription>Sign in to your dashboard</CardDescription>

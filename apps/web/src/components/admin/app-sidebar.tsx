@@ -52,7 +52,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-4">
         <Link href={isAdmin && !impersonating ? "/admin/tenants" : "/admin"} className="flex items-center gap-2">
-          <LogoIcon className="w-7 h-7" />
+          <LogoIcon className="w-7 h-7" id="sidebar" />
           <span className="font-semibold text-lg">Notipo</span>
         </Link>
         {impersonating && (
