@@ -29,6 +29,12 @@ export async function userRoutes(app: FastifyInstance) {
   /** POST /api/users — create a user in the tenant */
   app.post("/api/users", async (request, reply) => {
     const body = createUserSchema.parse(request.body);
+
+    // Only OWNER can create ADMIN or OWNER users
+    if ((body.role === "OWNER" || body.role === "ADMIN") && request.user.role !== "OWNER") {
+      return reply.forbidden("Only the tenant owner can create admin or owner users");
+    }
+
     const apiKey = randomBytes(32).toString("hex");
 
     const user = await app.prisma.user.create({

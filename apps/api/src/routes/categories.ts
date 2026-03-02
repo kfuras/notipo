@@ -21,7 +21,9 @@ const ALLOWED_MIME_TYPES: Record<string, string> = {
 async function deleteUploadedFile(backgroundImage: string | null) {
   if (!backgroundImage?.startsWith("upload:")) return;
   const relPath = backgroundImage.slice("upload:".length);
-  await fs.unlink(path.join(UPLOADS_DIR, relPath)).catch(() => {});
+  const resolved = path.resolve(UPLOADS_DIR, relPath);
+  if (!resolved.startsWith(UPLOADS_DIR + path.sep)) return; // path traversal guard
+  await fs.unlink(resolved).catch(() => {});
 }
 
 const updateCategorySchema = z.object({

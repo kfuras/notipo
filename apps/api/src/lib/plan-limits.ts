@@ -1,4 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
+import { config } from "../config.js";
+
+/** When Stripe is not configured, all features are unlocked (self-hosted mode). */
+function isSelfHosted(): boolean {
+  return !config.STRIPE_SECRET_KEY;
+}
 
 interface PlanLimits {
   postsPerMonth: number | null; // null = unlimited
@@ -30,6 +36,7 @@ const PLAN_CONFIG: Record<string, PlanLimits> = {
 
 /** Resolve the effective plan, accounting for trial expiry. */
 export function getEffectivePlan(plan: string, trialEndsAt: Date | null): string {
+  if (isSelfHosted()) return "PRO";
   if (plan === "TRIAL") {
     if (!trialEndsAt || new Date() > trialEndsAt) return "FREE";
     return "TRIAL";

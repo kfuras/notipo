@@ -1,5 +1,6 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import { timingSafeEqual } from "node:crypto";
 import { config } from "../config.js";
 
 interface TenantContext {
@@ -39,7 +40,10 @@ async function auth(app: FastifyInstance) {
     }
 
     // Admin API key — supports both /api/admin/* and tenant impersonation
-    if (apiKey === config.API_KEY) {
+    const isAdminKey =
+      apiKey.length === config.API_KEY.length &&
+      timingSafeEqual(Buffer.from(apiKey), Buffer.from(config.API_KEY));
+    if (isAdminKey) {
       request.isAdmin = true;
 
       // Pure admin routes — no tenant context needed

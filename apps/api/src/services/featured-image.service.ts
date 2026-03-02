@@ -9,6 +9,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import fs from "node:fs/promises";
 import axios from "axios";
+import { isPrivateUrl } from "../lib/url-validation.js";
 import type { FeaturedImageRequest } from "../types/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -68,14 +69,22 @@ export class FeaturedImageService {
     let bgBuffer: Buffer;
     const bg = params.backgroundImageUrl;
     if (bg.startsWith("http://") || bg.startsWith("https://")) {
+      if (await isPrivateUrl(bg)) {
+        throw new Error("Background image URL points to a private/internal address");
+      }
       const res = await axios.get<ArrayBuffer>(bg, {
         responseType: "arraybuffer",
         timeout: 30_000,
+        maxRedirects: 0,
       });
       bgBuffer = Buffer.from(res.data);
     } else if (bg.startsWith("upload:")) {
       const relPath = bg.slice("upload:".length);
-      const uploadPath = path.join(process.cwd(), "uploads", "category-images", relPath);
+      const uploadsDir = path.join(process.cwd(), "uploads", "category-images");
+      const uploadPath = path.resolve(uploadsDir, relPath);
+      if (!uploadPath.startsWith(uploadsDir + path.sep)) {
+        throw new Error("Invalid background image path");
+      }
       bgBuffer = await fs.readFile(uploadPath);
     } else {
       const localPath = path.join(

@@ -39,9 +39,10 @@ export async function notionWebhookRoutes(app: FastifyInstance) {
 
     // ── Verification request (one-time during subscription setup) ──
     if (body.verification_token && !body.type) {
+      // Log the token so the operator can set NOTION_WEBHOOK_SECRET.
+      // This is a one-time setup value, not a recurring secret.
       log.info(
-        { token: body.verification_token },
-        "Notion webhook verification token received — set NOTION_WEBHOOK_SECRET env var to this value",
+        `Notion webhook verification token received: ${body.verification_token} — set NOTION_WEBHOOK_SECRET env var to this value`,
       );
       return reply.code(200).send();
     }
@@ -49,8 +50,8 @@ export async function notionWebhookRoutes(app: FastifyInstance) {
     // ── HMAC signature verification ──
     const secret = config.NOTION_WEBHOOK_SECRET;
     if (!secret) {
-      log.warn("Received webhook event but NOTION_WEBHOOK_SECRET is not set — ignoring");
-      return reply.code(200).send();
+      log.warn("Received webhook event but NOTION_WEBHOOK_SECRET is not set — rejecting");
+      return reply.code(503).send();
     }
 
     const signature = request.headers["x-notion-signature"] as string | undefined;
