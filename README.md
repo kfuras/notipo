@@ -63,7 +63,7 @@ cp apps/api/.env.example apps/api/.env
 docker compose --profile full up --build
 ```
 
-The admin UI is at `http://localhost/admin`. See [First-run setup](#first-run-setup) to connect Notion and WordPress.
+Open `http://localhost/admin` and register with your email and password. The first user becomes the owner — see [First-run setup](#first-run-setup) to connect Notion and WordPress.
 
 ---
 
@@ -74,7 +74,6 @@ The admin UI is at `http://localhost/admin`. See [First-run setup](#first-run-se
 - [Development — native Node](#development--native-node)
 - [Development — local Docker](#development--local-docker-no-node-required)
 - [Production — VPS self-hosted](#production--vps-self-hosted)
-- [Production — Railway](#production--railway)
 - [First-run setup](#first-run-setup)
 - [Notion database setup](#notion-database-setup)
 - [Admin UI](#admin-ui)
@@ -107,7 +106,7 @@ cp apps/api/.env.example apps/api/.env
 | `DATABASE_URL` | PostgreSQL connection string |
 | `ENCRYPTION_KEY` | 64-char hex string — `openssl rand -hex 32` |
 | `API_KEY` | Admin API key for `/api/admin/*` routes — `openssl rand -hex 16` |
-| `ALLOW_SIGNUP` | Set to `false` to disable self-service registration (default: `true`) |
+| `ALLOW_SIGNUP` | Set to `true` for open registration (default: `false` — only the first user can register) |
 
 **Notion OAuth** (optional — enables "Connect to Notion" button):
 
@@ -133,7 +132,7 @@ cp apps/api/.env.example apps/api/.env
 |----------|-------------|
 | `NEXT_PUBLIC_PLAUSIBLE_SRC` | Plausible analytics script URL (optional — no tracking if unset) |
 
-These are inlined at build time. In Docker, they're passed as build args via `docker-compose.prod.yml`. On Railway, set them as regular env vars.
+These are inlined at build time. In Docker, they're passed as build args via `docker-compose.prod.yml`.
 
 **Required for VPS deployment only:**
 
@@ -143,17 +142,18 @@ These are inlined at build time. In Docker, they're passed as build args via `do
 | `ACME_EMAIL` | Email for Let's Encrypt certificate notifications |
 | `DB_PASSWORD` | Postgres password — `openssl rand -hex 16` |
 
-**Seed variables** (configure your first tenant on startup):
+**Seed variables** (development only — `npm run seed -w @notipo/api`):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SEED_TENANT_NAME` | `Dev Tenant` | Display name for your blog |
 | `SEED_TENANT_SLUG` | `dev` | URL-safe identifier |
 | `SEED_OWNER_EMAIL` | `dev@notipo.local` | Your login email |
+| `SEED_OWNER_PASSWORD` | _(none)_ | Set to log in with email/password instead of API key |
 | `SEED_API_KEY` | falls back to `API_KEY` | Tenant API key for calling the API |
 | `SEED_NOTION_TRIGGER_STATUS` | `Ready to Publish` | Notion status that triggers sync |
 
-The seed runs automatically on startup and is idempotent — safe to re-run. Categories and tags are imported automatically from WordPress once you connect your WP credentials — no manual configuration needed.
+The seed is for local development only. In production, register your account through the admin UI instead — the first user becomes the owner automatically.
 
 ---
 
@@ -222,10 +222,9 @@ cp apps/api/.env.example apps/api/.env
 docker compose --profile full up --build
 ```
 
-The API runs at `http://localhost:3000`.
-The admin UI is at `http://localhost/admin` (served by nginx).
+The admin UI is at `http://localhost/admin` (nginx proxies API requests to the backend).
 
-On first start the API container runs migrations and seed automatically.
+On first start the API container runs database migrations automatically. Register with your email and password — the first user becomes the owner.
 
 ---
 
@@ -259,11 +258,6 @@ API_KEY=<openssl rand -hex 16>
 DB_PASSWORD=<openssl rand -hex 16>
 DOMAIN=yourdomain.com
 ACME_EMAIL=you@example.com
-
-SEED_TENANT_NAME=My Blog
-SEED_TENANT_SLUG=myblog
-SEED_OWNER_EMAIL=you@example.com
-SEED_API_KEY=<openssl rand -hex 16>
 ```
 
 **3. Start the stack:**
@@ -272,14 +266,15 @@ SEED_API_KEY=<openssl rand -hex 16>
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-On first start, the app container runs `prisma migrate deploy` and `prisma db seed` before the server starts. Check the logs if the health check fails:
+On first start, the app container runs `prisma migrate deploy` before the server starts. Check the logs if the health check fails:
 
 ```bash
 docker logs notipo-app
 ```
 
-The API is available at `https://yourdomain.com/api`.
-The admin UI is at `https://yourdomain.com/admin`.
+**4. Register your account:**
+
+Open `https://yourdomain.com/admin` and register with your email and password. The first user becomes the owner with full access — no email verification required.
 
 **Updating to a new version:**
 
@@ -290,41 +285,9 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ---
 
-## Production — Railway
-
-Railway builds and deploys the app automatically from your repository. You will need to create two services: the Node.js app and a PostgreSQL database.
-
-**1. Create a new Railway project** and add a PostgreSQL plugin. Copy the `DATABASE_URL` Railway provides.
-
-**2. Deploy the app service** by connecting your GitHub repo. Railway will detect `railway.toml` and build using the `production` Dockerfile target.
-
-**3. Set environment variables** in the Railway dashboard:
-
-```
-DATABASE_URL=<from Railway Postgres plugin>
-ENCRYPTION_KEY=<openssl rand -hex 32>
-API_KEY=<openssl rand -hex 16>
-
-SEED_TENANT_NAME=My Blog
-SEED_TENANT_SLUG=myblog
-SEED_OWNER_EMAIL=you@example.com
-SEED_API_KEY=<openssl rand -hex 16>
-SEED_NOTION_TRIGGER_STATUS=Post to Wordpress
-```
-
-The start command in `railway.toml` runs `prisma migrate deploy` before the app starts. The seed runs on first deploy via the Dockerfile CMD. After the first deploy, Railway uses the start command directly and skips the seed.
-
-> Note: Railway uses the `startCommand` from `railway.toml`, which does not re-run the seed on redeploy. The seed only runs during the initial Docker build on first deploy.
-
-**4. Add a custom domain** in Railway's networking settings if desired.
-
----
-
 ## First-run setup
 
-After the app starts for the first time, the seed has created your tenant and owner user. You now need to connect Notion and WordPress credentials.
-
-Open the admin UI at `/admin` and either sign up with email and password (creates a new tenant) or enter your API key (the value of `SEED_API_KEY` or `API_KEY`). An inline onboarding stepper on the dashboard guides you through three steps:
+After registering, you need to connect Notion and WordPress. An inline onboarding stepper on the dashboard guides you through three steps:
 
 **Step 1 — Duplicate the Notion template:**
 Open the [Notipo Blog Template](https://free-dentist-6b2.notion.site/30d842af972f8091a104eb8773fbf390?v=30d842af972f8091a104eb8773fbf390) and duplicate it to your workspace. This gives you a database with all required properties pre-configured. Confirm in the stepper once done.
@@ -384,7 +347,7 @@ Pages:
 - **Jobs** — background job log with error details and status filtering
 - **Settings** — Notion connection, WordPress credentials, trigger statuses, code highlighter, webhook URL
 - **Billing** — current plan, upgrade to Pro, manage subscription
-- **Account** — profile, change password, delete account
+- **Account** — profile, API key, change password, delete account
 - **Tenants** — admin-only, create and manage tenants
 
 Mobile-optimized: bottom navigation on phones, sidebar on desktop.

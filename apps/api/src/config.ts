@@ -12,7 +12,7 @@ const envSchema = z.object({
   NOTION_OAUTH_CLIENT_ID: z.string().optional(),
   NOTION_OAUTH_CLIENT_SECRET: z.string().optional(),
   NOTION_OAUTH_REDIRECT_URI: z.string().url().optional(),
-  ALLOW_SIGNUP: z.string().default("true").transform((v) => v === "true"),
+  ALLOW_SIGNUP: z.string().default("false").transform((v) => v === "true"),
   POLL_INTERVAL_SECONDS: z.coerce.number().default(300),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_PUBLISHABLE_KEY: z.string().optional(),

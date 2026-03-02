@@ -74,10 +74,16 @@ const emailRateLimit = {
 export async function authRoutes(app: FastifyInstance) {
   /** GET /api/auth/providers — what auth methods are available */
   app.get("/api/auth/providers", async () => {
+    let signup = config.ALLOW_SIGNUP;
+    // Always show signup if no tenants exist yet (first-run setup)
+    if (!signup) {
+      const tenantCount = await app.prisma.tenant.count();
+      if (tenantCount === 0) signup = true;
+    }
     return {
       data: {
         password: true,
-        signup: config.ALLOW_SIGNUP,
+        signup,
       },
     };
   });
@@ -85,7 +91,11 @@ export async function authRoutes(app: FastifyInstance) {
   /** POST /api/auth/register — create a new tenant with email+password */
   app.post("/api/auth/register", authRateLimit, async (request, reply) => {
     if (!config.ALLOW_SIGNUP) {
-      return reply.forbidden("Registration is disabled");
+      // Allow the very first registration even when signup is disabled (self-hosted setup)
+      const tenantCount = await app.prisma.tenant.count();
+      if (tenantCount > 0) {
+        return reply.forbidden("Registration is disabled");
+      }
     }
 
     const body = registerSchema.parse(request.body);
@@ -149,7 +159,7 @@ export async function authRoutes(app: FastifyInstance) {
     // Send verification email
     const token = createToken(user.id, "verify");
     const verifyUrl = `${getBaseUrl()}/auth/verify?token=${token}`;
-    await sendEmail(body.email, "Verify your email — Notipo", verificationEmailHtml(verifyUrl));
+    const emailSent = await sendEmail(body.email, "Verify your email — Notipo", verificationEmailHtml(verifyUrl));
 
     // Notify admin of new signup (fire-and-forget)
     if (config.ADMIN_NOTIFY_EMAIL) {
@@ -158,6 +168,23 @@ export async function authRoutes(app: FastifyInstance) {
         `New signup: ${body.blogName}`,
         `<p><strong>${body.name}</strong> (${body.email}) just registered with blog name <strong>${body.blogName}</strong>.</p>`,
       ).catch(() => {});
+    }
+
+    // If email is not configured, auto-verify and log the user in immediately
+    if (!emailSent) {
+      const verified = await app.prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerified: true },
+        include: { tenant: { select: { id: true, name: true, slug: true } } },
+      });
+      log.info({ userId: user.id }, "Email not configured — auto-verified user");
+      return reply.code(201).send({
+        data: {
+          apiKey: verified.apiKey,
+          user: { id: verified.id, email: verified.email, name: verified.name },
+          tenant: verified.tenant,
+        },
+      });
     }
 
     return reply.code(201).send({

@@ -76,8 +76,10 @@ export function LoginForm() {
     setError("");
     setLoading(true);
     try {
-      await register(regEmail, regPassword, blogName);
-      setRegistered(true);
+      const autoLoggedIn = await register(regEmail, regPassword, blogName);
+      if (!autoLoggedIn) {
+        setRegistered(true);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {

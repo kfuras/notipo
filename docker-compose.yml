@@ -31,9 +31,24 @@ services:
     environment:
       DATABASE_URL: postgresql://notipo:localdev@postgres:5432/notipo
     env_file: .env
+    command: ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
     depends_on:
       postgres:
         condition: service_healthy
+
+  web:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: notipo-dev-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      API_INTERNAL_URL: http://app:3000
+    depends_on:
+      - app
 
 volumes:
   pgdata:

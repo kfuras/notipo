@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, Lock, Trash2, Loader2 } from "lucide-react";
+import { User, Lock, Trash2, Loader2, Key, Copy, Check } from "lucide-react";
 
 interface AccountData {
   data: {
@@ -18,6 +18,7 @@ interface AccountData {
     email: string;
     name: string | null;
     role: string;
+    apiKey: string;
     createdAt: string;
     tenant: {
       name: string;
@@ -33,6 +34,9 @@ export default function AccountPage() {
   const { call } = useApiCall();
   const { data: account, loading } = useApi<AccountData>("/api/account");
   const router = useRouter();
+
+  // API key copy state
+  const [copied, setCopied] = useState(false);
 
   // Change password state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -136,6 +140,40 @@ export default function AccountPage() {
             <span className="text-sm font-medium">
               {new Date(a.createdAt).toLocaleDateString()}
             </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* API Key */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Key className="w-5 h-5" />
+            API Key
+          </CardTitle>
+          <CardDescription>Use this key to authenticate API requests from external tools.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2">
+            <Input
+              type="password"
+              value={a.apiKey}
+              readOnly
+              className="font-mono text-sm"
+              onFocus={(e) => { e.target.type = "text"; }}
+              onBlur={(e) => { e.target.type = "password"; }}
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                navigator.clipboard.writeText(a.apiKey);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            </Button>
           </div>
         </CardContent>
       </Card>

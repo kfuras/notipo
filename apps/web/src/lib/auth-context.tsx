@@ -99,14 +99,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const register = useCallback(
-    async (email: string, password: string, blogName: string) => {
-      await api<{ message: string; needsVerification: boolean }>(
+    async (email: string, password: string, blogName: string): Promise<boolean> => {
+      const res = await api<{ data?: { apiKey: string }; needsVerification?: boolean }>(
         "/api/auth/register",
         { method: "POST", body: { email, password, blogName } },
       );
-      // Registration no longer returns an API key — user must verify email first
+      // If email is not configured, the API auto-verifies and returns an API key
+      if (res.data?.apiKey) {
+        localStorage.setItem("notipo_api_key", res.data.apiKey);
+        localStorage.setItem("notipo_email", email);
+        const isAdmin = await detectAdmin(res.data.apiKey);
+        setState({ apiKey: res.data.apiKey, email, isAdmin, isLoading: false, impersonating: null });
+        return true; // auto-logged in
+      }
+      return false; // needs email verification
     },
-    [],
+    [detectAdmin],
   );
 
   const logout = useCallback(() => {

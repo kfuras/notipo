@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import bcrypt from "bcryptjs";
 import "dotenv/config";
 import { createCipheriv, randomBytes } from "node:crypto";
 
@@ -79,21 +80,30 @@ async function main() {
   }
 
   // Create owner user
+  const ownerPassword = process.env.SEED_OWNER_PASSWORD;
+  const passwordHash = ownerPassword ? await bcrypt.hash(ownerPassword, 12) : null;
+
   await prisma.user.upsert({
     where: { email_tenantId: { email: ownerEmail, tenantId: tenant.id } },
-    update: { apiKey },
+    update: { apiKey, ...(passwordHash && { passwordHash, emailVerified: true }) },
     create: {
       email: ownerEmail,
       name: tenantName,
       role: "OWNER",
       apiKey,
       tenantId: tenant.id,
+      ...(passwordHash && { passwordHash, emailVerified: true }),
     },
   });
 
   console.log(
-    `Seed complete: tenant "${tenantName}" (${tenantSlug}), API key: ${apiKey}`,
+    `Seed complete: tenant "${tenantName}" (${tenantSlug})`,
   );
+  if (ownerPassword) {
+    console.log(`  Login with: ${ownerEmail} / (your SEED_OWNER_PASSWORD)`);
+  } else {
+    console.log(`  API key: ${apiKey}`);
+  }
 }
 
 main()

@@ -51,6 +51,7 @@ export async function accountRoutes(app: FastifyInstance) {
         email: true,
         name: true,
         role: true,
+        apiKey: true,
         createdAt: true,
         tenant: {
           select: { name: true, slug: true, plan: true, createdAt: true },
