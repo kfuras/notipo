@@ -1,5 +1,5 @@
 # Build context: monorepo root (.)
-FROM node:25-slim AS builder
+FROM node:25.5.0-slim AS builder
 WORKDIR /app
 
 # Copy root workspace config
