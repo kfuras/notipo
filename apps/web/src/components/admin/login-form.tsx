@@ -43,7 +43,7 @@ export function LoginForm() {
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
 
-  // API key login
+  // API key login (shown only when signup is closed — e.g. admin API key on hosted)
   const [key, setKey] = useState("");
 
   useEffect(() => {
@@ -290,26 +290,26 @@ export function LoginForm() {
               </TabsContent>
             )}
             <TabsContent value="apikey">
-              <form onSubmit={handleKeyLogin} className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="apikey">API Key</Label>
-                  <Input
-                    id="apikey"
-                    type="password"
-                    value={key}
-                    onChange={(e) => setKey(e.target.value)}
-                    placeholder="Enter your API key"
-                    required
-                  />
-                </div>
-                {error && (
-                  <p className="text-sm text-destructive">{error}</p>
-                )}
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Connecting..." : "Connect"}
-                </Button>
-              </form>
-            </TabsContent>
+                <form onSubmit={handleKeyLogin} className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="apikey">API Key</Label>
+                    <Input
+                      id="apikey"
+                      type="password"
+                      value={key}
+                      onChange={(e) => setKey(e.target.value)}
+                      placeholder="Enter your API key"
+                      required
+                    />
+                  </div>
+                  {error && (
+                    <p className="text-sm text-destructive">{error}</p>
+                  )}
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Connecting..." : "Connect"}
+                  </Button>
+                </form>
+              </TabsContent>
           </Tabs>
           )}
         </CardContent>
