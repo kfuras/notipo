@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { useApi, useApiCall } from "@/hooks/use-api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,7 +61,7 @@ function CategoryImageCell({
       await upload(`/api/categories/${category.id}/background-image`, file);
       onUpdate();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Upload failed");
+      toast.error(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -75,7 +76,7 @@ function CategoryImageCell({
       onUpdate();
       setOpen(false);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Remove failed");
+      toast.error(err instanceof Error ? err.message : "Remove failed");
     }
   }
 
@@ -164,7 +165,7 @@ export default function CategoriesPage() {
       await call("/api/categories/sync", { method: "POST" });
       await refetch();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Sync failed");
+      toast.error(err instanceof Error ? err.message : "Sync failed");
     } finally {
       setSyncing(false);
     }
