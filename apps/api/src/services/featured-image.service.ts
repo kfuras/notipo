@@ -77,64 +77,82 @@ const GRADIENTS: [string, string][] = [
   ["#2c3e50", "#3498db"], // dark → bright blue
 ];
 
-// In-memory cache for Unsplash results keyed by category name.
-// Avoids re-fetching when multiple posts share the same category.
-interface UnsplashCacheEntry {
+// In-memory cache for Unsplash search results keyed by category name.
+// Stores multiple photos per category so different posts get different backgrounds.
+interface UnsplashPhoto {
   buffer: Buffer;
   attribution: UnsplashAttribution;
 }
-const unsplashCache = new Map<string, UnsplashCacheEntry>();
+const unsplashCache = new Map<string, UnsplashPhoto[]>();
+
+/** Simple string hash for deterministic photo selection. */
+function hashString(str: string): number {
+  let hash = 0;
+  for (const ch of str) hash = ((hash << 5) - hash + ch.charCodeAt(0)) | 0;
+  return Math.abs(hash);
+}
 
 export class FeaturedImageService {
-  /** Fetch a landscape photo from Unsplash matching the category name. */
-  private async fetchUnsplashBackground(query: string): Promise<UnsplashCacheEntry | null> {
+  /**
+   * Fetch landscape photos from Unsplash matching the category name.
+   * Returns a specific photo selected by hashing the post title,
+   * so each post gets a different but deterministic background.
+   */
+  private async fetchUnsplashBackground(category: string, title: string): Promise<(UnsplashPhoto & { index: number }) | null> {
     if (!config.UNSPLASH_ACCESS_KEY) return null;
 
-    const cached = unsplashCache.get(query);
-    if (cached) return cached;
+    let photos = unsplashCache.get(category);
 
-    try {
-      const search = await axios.get<{
-        results: Array<{
-          id: string;
-          urls: { regular: string };
-          links: { download_location: string };
-          user: { name: string; links: { html: string } };
-        }>;
-      }>("https://api.unsplash.com/search/photos", {
-        params: { query, orientation: "landscape", per_page: 1 },
-        headers: { Authorization: `Client-ID ${config.UNSPLASH_ACCESS_KEY}` },
-        timeout: 10_000,
-      });
+    if (!photos) {
+      try {
+        const search = await axios.get<{
+          results: Array<{
+            id: string;
+            urls: { regular: string };
+            links: { download_location: string };
+            user: { name: string; links: { html: string } };
+          }>;
+        }>("https://api.unsplash.com/search/photos", {
+          params: { query: category, orientation: "landscape", per_page: 10 },
+          headers: { Authorization: `Client-ID ${config.UNSPLASH_ACCESS_KEY}` },
+          timeout: 10_000,
+        });
 
-      const photo = search.data.results[0];
-      if (!photo) return null;
+        if (!search.data.results.length) return null;
 
-      // Trigger download tracking (required by Unsplash ToS)
-      axios.get(photo.links.download_location, {
-        headers: { Authorization: `Client-ID ${config.UNSPLASH_ACCESS_KEY}` },
-        timeout: 5_000,
-      }).catch(() => {});
+        photos = await Promise.all(
+          search.data.results.map(async (photo) => {
+            // Trigger download tracking (required by Unsplash ToS)
+            axios.get(photo.links.download_location, {
+              headers: { Authorization: `Client-ID ${config.UNSPLASH_ACCESS_KEY}` },
+              timeout: 5_000,
+            }).catch(() => {});
 
-      const img = await axios.get<ArrayBuffer>(photo.urls.regular, {
-        responseType: "arraybuffer",
-        timeout: 15_000,
-      });
+            const img = await axios.get<ArrayBuffer>(photo.urls.regular, {
+              responseType: "arraybuffer",
+              timeout: 15_000,
+            });
 
-      const entry: UnsplashCacheEntry = {
-        buffer: Buffer.from(img.data),
-        attribution: {
-          photographerName: photo.user.name,
-          photographerUrl: photo.user.links.html,
-        },
-      };
-      unsplashCache.set(query, entry);
-      logger.info({ query, photoId: photo.id, photographer: photo.user.name }, "Fetched Unsplash background");
-      return entry;
-    } catch (err) {
-      logger.warn({ err, query }, "Unsplash fetch failed — falling back to gradient");
-      return null;
+            return {
+              buffer: Buffer.from(img.data),
+              attribution: {
+                photographerName: photo.user.name,
+                photographerUrl: photo.user.links.html,
+              },
+            };
+          }),
+        );
+
+        unsplashCache.set(category, photos);
+        logger.info({ category, count: photos.length }, "Fetched Unsplash backgrounds for category");
+      } catch (err) {
+        logger.warn({ err, category }, "Unsplash fetch failed — falling back to gradient");
+        return null;
+      }
     }
+
+    const index = hashString(title) % photos.length;
+    return { ...photos[index], index };
   }
 
   /** Generate a gradient background when no image is configured. */
@@ -200,7 +218,7 @@ export class FeaturedImageService {
         .toBuffer();
     } else {
       // No background image configured — try Unsplash, then gradient fallback
-      const unsplashResult = await this.fetchUnsplashBackground(params.title);
+      const unsplashResult = await this.fetchUnsplashBackground(params.category, params.title);
       if (unsplashResult) {
         resized = await sharp(unsplashResult.buffer)
           .resize(WIDTH, HEIGHT, { fit: "cover", position: "attention" })
