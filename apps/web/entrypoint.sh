@@ -16,10 +16,4 @@ if [ -n "$API_INTERNAL_URL" ]; then
         > /etc/nginx/conf.d/default.conf
 fi
 
-# Self-hosted: redirect landing page to login/register
-if [ "$SELF_HOSTED" = "true" ]; then
-    sed -i '/location \/ {/i \
-    location = / { return 302 /auth/login; }' /etc/nginx/conf.d/default.conf
-fi
-
 exec nginx -g 'daemon off;'
