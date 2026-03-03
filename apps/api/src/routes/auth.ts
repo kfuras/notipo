@@ -6,6 +6,7 @@ import { config } from "../config.js";
 import { logger } from "../lib/logger.js";
 import { sendEmail } from "../lib/email.js";
 import { createToken, verifyToken } from "../lib/auth-token.js";
+import { isStripeConfigured } from "../lib/stripe.js";
 
 const log = logger.child({ route: "auth" });
 
@@ -120,15 +121,18 @@ export async function authRoutes(app: FastifyInstance) {
     const passwordHash = await bcrypt.hash(body.password, 12);
     const apiKey = randomBytes(32).toString("hex");
 
-    const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+    // When Stripe is not configured (self-hosted), grant full Pro access.
+    // When Stripe is configured (SaaS), start a 7-day trial.
+    const usesTrial = isStripeConfigured();
+    const trialEndsAt = usesTrial ? new Date() : null;
+    if (trialEndsAt) trialEndsAt.setDate(trialEndsAt.getDate() + 7);
 
     const tenant = await app.prisma.$transaction(async (tx) => {
       const t = await tx.tenant.create({
         data: {
           name: body.blogName,
           slug,
-          plan: "TRIAL",
+          plan: usesTrial ? "TRIAL" : "PRO",
           trialEndsAt,
           users: {
             create: {
