@@ -1,0 +1,35 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear description of what happened and what you expected.
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options:
+        - Self-hosted (Docker)
+        - Hosted (app.notipo.com)
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce this?
+      placeholder: |
+        1. Go to ...
+        2. Click on ...
+        3. See error
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Paste any relevant logs (`docker logs notipo-app`).
+      render: shell
