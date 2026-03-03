@@ -62,45 +62,84 @@ function wrapText(
   return lines;
 }
 
+// Gradient color pairs for fallback backgrounds when no image is set.
+// Deterministically selected by category name for visual consistency.
+const GRADIENTS: [string, string][] = [
+  ["#1a1a2e", "#16213e"], // deep navy
+  ["#0f3460", "#533483"], // navy → purple
+  ["#2d3436", "#636e72"], // charcoal
+  ["#1b1b2f", "#162447"], // midnight
+  ["#0a3d62", "#3c6382"], // ocean blue
+  ["#6a0572", "#ab83a1"], // plum
+  ["#1e3a5f", "#4a8db7"], // steel blue
+  ["#2c3e50", "#3498db"], // dark → bright blue
+];
+
 export class FeaturedImageService {
+  /** Generate a gradient background when no image is configured. */
+  private async generateGradientBackground(categoryName: string): Promise<Buffer> {
+    let hash = 0;
+    for (const ch of categoryName) hash = (hash + ch.charCodeAt(0)) % GRADIENTS.length;
+    const [color1, color2] = GRADIENTS[hash];
+
+    const svg = `<svg width="${WIDTH}" height="${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${color1}" />
+          <stop offset="100%" stop-color="${color2}" />
+        </linearGradient>
+      </defs>
+      <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#g)" />
+    </svg>`;
+
+    return sharp(Buffer.from(svg)).png().toBuffer();
+  }
+
   /** Generate a featured image and return PNG bytes. */
   async generate(params: FeaturedImageRequest): Promise<Buffer> {
-    // Load background — URL fetched via HTTP, upload: prefix from uploads dir, plain filename from bundled assets
-    let bgBuffer: Buffer;
-    const bg = params.backgroundImageUrl;
-    if (bg.startsWith("http://") || bg.startsWith("https://")) {
-      if (await isPrivateUrl(bg)) {
-        throw new Error("Background image URL points to a private/internal address");
-      }
-      const res = await axios.get<ArrayBuffer>(bg, {
-        responseType: "arraybuffer",
-        timeout: 30_000,
-        maxRedirects: 0,
-      });
-      bgBuffer = Buffer.from(res.data);
-    } else if (bg.startsWith("upload:")) {
-      const relPath = bg.slice("upload:".length);
-      const uploadsDir = path.join(process.cwd(), "uploads", "category-images");
-      const uploadPath = path.resolve(uploadsDir, relPath);
-      if (!uploadPath.startsWith(uploadsDir + path.sep)) {
-        throw new Error("Invalid background image path");
-      }
-      bgBuffer = await fs.readFile(uploadPath);
-    } else {
-      const localPath = path.join(
-        process.cwd(),
-        "public",
-        "category-images",
-        path.basename(bg),
-      );
-      bgBuffer = await fs.readFile(localPath);
-    }
+    let resized: Buffer;
 
-    // Resize background with attention-based smart crop
-    const resized = await sharp(bgBuffer)
-      .resize(WIDTH, HEIGHT, { fit: "cover", position: "attention" })
-      .png()
-      .toBuffer();
+    if (params.backgroundImageUrl) {
+      // Load background — URL fetched via HTTP, upload: prefix from uploads dir, plain filename from bundled assets
+      let bgBuffer: Buffer;
+      const bg = params.backgroundImageUrl;
+      if (bg.startsWith("http://") || bg.startsWith("https://")) {
+        if (await isPrivateUrl(bg)) {
+          throw new Error("Background image URL points to a private/internal address");
+        }
+        const res = await axios.get<ArrayBuffer>(bg, {
+          responseType: "arraybuffer",
+          timeout: 30_000,
+          maxRedirects: 0,
+        });
+        bgBuffer = Buffer.from(res.data);
+      } else if (bg.startsWith("upload:")) {
+        const relPath = bg.slice("upload:".length);
+        const uploadsDir = path.join(process.cwd(), "uploads", "category-images");
+        const uploadPath = path.resolve(uploadsDir, relPath);
+        if (!uploadPath.startsWith(uploadsDir + path.sep)) {
+          throw new Error("Invalid background image path");
+        }
+        bgBuffer = await fs.readFile(uploadPath);
+      } else {
+        const localPath = path.join(
+          process.cwd(),
+          "public",
+          "category-images",
+          path.basename(bg),
+        );
+        bgBuffer = await fs.readFile(localPath);
+      }
+
+      // Resize background with attention-based smart crop
+      resized = await sharp(bgBuffer)
+        .resize(WIDTH, HEIGHT, { fit: "cover", position: "attention" })
+        .png()
+        .toBuffer();
+    } else {
+      // No background image configured — use gradient fallback
+      resized = await this.generateGradientBackground(params.category);
+    }
 
     // Compose overlay and text on canvas
     const { createCanvas, loadImage } = await getCanvas();

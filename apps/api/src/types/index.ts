@@ -63,7 +63,7 @@ export interface RankMathSeoPayload {
 export interface FeaturedImageRequest {
   title: string;
   category: string;
-  backgroundImageUrl: string;
+  backgroundImageUrl?: string;
 }
 
 // Gutenberg conversion

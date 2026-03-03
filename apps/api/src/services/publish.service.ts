@@ -96,13 +96,13 @@ export class PublishService {
 
       // Generate featured image if needed
       let wpFeaturedMediaId: number | undefined = post.wpFeaturedMediaId ?? undefined;
-      if (!wpFeaturedMediaId && post.category?.backgroundImage && post.featuredImageTitle) {
+      if (!wpFeaturedMediaId && post.featuredImageTitle) {
         onStep?.("Generating featured image…");
         const imgService = new FeaturedImageService();
         const imageBuffer = await imgService.generate({
           title: post.featuredImageTitle,
-          category: post.category.name,
-          backgroundImageUrl: post.category.backgroundImage,
+          category: post.category?.name || "Blog",
+          backgroundImageUrl: post.category?.backgroundImage || undefined,
         });
         const slug = post.slug || post.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
         const media = await wp.uploadMedia(imageBuffer, `${slug}-featured.png`);

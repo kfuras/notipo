@@ -250,22 +250,18 @@ export class SyncService {
       let wpFeaturedMediaId: number | undefined;
       if (!featuredImagesAllowed) {
         logger.info({ tenantId }, "Featured image generation skipped — Free plan");
-      } else if (!category) {
-        logger.warn({ notionCategory: result.metadata.category }, "Category not found in DB — skipping featured image");
-      } else if (!category.backgroundImage) {
-        logger.warn({ categoryName: category.name }, "Category has no backgroundImage — skipping featured image");
       } else if (!result.metadata.featuredImageTitle) {
         logger.warn("featuredImageTitle is empty — skipping featured image");
       }
-      if (featuredImagesAllowed && category?.backgroundImage && result.metadata.featuredImageTitle) {
+      if (featuredImagesAllowed && result.metadata.featuredImageTitle) {
         onStep?.("Generating featured image…");
         const imgService = new FeaturedImageService();
         const slug = result.metadata.slug || result.metadata.title;
         const safeSlug = slug.toLowerCase().replace(/[^a-z0-9]+/g, "-").substring(0, 60);
         const imageBuffer = await imgService.generate({
           title: result.metadata.featuredImageTitle,
-          category: category.name,
-          backgroundImageUrl: category.backgroundImage,
+          category: category?.name || result.metadata.category || "Blog",
+          backgroundImageUrl: category?.backgroundImage || undefined,
         });
         const media = await wp.uploadMedia(imageBuffer, `${safeSlug}-featured.png`);
         await wp.updateMediaMeta(media.id, {
