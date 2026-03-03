@@ -58,7 +58,7 @@ function CheckoutForm() {
         options={{
           layout: "tabs",
           paymentMethodOrder: ["link", "card"],
-          wallets: { link: "auto" },
+          wallets: { applePay: "never", googlePay: "never", link: "auto" },
           fields: { billingDetails: { address: "if_required" } },
         }}
         onReady={() => setReady(true)}
