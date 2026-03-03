@@ -76,8 +76,7 @@ export async function billingRoutes(app: FastifyInstance) {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
-      ui_mode: "custom",
-      payment_method_types: ["card", "link"],
+      ui_mode: "embedded",
       metadata: { tenantId: tenant.id },
       line_items: [{ price: config.STRIPE_PRO_PRICE_ID!, quantity: 1 }],
       return_url: `${baseUrl}/admin/billing/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
