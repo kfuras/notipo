@@ -1,20 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { loadStripe, type Stripe } from "@stripe/stripe-js";
+import {
+  EmbeddedCheckoutProvider,
+  EmbeddedCheckout,
+} from "@stripe/react-stripe-js";
 import { useApiCall } from "@/hooks/use-api";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 
+interface CheckoutResponse {
+  data: {
+    clientSecret: string;
+    publishableKey: string;
+  };
+}
+
 export default function CheckoutPage() {
   const { call } = useApiCall();
+  const [stripe, setStripe] = useState<Promise<Stripe | null> | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    call<{ data: { url: string } }>("/api/billing/checkout", {
+    call<CheckoutResponse>("/api/billing/checkout", {
       method: "POST",
     })
       .then((res) => {
-        window.location.href = res.data.url;
+        setStripe(loadStripe(res.data.publishableKey));
+        setClientSecret(res.data.clientSecret);
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Failed to initialize checkout");
@@ -33,10 +48,39 @@ export default function CheckoutPage() {
     );
   }
 
+  if (!stripe || !clientSecret) {
+    return (
+      <div className="max-w-2xl mx-auto text-center py-16">
+        <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Preparing checkout...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto text-center py-16">
-      <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3 text-muted-foreground" />
-      <p className="text-sm text-muted-foreground">Redirecting to checkout...</p>
+    <div className="max-w-3xl mx-auto">
+      <div className="mb-6">
+        <Link
+          href="/admin/billing"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Billing
+        </Link>
+        <h1 className="text-2xl font-bold mt-2">Upgrade to Pro</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          $19/month — unlimited posts, featured images, and webhook-triggered sync.
+        </p>
+      </div>
+
+      <div className="rounded-xl overflow-hidden border border-border">
+        <EmbeddedCheckoutProvider
+          stripe={stripe}
+          options={{ clientSecret }}
+        >
+          <EmbeddedCheckout />
+        </EmbeddedCheckoutProvider>
+      </div>
     </div>
   );
 }
