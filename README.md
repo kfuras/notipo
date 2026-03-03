@@ -299,8 +299,18 @@ After registering, you need to connect Notion and WordPress. An inline onboardin
 Open the [Notipo Blog Template](https://free-dentist-6b2.notion.site/30d842af972f8091a104eb8773fbf390?v=30d842af972f8091a104eb8773fbf390) and duplicate it to your workspace. This gives you a database with all required properties pre-configured. Confirm in the stepper once done.
 
 **Step 2 — Connect Notion** (choose one):
-- **OAuth** (recommended): Click "Connect to Notion" → authorize in Notion's consent screen → select the database you just duplicated. Credentials and database ID are configured automatically. Requires OAuth env vars to be set.
-- **Manual token**: Create an internal integration at [notion.so/my-integrations](https://www.notion.so/my-integrations), copy the token, and paste it in the inline form.
+- **OAuth** (recommended for hosted): Click "Connect to Notion" → authorize in Notion's consent screen → select the database you just duplicated. Credentials and database ID are configured automatically. Requires `NOTION_OAUTH_*` env vars.
+- **Internal integration** (recommended for self-hosted): Follow the steps below.
+
+**Setting up a Notion internal integration:**
+
+1. Go to [notion.so/my-integrations](https://www.notion.so/my-integrations) and click **New integration**
+2. Give it a name (e.g. "Notipo"), select your workspace, and click **Submit**
+3. On the integration page, copy the **Internal Integration Secret** (starts with `ntn_`) — this is your token
+4. Go to your Notion database (the template you duplicated in Step 1)
+5. Click the **···** menu in the top-right → **Connections** → **Connect to** → select your integration
+6. Copy your **database ID** from the database URL: `https://notion.so/yourworkspace/`**`<database-id>`**`?v=...` — the 32-character hex string before the `?`
+7. In the Notipo dashboard, paste the integration token and database ID into the form
 
 **Step 3 — Connect WordPress:**
 - Site URL (e.g. `https://yourblog.com`)
