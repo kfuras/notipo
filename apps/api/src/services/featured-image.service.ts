@@ -77,13 +77,15 @@ const GRADIENTS: [string, string][] = [
   ["#2c3e50", "#3498db"], // dark → bright blue
 ];
 
-// In-memory cache for Unsplash search results keyed by category name.
-// Stores multiple photos per category so different posts get different backgrounds.
-interface UnsplashPhoto {
-  buffer: Buffer;
-  attribution: UnsplashAttribution;
+// In-memory cache for Unsplash search results (metadata only, not image bytes).
+interface UnsplashSearchResult {
+  id: string;
+  url: string;
+  downloadLocation: string;
+  photographerName: string;
+  photographerUrl: string;
 }
-const unsplashCache = new Map<string, UnsplashPhoto[]>();
+const unsplashSearchCache = new Map<string, UnsplashSearchResult[]>();
 
 /** Simple string hash for deterministic photo selection. */
 function hashString(str: string): number {
@@ -92,18 +94,24 @@ function hashString(str: string): number {
   return Math.abs(hash);
 }
 
+interface UnsplashResult {
+  buffer: Buffer;
+  attribution: UnsplashAttribution;
+}
+
 export class FeaturedImageService {
   /**
-   * Fetch landscape photos from Unsplash matching the category name.
-   * Returns a specific photo selected by hashing the post title,
+   * Fetch a landscape photo from Unsplash for a category.
+   * Searches by category name (cached), picks a photo by hashing the post title
    * so each post gets a different but deterministic background.
+   * Only downloads the selected photo (not all results).
    */
-  private async fetchUnsplashBackground(category: string, title: string): Promise<(UnsplashPhoto & { index: number }) | null> {
+  private async fetchUnsplashBackground(category: string, title: string): Promise<UnsplashResult | null> {
     if (!config.UNSPLASH_ACCESS_KEY) return null;
 
-    let photos = unsplashCache.get(category);
+    let results = unsplashSearchCache.get(category);
 
-    if (!photos) {
+    if (!results) {
       try {
         const search = await axios.get<{
           results: Array<{
@@ -113,46 +121,57 @@ export class FeaturedImageService {
             user: { name: string; links: { html: string } };
           }>;
         }>("https://api.unsplash.com/search/photos", {
-          params: { query: category, orientation: "landscape", per_page: 10 },
+          params: { query: category, orientation: "landscape", per_page: 30 },
           headers: { Authorization: `Client-ID ${config.UNSPLASH_ACCESS_KEY}` },
           timeout: 10_000,
         });
 
         if (!search.data.results.length) return null;
 
-        photos = await Promise.all(
-          search.data.results.map(async (photo) => {
-            // Trigger download tracking (required by Unsplash ToS)
-            axios.get(photo.links.download_location, {
-              headers: { Authorization: `Client-ID ${config.UNSPLASH_ACCESS_KEY}` },
-              timeout: 5_000,
-            }).catch(() => {});
+        results = search.data.results.map((photo) => ({
+          id: photo.id,
+          url: photo.urls.regular,
+          downloadLocation: photo.links.download_location,
+          photographerName: photo.user.name,
+          photographerUrl: photo.user.links.html,
+        }));
 
-            const img = await axios.get<ArrayBuffer>(photo.urls.regular, {
-              responseType: "arraybuffer",
-              timeout: 15_000,
-            });
-
-            return {
-              buffer: Buffer.from(img.data),
-              attribution: {
-                photographerName: photo.user.name,
-                photographerUrl: photo.user.links.html,
-              },
-            };
-          }),
-        );
-
-        unsplashCache.set(category, photos);
-        logger.info({ category, count: photos.length }, "Fetched Unsplash backgrounds for category");
+        unsplashSearchCache.set(category, results);
+        logger.info({ category, count: results.length }, "Cached Unsplash search results for category");
       } catch (err) {
         logger.warn({ err, category }, "Unsplash fetch failed — falling back to gradient");
         return null;
       }
     }
 
-    const index = hashString(title) % photos.length;
-    return { ...photos[index], index };
+    // Pick a photo deterministically based on post title
+    const index = hashString(title) % results.length;
+    const photo = results[index];
+
+    try {
+      // Trigger download tracking (required by Unsplash ToS)
+      axios.get(photo.downloadLocation, {
+        headers: { Authorization: `Client-ID ${config.UNSPLASH_ACCESS_KEY}` },
+        timeout: 5_000,
+      }).catch(() => {});
+
+      const img = await axios.get<ArrayBuffer>(photo.url, {
+        responseType: "arraybuffer",
+        timeout: 15_000,
+      });
+
+      logger.info({ category, title, photoId: photo.id, index, photographer: photo.photographerName }, "Selected Unsplash background");
+      return {
+        buffer: Buffer.from(img.data),
+        attribution: {
+          photographerName: photo.photographerName,
+          photographerUrl: photo.photographerUrl,
+        },
+      };
+    } catch (err) {
+      logger.warn({ err, category, photoId: photo.id }, "Unsplash image download failed — falling back to gradient");
+      return null;
+    }
   }
 
   /** Generate a gradient background when no image is configured. */
