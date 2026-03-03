@@ -86,6 +86,13 @@ export async function billingRoutes(app: FastifyInstance) {
       },
     });
 
+    log.info({
+      sessionId: session.id,
+      paymentMethodTypes: session.payment_method_types,
+      currency: session.currency,
+      status: session.status,
+    }, "Checkout session created");
+
     return {
       data: {
         clientSecret: session.client_secret,
