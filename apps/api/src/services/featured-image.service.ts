@@ -200,7 +200,7 @@ export class FeaturedImageService {
         .toBuffer();
     } else {
       // No background image configured — try Unsplash, then gradient fallback
-      const unsplashResult = await this.fetchUnsplashBackground(params.category);
+      const unsplashResult = await this.fetchUnsplashBackground(params.title);
       if (unsplashResult) {
         resized = await sharp(unsplashResult.buffer)
           .resize(WIDTH, HEIGHT, { fit: "cover", position: "attention" })
