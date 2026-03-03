@@ -90,7 +90,7 @@ export class PublishService {
     } else {
       // Fallback: no WP draft yet — create one from scratch and publish
       onStep?.("Converting to Gutenberg…");
-      const wpContent = convertMarkdownToGutenberg(post.markdownContent, {
+      let wpContent = convertMarkdownToGutenberg(post.markdownContent, {
         highlighter: post.tenant.codeHighlighter,
       });
 
@@ -99,7 +99,7 @@ export class PublishService {
       if (!wpFeaturedMediaId && post.featuredImageTitle) {
         onStep?.("Generating featured image…");
         const imgService = new FeaturedImageService();
-        const imageBuffer = await imgService.generate({
+        const { buffer: imageBuffer, unsplashAttribution } = await imgService.generate({
           title: post.featuredImageTitle,
           category: post.category?.name || "Blog",
           backgroundImageUrl: post.category?.backgroundImage || undefined,
@@ -111,6 +111,11 @@ export class PublishService {
           title: post.featuredImageTitle,
         });
         wpFeaturedMediaId = media.id;
+
+        if (unsplashAttribution) {
+          const { photographerName, photographerUrl } = unsplashAttribution;
+          wpContent += `\n\n<!-- wp:paragraph {"className":"unsplash-credit","style":{"typography":{"fontSize":"14px"}}} -->\n<p class="unsplash-credit" style="font-size:14px">Photo by <a href="${photographerUrl}?utm_source=notipo&amp;utm_medium=referral">${photographerName}</a> on <a href="https://unsplash.com?utm_source=notipo&amp;utm_medium=referral">Unsplash</a></p>\n<!-- /wp:paragraph -->`;
+        }
       }
 
       // Resolve tags

@@ -12,7 +12,7 @@ import axios from "axios";
 import { isPrivateUrl } from "../lib/url-validation.js";
 import { config } from "../config.js";
 import { logger } from "../lib/logger.js";
-import type { FeaturedImageRequest } from "../types/index.js";
+import type { FeaturedImageRequest, FeaturedImageResult, UnsplashAttribution } from "../types/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -77,13 +77,17 @@ const GRADIENTS: [string, string][] = [
   ["#2c3e50", "#3498db"], // dark → bright blue
 ];
 
-// In-memory cache for Unsplash images keyed by category name.
+// In-memory cache for Unsplash results keyed by category name.
 // Avoids re-fetching when multiple posts share the same category.
-const unsplashCache = new Map<string, Buffer>();
+interface UnsplashCacheEntry {
+  buffer: Buffer;
+  attribution: UnsplashAttribution;
+}
+const unsplashCache = new Map<string, UnsplashCacheEntry>();
 
 export class FeaturedImageService {
   /** Fetch a landscape photo from Unsplash matching the category name. */
-  private async fetchUnsplashBackground(query: string): Promise<Buffer | null> {
+  private async fetchUnsplashBackground(query: string): Promise<UnsplashCacheEntry | null> {
     if (!config.UNSPLASH_ACCESS_KEY) return null;
 
     const cached = unsplashCache.get(query);
@@ -91,7 +95,12 @@ export class FeaturedImageService {
 
     try {
       const search = await axios.get<{
-        results: Array<{ id: string; urls: { regular: string }; links: { download_location: string } }>;
+        results: Array<{
+          id: string;
+          urls: { regular: string };
+          links: { download_location: string };
+          user: { name: string; links: { html: string } };
+        }>;
       }>("https://api.unsplash.com/search/photos", {
         params: { query, orientation: "landscape", per_page: 1 },
         headers: { Authorization: `Client-ID ${config.UNSPLASH_ACCESS_KEY}` },
@@ -112,10 +121,16 @@ export class FeaturedImageService {
         timeout: 15_000,
       });
 
-      const buffer = Buffer.from(img.data);
-      unsplashCache.set(query, buffer);
-      logger.info({ query, photoId: photo.id }, "Fetched Unsplash background");
-      return buffer;
+      const entry: UnsplashCacheEntry = {
+        buffer: Buffer.from(img.data),
+        attribution: {
+          photographerName: photo.user.name,
+          photographerUrl: photo.user.links.html,
+        },
+      };
+      unsplashCache.set(query, entry);
+      logger.info({ query, photoId: photo.id, photographer: photo.user.name }, "Fetched Unsplash background");
+      return entry;
     } catch (err) {
       logger.warn({ err, query }, "Unsplash fetch failed — falling back to gradient");
       return null;
@@ -141,9 +156,10 @@ export class FeaturedImageService {
     return sharp(Buffer.from(svg)).png().toBuffer();
   }
 
-  /** Generate a featured image and return PNG bytes. */
-  async generate(params: FeaturedImageRequest): Promise<Buffer> {
+  /** Generate a featured image and return PNG bytes with optional Unsplash attribution. */
+  async generate(params: FeaturedImageRequest): Promise<FeaturedImageResult> {
     let resized: Buffer;
+    let unsplashAttribution: UnsplashAttribution | undefined;
 
     if (params.backgroundImageUrl) {
       // Load background — URL fetched via HTTP, upload: prefix from uploads dir, plain filename from bundled assets
@@ -184,12 +200,13 @@ export class FeaturedImageService {
         .toBuffer();
     } else {
       // No background image configured — try Unsplash, then gradient fallback
-      const unsplash = await this.fetchUnsplashBackground(params.category);
-      if (unsplash) {
-        resized = await sharp(unsplash)
+      const unsplashResult = await this.fetchUnsplashBackground(params.category);
+      if (unsplashResult) {
+        resized = await sharp(unsplashResult.buffer)
           .resize(WIDTH, HEIGHT, { fit: "cover", position: "attention" })
           .png()
           .toBuffer();
+        unsplashAttribution = unsplashResult.attribution;
       } else {
         resized = await this.generateGradientBackground(params.category);
       }
@@ -228,6 +245,6 @@ export class FeaturedImageService {
       ctx.fillText(lines[i], x, y);
     }
 
-    return canvas.toBuffer("image/png") as Buffer;
+    return { buffer: canvas.toBuffer("image/png") as Buffer, unsplashAttribution };
   }
 }

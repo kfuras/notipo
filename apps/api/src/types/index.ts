@@ -66,6 +66,16 @@ export interface FeaturedImageRequest {
   backgroundImageUrl?: string;
 }
 
+export interface UnsplashAttribution {
+  photographerName: string;
+  photographerUrl: string;
+}
+
+export interface FeaturedImageResult {
+  buffer: Buffer;
+  unsplashAttribution?: UnsplashAttribution;
+}
+
 // Gutenberg conversion
 export interface GutenbergOptions {
   highlighter: CodeHighlighter;

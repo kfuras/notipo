@@ -232,7 +232,7 @@ export class SyncService {
       }
 
       // Re-convert markdown → Gutenberg using the (possibly refreshed) finalMarkdown
-      const wpContent = convertMarkdownToGutenberg(finalMarkdown, { highlighter });
+      let wpContent = convertMarkdownToGutenberg(finalMarkdown, { highlighter });
 
       // Resolve tag IDs (post tags take priority over category defaults)
       // Best-effort: some WP sites have /tags endpoint disabled (404)
@@ -258,7 +258,7 @@ export class SyncService {
         const imgService = new FeaturedImageService();
         const slug = result.metadata.slug || result.metadata.title;
         const safeSlug = slug.toLowerCase().replace(/[^a-z0-9]+/g, "-").substring(0, 60);
-        const imageBuffer = await imgService.generate({
+        const { buffer: imageBuffer, unsplashAttribution } = await imgService.generate({
           title: result.metadata.featuredImageTitle,
           category: category?.name || result.metadata.category || "Blog",
           backgroundImageUrl: category?.backgroundImage || undefined,
@@ -270,6 +270,11 @@ export class SyncService {
         });
         wpFeaturedMediaId = media.id;
         logger.info({ wpFeaturedMediaId }, "Featured image uploaded to WP");
+
+        if (unsplashAttribution) {
+          const { photographerName, photographerUrl } = unsplashAttribution;
+          wpContent += `\n\n<!-- wp:paragraph {"className":"unsplash-credit","style":{"typography":{"fontSize":"14px"}}} -->\n<p class="unsplash-credit" style="font-size:14px">Photo by <a href="${photographerUrl}?utm_source=notipo&amp;utm_medium=referral">${photographerName}</a> on <a href="https://unsplash.com?utm_source=notipo&amp;utm_medium=referral">Unsplash</a></p>\n<!-- /wp:paragraph -->`;
+        }
       }
 
       // Create a new WP draft for review
