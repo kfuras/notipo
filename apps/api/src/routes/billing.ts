@@ -205,7 +205,7 @@ export async function billingRoutes(app: FastifyInstance) {
         if (!tenantId) break;
 
         if (sub.status === "active") {
-          await app.prisma.tenant.update({
+          await app.prisma.tenant.updateMany({
             where: { id: tenantId },
             data: { plan: "PRO" },
           });
@@ -220,11 +220,15 @@ export async function billingRoutes(app: FastifyInstance) {
         const tenantId = sub.metadata?.tenantId;
         if (!tenantId) break;
 
-        await app.prisma.tenant.update({
+        const deleted = await app.prisma.tenant.updateMany({
           where: { id: tenantId },
           data: { plan: "FREE", stripeSubscriptionId: null },
         });
-        log.info({ tenantId }, "Tenant downgraded to FREE — subscription cancelled");
+        if (deleted.count > 0) {
+          log.info({ tenantId }, "Tenant downgraded to FREE — subscription cancelled");
+        } else {
+          log.warn({ tenantId }, "subscription.deleted: tenant not found, skipping");
+        }
         break;
       }
 
