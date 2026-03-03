@@ -52,11 +52,6 @@ export async function billingRoutes(app: FastifyInstance) {
       select: { id: true, stripeCustomerId: true, plan: true },
     });
 
-    const owner = await app.prisma.user.findFirst({
-      where: { tenantId: tenant.id, role: "OWNER" },
-      select: { email: true },
-    });
-
     // Create or reuse Stripe customer
     let customerId = tenant.stripeCustomerId;
     if (!customerId) {
