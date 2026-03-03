@@ -77,6 +77,7 @@ export async function billingRoutes(app: FastifyInstance) {
       customer: customerId,
       mode: "subscription",
       ui_mode: "embedded",
+      payment_method_types: ["card", "link"],
       metadata: { tenantId: tenant.id },
       line_items: [{ price: config.STRIPE_PRO_PRICE_ID!, quantity: 1 }],
       return_url: `${baseUrl}/admin/billing/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
