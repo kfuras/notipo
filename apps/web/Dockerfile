@@ -14,8 +14,6 @@ RUN npm run build --workspace=@notipo/shared
 
 # Build Next.js
 COPY apps/web/ ./apps/web/
-ARG NEXT_PUBLIC_PLAUSIBLE_SRC
-ENV NEXT_PUBLIC_PLAUSIBLE_SRC=$NEXT_PUBLIC_PLAUSIBLE_SRC
 RUN npm run build --workspace=@notipo/web
 
 FROM nginx:alpine

@@ -14,7 +14,7 @@ import {
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { LogoIcon } from "@/components/landing/icons/logo";
+import { LogoIcon } from "@/components/ui/logo";
 import {
   Sidebar,
   SidebarContent,

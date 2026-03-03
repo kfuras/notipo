@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { LogoIcon } from "@/components/landing/icons/logo";
+import { LogoIcon } from "@/components/ui/logo";
 import { CheckCircle } from "lucide-react";
 
 function SetDarkMeta() {

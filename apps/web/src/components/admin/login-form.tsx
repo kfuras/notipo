@@ -16,7 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogoIcon } from "@/components/landing/icons/logo";
+import { LogoIcon } from "@/components/ui/logo";
 import { Mail } from "lucide-react";
 
 export function LoginForm() {

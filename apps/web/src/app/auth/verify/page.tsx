@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { LogoIcon } from "@/components/landing/icons/logo";
+import { LogoIcon } from "@/components/ui/logo";
 import { CheckCircle, Loader2 } from "lucide-react";
 
 function SetDarkMeta() {
