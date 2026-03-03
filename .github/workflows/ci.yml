@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lockfile-check:
+    name: Verify lockfile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for Alpine Linux native binaries
+        run: |
+          missing=""
+          grep -q "@img/sharp-linuxmusl-x64" package-lock.json || missing="$missing sharp-linuxmusl-x64"
+          grep -q "lightningcss-linux-x64-musl" package-lock.json || missing="$missing lightningcss-linux-x64-musl"
+          if [ -n "$missing" ]; then
+            echo "::error::Lockfile missing Alpine Linux binaries:$missing"
+            echo "Run 'npm install' with .npmrc in place to fix."
+            exit 1
+          fi
+          echo "All platform binaries present in lockfile."
