@@ -57,6 +57,8 @@ function CheckoutForm() {
         id="payment-element"
         options={{
           layout: "tabs",
+          paymentMethodOrder: ["link", "card"],
+          wallets: { link: "auto" },
           fields: { billingDetails: { address: "if_required" } },
         }}
         onReady={() => setReady(true)}
