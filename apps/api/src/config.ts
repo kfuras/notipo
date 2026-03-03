@@ -22,6 +22,7 @@ const envSchema = z.object({
   RESEND_FROM_EMAIL: z.string().optional().default("noreply@notipo.com"),
   ADMIN_NOTIFY_EMAIL: z.string().email().optional(),
   FRONTEND_URL: z.string().url().optional(),
+  UNSPLASH_ACCESS_KEY: z.string().optional(),
 });
 
 export type Config = z.infer<typeof envSchema>;

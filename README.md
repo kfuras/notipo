@@ -33,7 +33,7 @@ Don't want to self-host? [Sign up for a free account](https://app.notipo.com/aut
 - **Notion to WordPress sync** — change a status in Notion, post appears as a WordPress draft
 - **Two-step publish** — review the draft in WordPress, then set "Publish" in Notion to go live
 - **Content updates** — re-sync content from Notion without creating duplicates
-- **Featured images** — auto-created with your post title overlaid on a category background image
+- **Featured images** — auto-generated with your post title overlaid on a background (upload your own, Unsplash, or gradient fallback)
 - **Inline images** — Notion images uploaded to your WordPress media library, URLs replaced automatically
 - **SEO metadata** — Rank Math focus keyword, title, and description applied during sync
 - **Code highlighting** — Prism.js or Highlight.js syntax blocks in your posts
@@ -125,6 +125,12 @@ cp apps/api/.env.example apps/api/.env
 | `RESEND_API_KEY` | API key from [resend.com](https://resend.com) |
 | `RESEND_FROM_EMAIL` | Sender address (e.g. `noreply@yourdomain.com`) — verify your domain in Resend |
 | `ADMIN_NOTIFY_EMAIL` | (Optional) Email address to notify when new users sign up |
+
+**Unsplash** (optional — enhances featured image backgrounds):
+
+| Variable | Description |
+|----------|-------------|
+| `UNSPLASH_ACCESS_KEY` | API key from [unsplash.com/developers](https://unsplash.com/developers) — when set, featured images use a relevant Unsplash photo instead of a plain gradient |
 
 **Web frontend (Next.js)** — build-time variables:
 

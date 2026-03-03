@@ -10,6 +10,8 @@ import { fileURLToPath } from "node:url";
 import fs from "node:fs/promises";
 import axios from "axios";
 import { isPrivateUrl } from "../lib/url-validation.js";
+import { config } from "../config.js";
+import { logger } from "../lib/logger.js";
 import type { FeaturedImageRequest } from "../types/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -75,7 +77,51 @@ const GRADIENTS: [string, string][] = [
   ["#2c3e50", "#3498db"], // dark → bright blue
 ];
 
+// In-memory cache for Unsplash images keyed by category name.
+// Avoids re-fetching when multiple posts share the same category.
+const unsplashCache = new Map<string, Buffer>();
+
 export class FeaturedImageService {
+  /** Fetch a landscape photo from Unsplash matching the category name. */
+  private async fetchUnsplashBackground(query: string): Promise<Buffer | null> {
+    if (!config.UNSPLASH_ACCESS_KEY) return null;
+
+    const cached = unsplashCache.get(query);
+    if (cached) return cached;
+
+    try {
+      const search = await axios.get<{
+        results: Array<{ id: string; urls: { regular: string }; links: { download_location: string } }>;
+      }>("https://api.unsplash.com/search/photos", {
+        params: { query, orientation: "landscape", per_page: 1 },
+        headers: { Authorization: `Client-ID ${config.UNSPLASH_ACCESS_KEY}` },
+        timeout: 10_000,
+      });
+
+      const photo = search.data.results[0];
+      if (!photo) return null;
+
+      // Trigger download tracking (required by Unsplash ToS)
+      axios.get(photo.links.download_location, {
+        headers: { Authorization: `Client-ID ${config.UNSPLASH_ACCESS_KEY}` },
+        timeout: 5_000,
+      }).catch(() => {});
+
+      const img = await axios.get<ArrayBuffer>(photo.urls.regular, {
+        responseType: "arraybuffer",
+        timeout: 15_000,
+      });
+
+      const buffer = Buffer.from(img.data);
+      unsplashCache.set(query, buffer);
+      logger.info({ query, photoId: photo.id }, "Fetched Unsplash background");
+      return buffer;
+    } catch (err) {
+      logger.warn({ err, query }, "Unsplash fetch failed — falling back to gradient");
+      return null;
+    }
+  }
+
   /** Generate a gradient background when no image is configured. */
   private async generateGradientBackground(categoryName: string): Promise<Buffer> {
     let hash = 0;
@@ -137,8 +183,16 @@ export class FeaturedImageService {
         .png()
         .toBuffer();
     } else {
-      // No background image configured — use gradient fallback
-      resized = await this.generateGradientBackground(params.category);
+      // No background image configured — try Unsplash, then gradient fallback
+      const unsplash = await this.fetchUnsplashBackground(params.category);
+      if (unsplash) {
+        resized = await sharp(unsplash)
+          .resize(WIDTH, HEIGHT, { fit: "cover", position: "attention" })
+          .png()
+          .toBuffer();
+      } else {
+        resized = await this.generateGradientBackground(params.category);
+      }
     }
 
     // Compose overlay and text on canvas
