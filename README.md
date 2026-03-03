@@ -132,14 +132,6 @@ cp apps/api/.env.example apps/api/.env
 |----------|-------------|
 | `UNSPLASH_ACCESS_KEY` | API key from [unsplash.com/developers](https://unsplash.com/developers) — when set, featured images use a relevant Unsplash photo instead of a plain gradient |
 
-**Web frontend (Next.js)** — build-time variables:
-
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_PLAUSIBLE_SRC` | Plausible analytics script URL (optional — no tracking if unset) |
-
-These are inlined at build time. In Docker, they're passed as build args via `docker-compose.prod.yml`.
-
 **Required for VPS deployment only:**
 
 | Variable | Description |
@@ -300,17 +292,7 @@ Open the [Notipo Blog Template](https://free-dentist-6b2.notion.site/30d842af972
 
 **Step 2 — Connect Notion** (choose one):
 - **OAuth** (recommended for hosted): Click "Connect to Notion" → authorize in Notion's consent screen → select the database you just duplicated. Credentials and database ID are configured automatically. Requires `NOTION_OAUTH_*` env vars.
-- **Internal integration** (recommended for self-hosted): Follow the steps below.
-
-**Setting up a Notion internal integration:**
-
-1. Go to [notion.so/my-integrations](https://www.notion.so/my-integrations) and click **New integration**
-2. Give it a name (e.g. "Notipo"), select your workspace, and click **Submit**
-3. On the integration page, copy the **Internal Integration Secret** (starts with `ntn_`) — this is your token
-4. Go to your Notion database (the template you duplicated in Step 1)
-5. Click the **···** menu in the top-right → **Connections** → **Connect to** → select your integration
-6. Copy your **database ID** from the database URL: `https://notion.so/yourworkspace/`**`<database-id>`**`?v=...` — the 32-character hex string before the `?`
-7. In the Notipo dashboard, paste the integration token and database ID into the form
+- **Internal integration** (recommended for self-hosted): Click "Use manual token" in Settings, paste your integration token and database ID. See the [full step-by-step guide](https://notipo.com/docs/notion-setup#internal-integration) for creating the integration, configuring capabilities, sharing the database, and finding the database ID.
 
 **Step 3 — Connect WordPress:**
 - Site URL (e.g. `https://yourblog.com`)
@@ -334,6 +316,7 @@ Your Notion database needs these properties:
 | Category | Select | Auto-populated from WordPress categories |
 | Tags | Multi-select | Auto-populated from WordPress tags |
 | Slug | Text | URL slug for the WordPress post |
+| Featured Image Title | Text | Text overlay on the featured image (defaults to post title if blank) |
 | SEO Keyword | Text | Rank Math focus keyword |
 | WordPress Link | URL | Auto-filled with the WP post URL after sync/publish |
 
@@ -343,7 +326,7 @@ The `Status` options are configurable per tenant — the names above are default
 
 ## Billing & Plans
 
-When self-hosting, **all features are unlocked** with no restrictions — unlimited posts, featured images, webhooks, and instant sync. No billing configuration needed.
+When self-hosting, **all features are unlocked** with no restrictions — unlimited posts, featured images, webhooks, and instant sync. No billing configuration needed. New registrations automatically get the PRO plan when Stripe is not configured.
 
 The hosted version at [notipo.com](https://notipo.com) offers a Free tier (5 posts/month) and a Pro plan ($19/month) with unlimited posts and all features.
 
