@@ -22,6 +22,7 @@ function CheckoutForm() {
   const checkoutState = useCheckout();
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [ready, setReady] = useState(false);
 
   if (checkoutState.type === "loading") {
     return (
@@ -52,14 +53,23 @@ function CheckoutForm() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <PaymentElement />
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="w-full mt-4 py-3 px-4 rounded-lg font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        {isSubmitting ? "Processing..." : "Subscribe — $19/mo"}
-      </button>
+      <PaymentElement
+        id="payment-element"
+        options={{
+          layout: "tabs",
+          fields: { billingDetails: { address: "if_required" } },
+        }}
+        onReady={() => setReady(true)}
+      />
+      {ready && (
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full mt-6 py-3 px-4 rounded-lg font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {isSubmitting ? "Processing..." : "Subscribe — $19/mo"}
+        </button>
+      )}
       {message && (
         <p className="mt-3 text-sm text-destructive text-center">{message}</p>
       )}
@@ -129,7 +139,46 @@ export default function CheckoutPage() {
       <div className="rounded-xl border border-border p-6">
         <CheckoutProvider
           stripe={stripe}
-          options={{ clientSecret }}
+          options={{
+            clientSecret,
+            elementsOptions: {
+              appearance: {
+                theme: "night",
+                variables: {
+                  colorPrimary: "#e5e5e5",
+                  colorBackground: "#1c1c1c",
+                  colorText: "#f9f9f9",
+                  colorTextSecondary: "#a3a3a3",
+                  borderRadius: "8px",
+                  fontFamily: "system-ui, -apple-system, sans-serif",
+                },
+                rules: {
+                  ".Label": {
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    marginBottom: "8px",
+                    color: "#a3a3a3",
+                  },
+                  ".Input": {
+                    backgroundColor: "#1c1c1c",
+                    borderColor: "rgba(255,255,255,0.1)",
+                  },
+                  ".Input:focus": {
+                    borderColor: "rgba(255,255,255,0.3)",
+                  },
+                  ".Tab": {
+                    backgroundColor: "#1c1c1c",
+                    borderColor: "rgba(255,255,255,0.1)",
+                  },
+                  ".Tab--selected": {
+                    backgroundColor: "#2e2e2e",
+                    borderColor: "#e5e5e5",
+                    color: "#f9f9f9",
+                  },
+                },
+              },
+            },
+          }}
         >
           <CheckoutForm />
         </CheckoutProvider>
