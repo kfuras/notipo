@@ -61,7 +61,6 @@ export async function billingRoutes(app: FastifyInstance) {
     let customerId = tenant.stripeCustomerId;
     if (!customerId) {
       const customer = await stripe.customers.create({
-        email: owner?.email,
         metadata: { tenantId: tenant.id },
       });
       customerId = customer.id;
