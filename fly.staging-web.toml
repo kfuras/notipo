@@ -5,7 +5,8 @@ primary_region = 'ams'
   dockerfile = 'apps/web/Dockerfile'
 
 [env]
-  API_INTERNAL_URL = 'http://notipo-staging-api.internal:3000'
+  API_INTERNAL_URL = 'http://notipo-staging-api.flycast'
+  SITE_INTERNAL_URL = 'http://notipo-staging-site.flycast'
 
 [http_service]
   internal_port = 80

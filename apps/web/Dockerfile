@@ -20,6 +20,7 @@ FROM nginx:alpine
 COPY --from=builder /app/apps/web/out /usr/share/nginx/html
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY apps/web/nginx.conf.template /etc/nginx/proxy.conf.template
+COPY apps/web/nginx.staging.conf.template /etc/nginx/staging.conf.template
 COPY apps/web/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 EXPOSE 80

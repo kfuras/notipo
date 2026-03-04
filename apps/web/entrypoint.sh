@@ -11,9 +11,17 @@ if [ -n "$API_INTERNAL_URL" ]; then
         *)   export DNS_RESOLVER="$DNS_RAW" ;;
     esac
 
-    envsubst '${API_INTERNAL_URL} ${NGINX_PORT} ${DNS_RESOLVER}' \
-        < /etc/nginx/proxy.conf.template \
-        > /etc/nginx/conf.d/default.conf
+    if [ -n "$SITE_INTERNAL_URL" ]; then
+        # Staging mode: proxy API + marketing site, serve admin UI locally
+        envsubst '${API_INTERNAL_URL} ${SITE_INTERNAL_URL} ${NGINX_PORT} ${DNS_RESOLVER}' \
+            < /etc/nginx/staging.conf.template \
+            > /etc/nginx/conf.d/default.conf
+    else
+        # Railway mode: proxy API, serve admin UI locally
+        envsubst '${API_INTERNAL_URL} ${NGINX_PORT} ${DNS_RESOLVER}' \
+            < /etc/nginx/proxy.conf.template \
+            > /etc/nginx/conf.d/default.conf
+    fi
 fi
 
 exec nginx -g 'daemon off;'
