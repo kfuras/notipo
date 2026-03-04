@@ -15,5 +15,8 @@
   },
   "devDependencies": {
     "turbo": "^2"
+  },
+  "dependencies": {
+    "sharp": "^0.34.5"
   }
 }
