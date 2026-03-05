@@ -32,12 +32,12 @@ Don't want to self-host? [Sign up for a free account](https://app.notipo.com/aut
 
 <table>
 <tr>
-<td align="center"><img src="https://notipo.com/features/4-dashboard.gif" alt="Dashboard" width="480" /></td>
-<td align="center"><img src="https://notipo.com/features/1-jobs.gif" alt="Jobs" width="480" /></td>
+<td align="center"><img src="https://notipo.com/features/4-dashboard.gif" alt="Dashboard" width="400" /></td>
+<td align="center"><img src="https://notipo.com/features/1-jobs.gif" alt="Jobs" width="400" /></td>
 </tr>
 <tr>
-<td align="center"><img src="https://notipo.com/features/2-categories.gif" alt="Categories & Tags" width="480" /></td>
-<td align="center"><img src="https://notipo.com/features/3-settings.gif" alt="Settings" width="480" /></td>
+<td align="center"><img src="https://notipo.com/features/2-categories.gif" alt="Categories & Tags" width="400" /></td>
+<td align="center"><img src="https://notipo.com/features/3-settings.gif" alt="Settings" width="400" /></td>
 </tr>
 </table>
 
