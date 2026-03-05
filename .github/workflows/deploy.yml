@@ -1,13 +1,16 @@
 name: Deploy to Fly.io
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
 
 jobs:
   deploy-api:
     name: Deploy API
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     concurrency: deploy-api
     steps:
       - uses: actions/checkout@v4
@@ -19,6 +22,7 @@ jobs:
   deploy-web:
     name: Deploy Web
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     concurrency: deploy-web
     steps:
       - uses: actions/checkout@v4
