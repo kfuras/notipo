@@ -30,6 +30,17 @@ Don't want to self-host? [Sign up for a free account](https://app.notipo.com/aut
 
 ## Features
 
+<table>
+<tr>
+<td align="center"><img src="https://notipo.com/features/4-dashboard.gif" alt="Dashboard" width="480" /></td>
+<td align="center"><img src="https://notipo.com/features/1-jobs.gif" alt="Jobs" width="480" /></td>
+</tr>
+<tr>
+<td align="center"><img src="https://notipo.com/features/2-categories.gif" alt="Categories & Tags" width="480" /></td>
+<td align="center"><img src="https://notipo.com/features/3-settings.gif" alt="Settings" width="480" /></td>
+</tr>
+</table>
+
 - **Notion to WordPress sync** — change a status in Notion, post appears as a WordPress draft
 - **Two-step publish** — review the draft in WordPress, then set "Publish" in Notion to go live
 - **Content updates** — re-sync content from Notion without creating duplicates
