@@ -342,9 +342,11 @@ function WritePage() {
         body.slice(outerStart, start) === before &&
         body.slice(end, outerEnd) === after
       ) {
-        const next = body.slice(0, outerStart) + selected + body.slice(outerEnd);
+        // If the selected content is the default placeholder, remove everything
+        const keep = selected === "text" ? "" : selected;
+        const next = body.slice(0, outerStart) + keep + body.slice(outerEnd);
         setBody(next);
-        requestAnimationFrame(() => { el.focus(); el.selectionStart = outerStart; el.selectionEnd = outerStart + selected.length; });
+        requestAnimationFrame(() => { el.focus(); el.selectionStart = outerStart; el.selectionEnd = outerStart + keep.length; });
         return;
       }
 
