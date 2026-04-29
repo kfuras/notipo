@@ -118,6 +118,7 @@ function WritePage() {
 
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const slashMenuRef = useRef<HTMLDivElement>(null);
   const tracked = useRef(false);
   const submitted = useRef(false);
@@ -618,7 +619,7 @@ function WritePage() {
     { icon: Heading3, label: "Heading 3", action: () => insertAtLine("### ") },
     { sep: true },
     { icon: LinkIcon, label: `Link (${modKey}+K)`, action: () => wrapSelection("[", "](url)") },
-    { icon: Image, label: "Image", action: () => wrapSelection("![", "](url)") },
+    { icon: Image, label: "Upload image", action: () => fileInputRef.current?.click() },
     { sep: true },
     { icon: Code, label: "Inline code", action: () => wrapSelection("`", "`") },
     { icon: SquareCode, label: "Code block", action: () => insertBlock("```", "```", "code here") },
@@ -850,6 +851,19 @@ function WritePage() {
           </div>
         </div>
       </TooltipProvider>
+
+      {/* Hidden file input for image upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) uploadImage(file);
+          e.target.value = "";
+        }}
+      />
 
       {/* Writing area + preview */}
       <div className={`relative ${showPreview ? "grid grid-cols-1 md:grid-cols-2 gap-4" : ""}`}>
